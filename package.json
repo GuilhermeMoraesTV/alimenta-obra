@@ -1,0 +1,20 @@
+{
+  "name": "alimenta-obra",
+  "version": "1.0.0",
+  "description": "Protótipo PWA para gestão de refeições em obras.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/static-server.mjs 5190",
+    "dev": "node scripts/static-server.mjs 5190",
+    "check": "node --check src/app.js && node --check src/services/store.js && node --check src/services/exports.js && node --check src/data/seed.js"
+  },
+  "keywords": [
+    "pwa",
+    "obras",
+    "refeicoes",
+    "offline"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}
