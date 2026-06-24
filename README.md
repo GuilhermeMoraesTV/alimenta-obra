@@ -1,12 +1,36 @@
 # AlimentaObra
 
+## Configuracao atual com Supabase
+
+O frontend agora usa Supabase Auth e PostgreSQL. Para concluir a conexao:
+
+1. No SQL Editor do projeto Supabase, execute
+   `supabase/migrations/20260620000100_initial_schema.sql`.
+2. Copie `.env.example` para `.env.local`.
+3. Preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
+4. Crie os usuarios em **Authentication > Users**.
+5. Edite e execute `database/promover-usuario.sql` para definir o administrador
+   e o fornecedor.
+6. Rode `npm install` e `npm run dev`.
+
+Nunca coloque a chave `service_role` no frontend, no Git ou em variaveis
+iniciadas com `VITE_`.
+
+Validacao local:
+
+```powershell
+npm run check
+npm run build
+```
+
 Protótipo completo de um aplicativo PWA para gestão de refeições em obras. O sistema centraliza pedidos dos encarregados, consolida a demanda para o administrador, envia o pedido ao fornecedor e registra confirmações com data, hora e usuário.
 
 ## Como abrir
 
-Como é um protótipo estático, você pode abrir `index.html` diretamente no navegador. Para testar o modo PWA/offline com service worker, rode um servidor local:
+Instale as dependências e inicie o servidor Vite:
 
 ```powershell
+npm install
 npm run dev
 ```
 
@@ -16,7 +40,7 @@ Depois acesse:
 http://127.0.0.1:5190
 ```
 
-## Perfis de demonstração
+## Perfis do sistema
 
 - Encarregado: cria, salva, envia, consulta, edita e cancela pedidos antes do limite.
 - Administrador: acompanha dashboard, filtra pedidos, consolida, envia ao fornecedor e exporta relatórios.
@@ -55,8 +79,6 @@ manifest.webmanifest     Instalação Android/iPhone/Web
 
 ## Próximos passos para produção
 
-- Trocar `localStorage` por API com banco centralizado.
-- Implementar autenticação real com permissões por perfil.
 - Gerar `.xlsx`, `.pdf` e `.docx` nativos no backend.
 - Enviar notificações push/e-mail/WhatsApp corporativo.
 - Adicionar testes automatizados de regras de negócio.

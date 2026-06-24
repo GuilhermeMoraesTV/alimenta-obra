@@ -1,3 +1,10 @@
 *.log
+vite-preview*.out
+vite-preview*.err
 node_modules/
+dist/
+.env
+.env.*
+!.env.example
 .DS_Store
+.idea/

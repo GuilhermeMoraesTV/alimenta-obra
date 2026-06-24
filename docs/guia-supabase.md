@@ -1,16 +1,16 @@
 # Guia de integração com Supabase
 
-O AlimentaObra ainda usa `localStorage` como fonte de dados. Para colocá-lo em
-produção, a migração deve incluir banco PostgreSQL, autenticação, autorização
-por perfil e substituição das operações locais pela API do Supabase.
+O AlimentaObra já possui a camada de integração com Supabase. Este documento
+explica a arquitetura adotada e os cuidados para configurar e manter o banco.
 
 ## Situação atual
 
 - `src/data/seed.js`: usuários e dados de demonstração.
-- `src/services/store.js`: persistência no `localStorage`.
-- `src/app.js`: login fictício e operações síncronas.
-- `database/schema.sql`: modelo inicial, ainda sem Supabase Auth e RLS.
-- `service-worker.js`: cache e sincronização apenas simulada.
+- `src/services/store-v2.js`: estado visual e regras locais.
+- `src/services/database.js`: Auth, consultas, RPC e Realtime.
+- `src/app.js`: interface conectada ao banco.
+- `supabase/migrations/20260620000100_initial_schema.sql`: banco, Auth e RLS.
+- `service-worker.js`: cache apenas dos arquivos públicos da aplicação.
 
 ## 1. Criar o projeto
 
@@ -19,7 +19,7 @@ por perfil e substituição das operações locais pela API do Supabase.
 3. Guarde a senha do banco.
 4. Em **Project Settings > API**, copie:
    - Project URL;
-   - Publishable key, ou `anon key` em projetos antigos.
+   - Publishable key, ou `anon key` em projetos antigos;
 
 Nunca coloque a chave `service_role` no navegador ou no GitHub.
 

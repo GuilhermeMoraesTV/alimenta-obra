@@ -1,3 +1,11 @@
+-- ESQUEMA LEGADO DO PROTOTIPO.
+-- Nao execute este arquivo no Supabase.
+-- Use supabase/migrations/20260620000100_initial_schema.sql.
+
+-- ESQUEMA LEGADO DO PROTOTIPO.
+-- Nao execute este arquivo no Supabase.
+-- Use supabase/migrations/20260620000100_initial_schema.sql.
+
 create table users (
   id uuid primary key default gen_random_uuid(),
   name text not null,
