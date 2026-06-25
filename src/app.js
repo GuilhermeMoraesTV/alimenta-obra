@@ -1767,7 +1767,7 @@ window.addEventListener("online", () => {
 window.addEventListener("offline", render);
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
-  navigator.serviceWorker.register("/service-worker.js").catch(() => {
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`).catch(() => {
     console.warn("Service worker indisponivel neste ambiente.");
   });
 }

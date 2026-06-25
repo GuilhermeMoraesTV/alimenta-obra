@@ -1,9 +1,11 @@
 const CACHE_NAME = "alimenta-obra-v10";
+const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+const withScope = (path) => `${scopePath}${path.startsWith("/") ? path : `/${path}`}` || "/";
 const ASSETS = [
-  "/",
-  "/index.html",
-  "/assets/icon-192.svg",
-  "/assets/icon-512.svg"
+  withScope("/"),
+  withScope("/index.html"),
+  withScope("/assets/icon-192.svg"),
+  withScope("/assets/icon-512.svg")
 ];
 
 self.addEventListener("install", (event) => {
@@ -28,10 +30,10 @@ self.addEventListener("fetch", (event) => {
       fetch(event.request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(withScope("/index.html"), copy));
           return response;
         })
-        .catch(() => caches.match("/index.html"))
+        .catch(() => caches.match(withScope("/index.html")))
     );
     return;
   }
