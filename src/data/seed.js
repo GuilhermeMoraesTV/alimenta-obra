@@ -10,14 +10,15 @@ export const USERS = [
 ];
 
 export const MEAL_TYPES = [
-  { id: "marmita-campo", label: "Marmita Campo", locations: ["Campo"], leaderOnly: true },
-  { id: "buffer-almoco", label: "Buffer Almoco", locations: ["Restaurante BR", "Restaurante Centro"] },
-  { id: "jantar", label: "Jantar", locations: ["Restaurante Centro"] }
+  { id: "marmita-campo", label: "Marmita Campo", description: "Marmita individual para entrega em campo.", active: true, locations: ["Campo"], leaderOnly: true },
+  { id: "buffer-almoco", label: "Buffer Almoco", description: "Refeicao servida em ponto de apoio ou restaurante.", active: true, locations: ["Restaurante BR", "Restaurante Centro"] },
+  { id: "jantar", label: "Jantar", description: "Refeicao noturna para equipes programadas.", active: true, locations: ["Restaurante Centro"] }
 ];
 
 export const INITIAL_SETTINGS = {
   cutoffTime: "18:00",
   supplierName: "Fornecedor Central",
+  defaultMealUnitPrice: 18.5,
   defaultMealDate: "2026-06-18",
   notificationChannel: "E-mail e push",
   offlineSyncEnabled: true

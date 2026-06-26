@@ -1,4 +1,12 @@
 import { exportCsv, exportExcel, exportFinancialPdf, exportPdf, exportSupplierRomaneio, exportWord } from "./services/exports.js";
+import { renderAppShell } from "./components/app-shell.js";
+import { renderLoginScreen } from "./components/auth.js";
+import { icon } from "./components/icons.js";
+import { createSharedUi } from "./components/shared-ui.js";
+import { NAV_BY_ROLE, STATUS_LABEL, viewLabel } from "./core/navigation.js";
+import { createMealDomain } from "./features/meals/domain.js";
+import { countStatus, initials, nextSupplierStep, roleName, sumQty, totalsByMeal } from "./features/operations/metrics.js";
+import { createPageRegistry } from "./pages/index.js";
 import {
   canEditRequest,
   createEmptyState,
@@ -15,6 +23,7 @@ import {
 import {
   changeRequestStatus,
   confirmSupplierStep,
+  createAccessInvite,
   createDeliveryAddress,
   createMealRequest,
   fetchApplicationData,
@@ -24,16 +33,21 @@ import {
   getSession,
   logSupplierRomaneio,
   removeSubscription,
+  saveMealTypeCatalog,
   sendDailyConsolidation,
   signIn,
   signOut,
   signUp,
   subscribeToChanges,
+  updateCurrentProfile,
+  updateDefaultMealUnitPrice,
   updateMealRequest,
+  updateUserPassword,
   uploadSupplierInvoice,
   validateAlimentaObraSchema
 } from "./services/database.js";
 import { isSupabaseConfigured, supabase } from "./services/supabase.js";
+import { escapeHtml, formatDate, formatDateTime, money } from "./utils/formatters.js";
 
 const uiState = loadUiState();
 let state = { ...createEmptyState(), activeView: uiState.activeView ?? "inicio" };
@@ -42,48 +56,43 @@ let isRefreshing = false;
 let leaderOrdersTab = "novo";
 let leaderAddressFormOpen = false;
 let editingRequestId = null;
+let adminRequestDetailId = null;
+let exportMenuOpen = null;
+let generatedInviteLink = "";
 let pendingCancelRequestId = null;
 let operationNotice = null;
 
 const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
+const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
 
-const NAV_BY_ROLE = {
-  encarregado: [
-    ["inicio", "home", "Inicio"],
-    ["pedido", "clipboard", "Pedidos"]
-  ],
-  admin: [
-    ["painel", "dashboard", "Painel"],
-    ["pedidos", "clipboard", "Pedidos"],
-    ["consolidacao", "package", "Consolidacao"],
-    ["financeiro", "chart", "Financeiro"],
-    ["relatorios", "chart", "Relatorios"],
-    ["auditoria", "history", "Auditoria"]
-  ],
-  fornecedor: [
-    ["fornecedor", "dashboard", "Painel"],
-    ["fornecedor-pedidos", "clipboard", "Pedidos"],
-    ["fornecedor-historico", "history", "Historico"],
-    ["fornecedor-documentos", "package", "Documentos"],
-    ["fornecedor-financeiro", "chart", "Financeiro"]
-  ]
-};
-
-const STATUS_LABEL = {
-  rascunho: "Rascunho",
-  enviado: "Enviado",
-  confirmado: "Confirmado",
-  producao: "Em producao",
-  saiu_entrega: "Saiu para entrega",
-  entregue: "Entregue",
-  cancelado: "Cancelado"
-};
-
-let loginMode = "login";
+let loginMode = initialInviteToken ? "register" : "login";
 let supplierOrderStatus = "ativos";
 let supplierOrderDate = "";
 let selectedSupplierConsolidationId = null;
+
+const {
+  consolidationValue,
+  mealById,
+  pendingSyncText,
+  requestMealDescription,
+  requestUnitPrice,
+  requestValue
+} = createMealDomain({
+  getState: () => state,
+  getConsolidationSummary
+});
+
+const {
+  renderCompactHeader,
+  renderEmptyState,
+  renderExportMenu,
+  topbar
+} = createSharedUi({
+  getActiveView: () => state.activeView,
+  getExportMenuOpen: () => exportMenuOpen,
+  viewLabel
+});
 
 function persist(message) {
   saveUiState(state);
@@ -99,53 +108,15 @@ function toast(message) {
   setTimeout(() => item.remove(), 3400);
 }
 
-function formatDate(date) {
-  if (!date) return "-";
-  const [year, month, day] = date.split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function formatDateTime(value) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
-function money(value) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
-
 function activeDate() {
   return document.querySelector("[data-filter-date]")?.value || state.settings.defaultMealDate;
 }
 
 function setView(view) {
+  adminRequestDetailId = null;
+  exportMenuOpen = null;
   state.activeView = view;
   persist();
-}
-
-function icon(name, size = 18) {
-  const paths = {
-    home: `<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/>`,
-    clipboard: `<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 10h6M9 14h6M9 18h4"/>`,
-    dashboard: `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>`,
-    package: `<path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/>`,
-    chart: `<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>`,
-    history: `<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>`,
-    truck: `<path d="M3 6h11v11H3zM14 10h4l3 4v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>`,
-    plus: `<path d="M12 5v14M5 12h14"/>`,
-    arrow: `<path d="M5 12h14M14 7l5 5-5 5"/>`,
-    clock: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
-    utensils: `<path d="M7 3v8M4 3v5c0 2 1.3 3 3 3s3-1 3-3V3M7 11v10M15 3v18M15 3c3 1 5 4 5 7h-5"/>`,
-    map: `<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/>`,
-    users: `<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2.7-7 6-7s6 3 6 7"/><path d="M16 5a3 3 0 0 1 0 6M17 14c2.5.7 4 2.8 4 6"/>`,
-    logout: `<path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"/>`,
-    edit: `<path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"/><path d="m13.5 7 3.5 3.5"/>`,
-    trash: `<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/>`
-  };
-  return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] ?? paths.clipboard}</svg>`;
 }
 
 function render() {
@@ -158,154 +129,45 @@ function render() {
     renderLogin();
     return;
   }
-  const allowedViews = NAV_BY_ROLE[user.role].map(([view]) => view);
+  const allowedViews = [...NAV_BY_ROLE[user.role].map(([view]) => view), "configuracoes"];
   if (!allowedViews.includes(state.activeView)) {
     state.activeView = allowedViews[0];
     saveUiState(state);
   }
-  root.innerHTML = `
-    <div class="mobile-header role-${user.role}">
-      <div class="brand">
-        <div class="brand-mark">AO</div>
-        <div class="brand-name">Alimenta<span>Obra</span></div>
-      </div>
-      <button class="mobile-profile" data-action="logout" aria-label="Sair do sistema">
-        <span>${initials(user.name)}</span>
-        ${icon("logout", 17)}
-      </button>
-    </div>
-    <div class="app-shell role-${user.role}">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark">AO</div>
-          <div class="brand-name">Alimenta<span>Obra</span></div>
-        </div>
-        <div class="profile-box">
-          <div class="profile-avatar">${initials(user.name)}</div>
-          <div class="role">${roleName(user.role)}</div>
-          <div class="profile-name">${user.name}</div>
-          <div class="page-subtitle">${user.team}</div>
-        </div>
-        <nav class="nav">${renderNav(user)}</nav>
-        <div class="sidebar-footer">
-          <div class="side-status">
-            <span></span>
-            <div>
-              <strong>${navigator.onLine ? "Sistema online" : "Modo offline"}</strong>
-              <small>${pendingSyncText()}</small>
-            </div>
-          </div>
-          <button class="btn ghost sidebar-logout" data-action="logout">${icon("logout", 16)}<span>Sair do sistema</span></button>
-        </div>
-      </aside>
-      <main class="main role-${user.role} view-${state.activeView}">
-        ${renderAccessSwitcher(user)}
-        ${renderWorkspaceIntro(user)}
-        ${renderView(user)}
-      </main>
-    </div>
-    <div class="sync-strip ${navigator.onLine ? "" : "offline"}">${navigator.onLine ? "Online" : "Offline"} · ${pendingSyncText()}</div>
-    ${renderEditRequestModal()}
-    ${renderOperationModal()}
-  `;
+  root.innerHTML = renderAppShell({
+    accessSwitcher: renderAccessSwitcher(user),
+    activeView: state.activeView,
+    adminRequestDetailModal: renderAdminRequestDetailModal(),
+    content: renderView(user),
+    editRequestModal: renderEditRequestModal(),
+    initials,
+    operationModal: renderOperationModal(),
+    renderNav,
+    roleName,
+    user,
+    workspaceIntro: renderWorkspaceIntro(user)
+  });
   bindEvents();
 }
 
 function renderLogin() {
-  root.innerHTML = `
-    <section class="login-screen">
-      <div class="login-showcase">
-        <div class="login-hero">
-          <div class="brand brand-large">
-            <div class="brand-mark">AO</div>
-            <div class="brand-name">Alimenta<span>Obra</span></div>
-          </div>
-          <h1>Pedidos de refeicao da obra em um fluxo so.</h1>
-          <p>Encarregados solicitam, administracao consolida e fornecedor confirma cada etapa com rastreabilidade.</p>
-          <div class="login-metrics">
-            <div><strong>189</strong><span>refeicoes hoje</span></div>
-            <div><strong>3</strong><span>etapas fornecedor</span></div>
-            <div><strong>100%</strong><span>auditavel</span></div>
-          </div>
-          <div class="login-flow">
-            <span>Solicitar</span>
-            <span>Consolidar</span>
-            <span>Produzir</span>
-            <span>Entregar</span>
-          </div>
-        </div>
-        <div class="login-card">
-          <div class="login-tabs">
-            <button class="${loginMode === "login" ? "active" : ""}" data-login-mode="login">Login</button>
-            <button class="${loginMode === "cadastro" ? "active" : ""}" data-login-mode="cadastro">Cadastro</button>
-          </div>
-          ${loginMode === "login" ? renderLoginForm() : renderRegisterForm()}
-        </div>
-      </div>
-    </section>
-  `;
+  root.innerHTML = renderLoginScreen({ initialInviteToken, isSupabaseConfigured, loginMode });
   bindEvents();
 }
 
-function renderLoginForm() {
-  return `
-    <div class="brand login-brand">
-      <div class="brand-mark">AO</div>
-      <div>
-        <div class="brand-name">Entrar</div>
-        <p class="login-subtitle">Entre com seu e-mail e senha.</p>
-      </div>
-    </div>
-    ${!isSupabaseConfigured ? `<div class="empty">Configure o arquivo .env.local antes de entrar.</div>` : ""}
-    <form data-form="login">
-      <div class="field">
-        <label for="login-email">E-mail</label>
-        <input id="login-email" name="email" type="email" autocomplete="email" required />
-      </div>
-      <div class="field">
-        <label for="login-pass">Senha</label>
-        <input id="login-pass" name="password" type="password" autocomplete="current-password" minlength="8" required />
-      </div>
-      <button class="btn primary full" type="submit" ${isSupabaseConfigured ? "" : "disabled"}>Entrar no sistema</button>
-    </form>`;
-}
-
-function renderRegisterForm() {
-  return `
-    <div class="brand login-brand">
-      <div class="brand-mark">+</div>
-      <div>
-        <div class="brand-name">Criar acesso</div>
-        <p class="login-subtitle">Novos cadastros entram como encarregado.</p>
-      </div>
-    </div>
-    <form data-form="register">
-      <div class="field">
-        <label for="register-name">Nome completo</label>
-        <input id="register-name" name="name" placeholder="Ex.: Carlos Almeida" required />
-      </div>
-      <div class="field">
-        <label for="register-email">E-mail</label>
-        <input id="register-email" name="email" type="email" placeholder="nome@obra.com" required />
-      </div>
-      <div class="field">
-        <label for="register-team">Equipe / frente</label>
-        <input id="register-team" name="team" placeholder="Frente Sul" required />
-      </div>
-      <div class="field">
-        <label for="register-pass">Senha</label>
-        <input id="register-pass" name="password" type="password" minlength="8" autocomplete="new-password" required />
-      </div>
-      <button class="btn primary full" type="submit" ${isSupabaseConfigured ? "" : "disabled"}>Criar conta</button>
-    </form>`;
-}
-
 function renderNav(user) {
+  const adminMoreViews = ["financeiro", "relatorios", "auditoria", "configuracoes"];
   return NAV_BY_ROLE[user.role].map(([view, iconName, label]) => `
-    <button class="${state.activeView === view ? "active" : ""}" data-view="${view}">
+    <button class="${state.activeView === view || (view === "mais" && adminMoreViews.includes(state.activeView)) ? "active" : ""}" data-view="${view}">
       <span class="nav-icon">${icon(iconName, 18)}</span>
       <span>${label}</span>
     </button>`).join("");
+}
+
+function renderAdminBackButton() {
+  const user = getActiveUser(state);
+  if (user?.role !== "admin") return "";
+  return `<button class="btn outline small admin-back-button" data-view="mais">${icon("arrow", 15)}Voltar</button>`;
 }
 
 function renderAccessSwitcher(user) {
@@ -341,274 +203,54 @@ function renderAccessSwitcher(user) {
     </section>`;
 }
 
+const pageRegistry = createPageRegistry({
+  leader: {
+    canEditRequest,
+    countStatus,
+    escapeHtml,
+    formatDate,
+    formatDateTime,
+    getLeaderAddressFormOpen: () => leaderAddressFormOpen,
+    getState: () => state,
+    icon,
+    locationOptions,
+    renderEmptyState,
+    renderRequestTable,
+    requestMealDescription,
+    STATUS_LABEL,
+    sumQty,
+    topbar
+  },
+  settings: {
+    escapeHtml,
+    getGeneratedInviteLink: () => generatedInviteLink,
+    getState: () => state,
+    icon,
+    money,
+    renderAdminBackButton,
+    renderEmptyState,
+    roleName
+  },
+  renderAdminMore,
+  renderAuditoria,
+  renderConsolidacao,
+  renderFinanceiro,
+  renderFornecedor,
+  renderPainel,
+  renderPedidosAdmin,
+  renderRelatorios,
+  renderSupplierDocuments,
+  renderSupplierHistory,
+  renderSupplierOrders
+});
+
 function renderView(user) {
-  const view = state.activeView;
-  if (view === "inicio") return renderLeaderHome(user);
-  if (view === "pedido") return renderPedido(user);
-  if (view === "historico") return renderHistorico(user);
-  if (view === "painel") return renderPainel();
-  if (view === "pedidos") return renderPedidosAdmin();
-  if (view === "consolidacao") return renderConsolidacao();
-  if (view === "financeiro") return renderFinanceiro("admin");
-  if (view === "relatorios") return renderRelatorios();
-  if (view === "fornecedor") return renderFornecedor();
-  if (view === "fornecedor-pedidos") return renderSupplierOrders();
-  if (view === "fornecedor-historico") return renderSupplierHistory();
-  if (view === "fornecedor-documentos") return renderSupplierDocuments();
-  if (view === "fornecedor-financeiro") return renderFinanceiro("fornecedor");
-  if (view === "auditoria") return renderAuditoria();
-  return renderPedido(user);
+  return (pageRegistry[state.activeView] ?? pageRegistry.pedido)(user);
 }
 
 function renderWorkspaceIntro(user) {
   // As telas comecam pelo conteudo operativo, sem banner de apresentacao.
   return "";
-}
-
-function topbar(title, subtitle, actions = "") {
-  return `
-    <div class="topbar">
-      <div>
-        <span class="eyebrow">${viewLabel(state.activeView)}</span>
-        <h1 class="page-title">${title}</h1>
-        <div class="page-subtitle">${subtitle}</div>
-      </div>
-      <div class="actions">${actions}</div>
-    </div>`;
-}
-
-function renderCompactHeader(kicker, title, subtitle, actions = "") {
-  return `
-    <header class="compact-header">
-      <div>
-        <span class="compact-kicker">${kicker}</span>
-        <h1>${title}</h1>
-        <p>${subtitle}</p>
-      </div>
-      ${actions ? `<div class="compact-actions">${actions}</div>` : ""}
-    </header>`;
-}
-
-function renderEmptyState(title, message, action = "") {
-  return `
-    <div class="leader-empty">
-      <span class="leader-empty-icon">${icon("clipboard", 22)}</span>
-      <strong>${title}</strong>
-      <p>${message}</p>
-      ${action}
-    </div>`;
-}
-
-function leaderRequests(user, includeCancelled = true) {
-  return state.requests
-    .filter((request) => request.leaderId === user.id && (includeCancelled || request.status !== "cancelado"))
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-}
-
-function renderLeaderHome(user) {
-  const rows = leaderRequests(user);
-  const activeRows = rows.filter((request) => request.status !== "cancelado");
-  const mealDate = state.settings.defaultMealDate;
-  const todayRows = activeRows.filter((request) => request.date === mealDate);
-  const latest = rows[0];
-  const firstName = String(user.name).split(" ")[0];
-  return `
-    <div class="leader-page leader-home">
-      ${renderCompactHeader(
-        "Area do encarregado",
-        `Ola, ${firstName}.`,
-        `${user.team || "Sua equipe"} · pedidos de refeicao organizados em um unico lugar.`,
-        `<button class="btn primary leader-primary-action" data-view="pedido">${icon("plus", 17)}Novo pedido</button>`
-      )}
-      <section class="deadline-strip">
-        <span class="deadline-icon">${icon("clock", 20)}</span>
-        <div>
-          <span>Prazo do proximo pedido</span>
-          <strong>Ate ${state.settings.cutoffTime} do dia anterior</strong>
-        </div>
-        <span class="deadline-date">Refeicao em ${formatDate(mealDate)}</span>
-      </section>
-      <div class="leader-summary-grid">
-        <article class="leader-summary primary">
-          <span class="summary-icon">${icon("utensils", 20)}</span>
-          <div><span>Refeicoes programadas</span><strong>${sumQty(todayRows)}</strong><small>para ${formatDate(mealDate)}</small></div>
-        </article>
-        <article class="leader-summary">
-          <span class="summary-icon">${icon("clipboard", 20)}</span>
-          <div><span>Pedidos ativos</span><strong>${activeRows.length}</strong><small>${countStatus(activeRows, "rascunho")} em rascunho</small></div>
-        </article>
-        <article class="leader-summary">
-          <span class="summary-icon">${icon("users", 20)}</span>
-          <div><span>Equipe</span><strong class="summary-text">${user.team || "Nao informada"}</strong><small>encarregado responsavel</small></div>
-        </article>
-      </div>
-      <section class="latest-section">
-        <div class="section-heading">
-          <div><span class="compact-kicker">Acompanhamento</span><h2>Pedido mais recente</h2></div>
-          <button class="text-action" data-orders-tab="historico" data-view="pedido">Ver todos ${icon("arrow", 15)}</button>
-        </div>
-        ${latest
-          ? renderLeaderRequestCard(latest)
-          : renderEmptyState(
-              "Nenhum pedido por aqui",
-              "Crie a primeira solicitacao de refeicao da sua equipe.",
-              `<button class="btn primary small" data-view="pedido">${icon("plus", 15)}Criar pedido</button>`
-            )}
-      </section>
-    </div>`;
-}
-
-function renderPedido(user) {
-  const date = state.settings.defaultMealDate;
-  const rows = leaderRequests(user);
-  return `
-    <div class="leader-page leader-orders">
-      ${renderCompactHeader(
-        "Operacao da equipe",
-        "Pedidos",
-        "Crie uma solicitacao ou acompanhe tudo o que ja foi enviado."
-      )}
-      <div class="orders-tabs" role="tablist" aria-label="Secoes de pedidos">
-        <button class="${leaderOrdersTab === "novo" ? "active" : ""}" data-orders-tab="novo" role="tab" aria-selected="${leaderOrdersTab === "novo"}">${icon("plus", 16)}Novo pedido</button>
-        <button class="${leaderOrdersTab === "historico" ? "active" : ""}" data-orders-tab="historico" role="tab" aria-selected="${leaderOrdersTab === "historico"}">${icon("history", 16)}Historico <span>${rows.length}</span></button>
-      </div>
-      ${leaderOrdersTab === "novo" ? renderLeaderRequestForm(user, date) : renderLeaderHistory(user, rows)}
-    </div>`;
-}
-
-function renderLeaderRequestForm(user, date) {
-  const canManageAddresses = user.id === state.authenticatedUserId;
-  return `
-    <form class="leader-request-form" data-form="request">
-      <section class="form-section form-section-emphasis">
-        <div class="form-section-title">
-          <span>01</span>
-          <div><h2>Quantidade e data</h2><p>Informe quantas refeicoes a equipe precisa.</p></div>
-        </div>
-        <div class="request-basics">
-          <div class="field quantity-field">
-            <label for="request-quantity">Quantidade de refeicoes</label>
-            <div class="quantity-control">
-              <span>${icon("users", 20)}</span>
-              <input id="request-quantity" name="quantity" type="number" min="1" value="10" inputmode="numeric" required />
-            </div>
-          </div>
-          <div class="field">
-            <label for="request-date">Data da refeicao</label>
-            <input id="request-date" name="date" type="date" value="${date}" required />
-          </div>
-        </div>
-      </section>
-      <section class="form-section">
-        <div class="form-section-title">
-          <span>02</span>
-          <div><h2>Tipo de refeicao</h2><p>Escolha uma opcao para liberar os locais disponiveis.</p></div>
-        </div>
-        <div class="type-grid leader-type-grid">
-          ${state.mealTypes.map((meal, index) => `
-            <label class="meal-choice">
-              <input type="radio" name="mealTypeId" value="${meal.id}" ${index === 0 ? "checked" : ""} />
-              <span class="meal-choice-icon">${icon(index === 0 ? "package" : "utensils", 20)}</span>
-              <span class="meal-choice-copy">
-                <span class="choice-title">${meal.label}</span>
-                <span class="choice-sub">${meal.locations.map((item) => item.name).join(" ou ")}</span>
-              </span>
-              <span class="meal-choice-check"></span>
-            </label>`).join("")}
-        </div>
-      </section>
-      <section class="form-section">
-        <div class="form-section-title">
-          <span>03</span>
-          <div><h2>Entrega e observacoes</h2><p>Complete os detalhes finais da solicitacao.</p></div>
-        </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="request-location">Local de entrega</label>
-            <select id="request-location" name="locationId">${locationOptions(state.mealTypes[0]?.id)}</select>
-          </div>
-          <div class="field">
-            <label for="request-leader">Responsavel</label>
-            <input id="request-leader" value="${user.name}" disabled />
-          </div>
-        </div>
-        ${state.deliveryAddressFeatureAvailable ? `
-          <div class="saved-address-field">
-            <div class="saved-address-heading"><label for="request-delivery-address">Endereco de entrega</label>${canManageAddresses ? `<button type="button" class="text-action" data-address-form-toggle>${icon("plus", 15)}Novo endereco</button>` : ""}</div>
-            <select id="request-delivery-address" name="deliveryAddressId" required>${deliveryAddressOptions(user.id)}</select>
-            ${canManageAddresses && leaderAddressFormOpen ? renderDeliveryAddressForm() : ""}
-          </div>` : `
-          <div class="saved-address-unavailable">${icon("map", 15)} Enderecos salvos serao liberados apos a atualizacao do banco.</div>`}
-        <div class="field">
-          <label for="request-notes">Observacao <span class="optional-label">Opcional</span></label>
-          <textarea id="request-notes" name="notes" placeholder="Ex.: equipe extra, frente de servico ou ajuste de entrega"></textarea>
-        </div>
-      </section>
-      <div class="request-action-bar">
-        <div class="request-action-note">${icon("clock", 16)}Limite: ${state.settings.cutoffTime} do dia anterior</div>
-        <div class="button-row">
-          <button class="btn outline" type="submit" name="status" value="rascunho">Salvar rascunho</button>
-          <button class="btn primary" type="submit" name="status" value="enviado">Enviar pedido ${icon("arrow", 16)}</button>
-        </div>
-      </div>
-    </form>`;
-}
-
-function deliveryAddressOptions(leaderId) {
-  const rows = state.deliveryAddresses.filter((address) => address.leaderId === leaderId && address.active !== false);
-  if (!rows.length) return `<option value="">Cadastre um endereco de entrega</option>`;
-  return `<option value="">Selecione um endereco</option>${rows.map((address) => `<option value="${address.id}">${address.label} · ${address.addressLine}</option>`).join("")}`;
-}
-
-function renderDeliveryAddressForm() {
-  return `<div class="saved-address-form"><div class="field"><label for="delivery-address-label">Nome do endereco</label><input id="delivery-address-label" placeholder="Ex.: Frente Norte" required /></div><div class="field"><label for="delivery-address-line">Endereco completo</label><input id="delivery-address-line" placeholder="Rua, numero, bairro e cidade" required /></div><div class="field"><label for="delivery-address-reference">Referencia <span class="optional-label">Opcional</span></label><input id="delivery-address-reference" placeholder="Portaria, bloco ou ponto de apoio" /></div><div class="saved-address-actions"><button class="btn outline small" type="button" data-address-form-cancel>Cancelar</button><button class="btn primary small" type="button" data-save-delivery-address>Salvar endereco</button></div></div>`;
-}
-
-function renderLeaderHistory(user, rows = leaderRequests(user)) {
-  if (!rows.length) {
-    return renderEmptyState(
-      "Historico vazio",
-      "Os pedidos enviados ou salvos como rascunho aparecerao aqui.",
-      `<button class="btn primary small" data-orders-tab="novo">${icon("plus", 15)}Novo pedido</button>`
-    );
-  }
-  return `
-    <section class="leader-history">
-      <div class="history-summary">
-        <div><strong>${rows.length}</strong><span>pedidos registrados</span></div>
-        <div><strong>${sumQty(rows.filter((request) => request.status !== "cancelado"))}</strong><span>refeicoes solicitadas</span></div>
-        <div><strong>${countStatus(rows, "rascunho")}</strong><span>rascunhos</span></div>
-      </div>
-      <div class="leader-request-list">${rows.map(renderLeaderRequestCard).join("")}</div>
-      <div class="leader-history-table">${renderRequestTable(rows, { showLeader: false, editable: true })}</div>
-    </section>`;
-}
-
-function renderLeaderRequestCard(request) {
-  const editable = canEditRequest(state, request);
-  return `
-    <article class="leader-request-card">
-      <div class="request-card-main">
-        <span class="request-meal-icon">${icon(request.mealType?.includes("Marmita") ? "package" : "utensils", 19)}</span>
-        <div class="request-card-copy">
-          <div class="request-card-title"><strong>${request.mealType}</strong><span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span></div>
-          <div class="request-card-meta">
-            <span>${icon("clock", 14)}${formatDate(request.date)}</span>
-            <span>${icon("map", 14)}${request.deliveryAddress || request.location}</span>
-          </div>
-        </div>
-        <div class="request-card-quantity"><strong>${request.quantity}</strong><span>refeicoes</span></div>
-      </div>
-      <div class="request-card-footer">
-        <span>Atualizado ${formatDateTime(request.updatedAt)}</span>
-        ${editable
-          ? `<div class="request-card-actions">
-              <button class="icon-action" data-edit-request="${request.id}" aria-label="Editar pedido">${icon("edit", 15)}Editar</button>
-              <button class="icon-action danger" data-cancel-request="${request.id}" aria-label="Cancelar pedido">${icon("trash", 15)}Cancelar</button>
-            </div>`
-          : `<span class="locked-label">${icon("clock", 14)}Edicao encerrada</span>`}
-      </div>
-    </article>`;
 }
 
 function renderEditRequestModal() {
@@ -622,31 +264,9 @@ function renderEditRequestModal() {
 
 function renderOperationModal() {
   const request = state.requests.find((item) => item.id === pendingCancelRequestId);
-  if (request) return `<div class="operation-backdrop"><section class="operation-modal confirm"><span class="operation-icon danger">${icon("trash", 23)}</span><span class="eyebrow">Confirmar cancelamento</span><h2>Cancelar este pedido?</h2><p>O pedido de ${request.quantity} refeicoes para ${formatDate(request.date)} sera cancelado e deixara de entrar na consolidacao.</p><div><button class="btn outline" data-dismiss-operation>Voltar</button><button class="btn danger" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
+  if (request) return `<div class="operation-backdrop"><section class="operation-modal confirm"><span class="operation-icon danger">${icon("trash", 23)}</span><span class="eyebrow">Confirmar cancelamento</span><h2>Cancelar este pedido?</h2><p>O pedido de ${request.quantity} refeicoes para ${formatDate(request.date)} sera cancelado e nao entrara no envio ao fornecedor.</p><div><button class="btn outline" data-dismiss-operation>Voltar</button><button class="btn danger" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
   if (operationNotice) return `<div class="operation-backdrop"><section class="operation-modal success"><span class="operation-icon">${icon("clipboard", 23)}</span><span class="eyebrow">Operacao registrada</span><h2>${operationNotice.title}</h2><p>${operationNotice.message}</p><button class="btn primary" data-dismiss-operation>Continuar</button></section></div>`;
   return "";
-}
-
-function renderHistorico(user, embedded = false) {
-  const rows = leaderRequests(user);
-  return `
-    ${embedded ? "" : topbar("Historico de pedidos", "Solicitacoes feitas pela sua equipe")}
-    <div class="table-panel">
-      <h2 class="section-title">${embedded ? "Pedidos recentes" : "Todos os pedidos"}</h2>
-      ${renderRequestTable(rows, { showLeader: false, editable: true })}
-    </div>`;
-}
-
-function requestUnitPrice(request) {
-  return state.mealTypes.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? 0;
-}
-
-function requestValue(request) {
-  return Number(request.quantity) * requestUnitPrice(request);
-}
-
-function consolidationValue(consolidation) {
-  return getConsolidationSummary(state, consolidation).rows.reduce((sum, request) => sum + requestValue(request), 0);
 }
 
 function renderFinanceiro(mode) {
@@ -673,51 +293,36 @@ function renderFinanceiro(mode) {
   });
   const dailyMax = Math.max(...days.map((item) => item.value), 1);
   const title = isSupplier ? "Financeiro do fornecedor" : "Financeiro administrativo";
-  return `<section class="finance-page">${topbar(title, `Analise de ${month}`, `<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${sumQty(rows)} refeicoes no mes</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operacao</small></article><article class="finance-metric"><span>Ticket medio</span><strong>${money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Composicao por refeicao</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentacao no periodo.</div>`}</article><article class="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div class="finance-bars">${days.map((item) => `<div><strong>${item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style="height:${Math.max(5, Math.round((item.value / dailyMax) * 126))}px"></i><span>${item.label}</span></div>`).join("")}</div></article></div><article class="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${request.quantity}</td><td><strong>${money(requestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
+  return `<section class="finance-page">${topbar(title, `Analise de ${month}`, `${!isSupplier ? renderAdminBackButton() : ""}<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${sumQty(rows)} refeicoes no mes</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operacao</small></article><article class="finance-metric"><span>Ticket medio</span><strong>${money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Composicao por refeicao</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentacao no periodo.</div>`}</article><article class="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div class="finance-bars">${days.map((item) => `<div><strong>${item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style="height:${Math.max(5, Math.round((item.value / dailyMax) * 126))}px"></i><span>${item.label}</span></div>`).join("")}</div></article></div><article class="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${request.quantity}</td><td><strong>${money(requestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
 }
 
 function renderPainel() {
   const date = activeDate();
   const rows = requestsForDate(state, date);
-  const totals = totalsByMeal(rows);
+  const waitingCount = countStatus(rows, "enviado");
+  const deliveredCount = countStatus(rows, "entregue");
+  const totalCost = rows.reduce((sum, request) => sum + requestValue(request), 0);
   return `
-    <section class="admin-stats">
-      <div class="stats-grid">
-      <div class="stat-card accent"><div class="stat-label">Total geral</div><div class="stat-value">${sumQty(rows)}</div><div class="stat-sub">refeicoes no dia</div></div>
-      <div class="stat-card"><div class="stat-label">Marmitas</div><div class="stat-value">${totals["Marmita Campo"] ?? 0}</div><div class="stat-sub">campo</div></div>
-      <div class="stat-card"><div class="stat-label">Almocos</div><div class="stat-value">${totals["Buffer Almoco"] ?? 0}</div><div class="stat-sub">restaurantes</div></div>
-      <div class="stat-card"><div class="stat-label">Jantas</div><div class="stat-value">${totals.Jantar ?? 0}</div><div class="stat-sub">centro</div></div>
-      </div>
-      <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value">${countStatus(rows, "rascunho")}</div><div class="stat-sub">rascunhos</div></div>
-      <div class="stat-card"><div class="stat-label">Confirmados</div><div class="stat-value">${countStatus(rows, "enviado")}</div><div class="stat-sub">recebidos para consolidar</div></div>
-      <div class="stat-card"><div class="stat-label">Entregas</div><div class="stat-value">${countStatus(rows, "entregue")}</div><div class="stat-sub">realizadas</div></div>
-      <div class="stat-card"><div class="stat-label">Custo estimado</div><div class="stat-value">${money(rows.reduce((sum, request) => sum + requestValue(request), 0))}</div><div class="stat-sub">conforme tabela de precos</div></div>
-      </div>
+    <section class="admin-home">
+      <header class="admin-home-hero">
+        <div>
+          <span class="compact-kicker">Home</span>
+          <h1>Resumo de ${formatDate(date)}</h1>
+          <p>${waitingCount} pedido${waitingCount === 1 ? "" : "s"} recebido${waitingCount === 1 ? "" : "s"} para envio ao fornecedor.</p>
+        </div>
+        <button class="btn primary" data-view="consolidacao">${icon("truck", 16)}Enviar pedido</button>
+      </header>
+      <section class="admin-stats">
+        <div class="stats-grid admin-metrics-grid admin-home-metrics">
+          <div class="stat-card accent"><div class="stat-label">Total</div><div class="stat-value">${sumQty(rows)}</div><div class="stat-sub">refeicoes</div></div>
+          <div class="stat-card"><div class="stat-label">A enviar</div><div class="stat-value">${waitingCount}</div><div class="stat-sub">aguardando</div></div>
+          <div class="stat-card"><div class="stat-label">Entregas</div><div class="stat-value">${deliveredCount}</div><div class="stat-sub">realizadas</div></div>
+          <div class="stat-card"><div class="stat-label">Custo</div><div class="stat-value">${money(totalCost)}</div><div class="stat-sub">estimado</div></div>
+        </div>
+      </section>
+      ${renderAdminLiveOrders(rows)}
     </section>
-    ${renderAdminLiveOrders(rows)}
-    ${topbar("Painel administrativo", `Resumo operacional de ${formatDate(date)}`, `<button class="btn primary" data-view="consolidacao">Consolidar</button>`)}
-    <div class="ops-strip">
-      <div><span>Janela de pedidos</span><strong>Aberta ate ${state.settings.cutoffTime}</strong></div>
-      <div><span>Fornecedor</span><strong>${state.settings.supplierName}</strong></div>
-      <div><span>Notificacao</span><strong>${state.settings.notificationChannel}</strong></div>
-    </div>
-    <div class="filter-bar">
-      <input type="date" value="${date}" data-filter-date />
-      <select data-filter-leader>
-        <option value="">Todos os encarregados</option>
-        ${getLeaders(state).map((leader) => `<option value="${leader.id}">${leader.name}</option>`).join("")}
-      </select>
-      <select data-filter-meal>
-        <option value="">Todos os tipos</option>
-        ${state.mealTypes.map((meal) => `<option>${meal.label}</option>`).join("")}
-      </select>
-    </div>
     <div class="report-grid">
-      <div class="data-panel">
-        <h2 class="section-title">Pedidos recebidos</h2>
-        ${renderRequestTable(rows, { showLeader: true, editable: true })}
-      </div>
       <div class="insight-panel">
         <h2 class="section-title">Consumo recente</h2>
         <div class="chart">${[42, 65, 58, 71, 89, 94, 78, 88, 102, 115, 109, 130, sumQty(rows), 0].map((value, index) => `
@@ -768,18 +373,27 @@ function renderAdminLiveOrders(rows) {
 }
 
 function renderAdminPriorityOrder(request) {
+  const destination = request.deliveryAddress || request.location;
   return `
     <article class="admin-priority-order">
-      <span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span>
-      <h3>${request.mealType}</h3>
-      <div class="admin-priority-metrics">
+      <div class="admin-priority-main">
+        <span class="request-meal-icon">${icon(request.mealType?.includes("Marmita") ? "package" : "utensils", 17)}</span>
+        <div>
+          <span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span>
+          <h3>${request.mealType}</h3>
+          <p>${getUserName(state, request.leaderId)} - ${destination}</p>
+        </div>
+        <strong>${request.quantity}<small>ref.</small></strong>
+      </div>
+      <div class="admin-priority-metrics legacy-hidden">
         <div><strong>${request.quantity}</strong><span>refeicoes</span></div>
         <div><strong>${money(requestValue(request))}</strong><span>valor</span></div>
         <div><strong>${formatDate(request.date)}</strong><span>entrega</span></div>
       </div>
       <p>${getUserName(state, request.leaderId)} · ${request.deliveryAddress || request.location}</p>
       <div class="admin-priority-actions">
-        ${canEditRequest(state, request) ? `<button class="btn primary small" data-edit-request="${request.id}">Abrir pedido</button>` : ""}
+        <button class="btn outline small" data-open-request="${request.id}">Abrir pedido</button>
+        ${canEditRequest(state, request) ? `<button class="btn primary small" data-send-request-date="${request.date}">${icon("truck", 14)}Enviar</button>` : ""}
         <button class="btn outline small" data-view="pedidos">Ver todos</button>
       </div>
     </article>`;
@@ -787,12 +401,60 @@ function renderAdminPriorityOrder(request) {
 
 function renderAdminLiveOrderRow(request) {
   return `
-    <button class="admin-live-order" ${canEditRequest(state, request) ? `data-edit-request="${request.id}"` : `data-view="pedidos"`}>
+    <article class="admin-live-order">
+      <button class="admin-live-order-main" data-open-request="${request.id}">
       <span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span>
       <strong>${request.mealType} · ${request.quantity} refeicoes</strong>
       <small>${getUserName(state, request.leaderId)} · ${request.deliveryAddress || request.location}</small>
       <b>${formatDateTime(request.updatedAt)}</b>
-    </button>`;
+      </button>
+      ${canEditRequest(state, request) ? `<button class="icon-action admin-live-send" data-send-request-date="${request.date}" aria-label="Enviar pedido ao fornecedor">${icon("truck", 15)}Enviar</button>` : ""}
+    </article>`;
+}
+
+function renderAdminRequestDetailModal() {
+  const request = state.requests.find((item) => item.id === adminRequestDetailId);
+  if (!request) return "";
+  const destination = request.deliveryAddress || request.location;
+  const composition = requestMealDescription(request);
+  return `
+    <div class="request-detail-backdrop" data-close-request-detail>
+    <section class="request-detail-modal" role="dialog" aria-modal="true" aria-labelledby="request-detail-title" onclick="event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Detalhe do pedido</span>
+          <h2 id="request-detail-title">${getUserName(state, request.leaderId)}</h2>
+          <p>${formatDate(request.date)} - ${STATUS_LABEL[request.status] ?? request.status}</p>
+        </div>
+        <button class="modal-close" type="button" data-close-request-detail aria-label="Fechar">×</button>
+      </header>
+      <article class="admin-request-detail-card">
+        <div class="admin-request-detail-hero">
+          <span class="request-meal-icon">${icon(request.mealType?.includes("Marmita") ? "package" : "utensils", 22)}</span>
+          <div>
+            <span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span>
+            <h2>${request.mealType}</h2>
+            <p>${request.quantity} refeicoes solicitadas${composition ? ` - ${escapeHtml(composition)}` : ""}</p>
+          </div>
+        </div>
+        <div class="admin-request-detail-grid">
+          <div><span>Encarregado</span><strong>${getUserName(state, request.leaderId)}</strong></div>
+          <div><span>Entrega</span><strong>${destination}</strong></div>
+          <div><span>Data</span><strong>${formatDate(request.date)}</strong></div>
+          <div><span>Valor estimado</span><strong>${money(requestValue(request))}</strong></div>
+        </div>
+        <div class="admin-request-notes">
+          <span>Observacao</span>
+          <p>${request.notes || "Sem observacoes para este pedido."}</p>
+        </div>
+        ${composition ? `<div class="admin-request-notes"><span>Composicao</span><p>${escapeHtml(composition)}</p></div>` : ""}
+      </article>
+      <footer>
+        ${canEditRequest(state, request) ? `<button class="btn outline" data-edit-request="${request.id}">${icon("edit", 14)}Editar</button>` : ""}
+        ${canEditRequest(state, request) ? `<button class="btn primary" data-send-request-date="${request.date}">${icon("truck", 14)}Enviar pedido</button>` : ""}
+      </footer>
+    </section>
+    </div>`;
 }
 
 function renderPedidosAdmin() {
@@ -806,24 +468,85 @@ function renderPedidosAdmin() {
     return matchDate && matchLeader && matchMeal;
   });
   return `
-    ${topbar("Pedidos", "Filtro por data, encarregado e tipo de refeicao")}
-    <div class="filter-bar">
-      <input type="date" value="${date}" data-filter-date />
-      <select data-filter-leader>
-        <option value="">Todos os encarregados</option>
-        ${state.users.map((user) => `<option value="${user.id}" ${leader === user.id ? "selected" : ""}>${user.name}</option>`).join("")}
-      </select>
-      <select data-filter-meal>
-        <option value="">Todos os tipos</option>
-        ${state.mealTypes.map((item) => `<option ${meal === item.label ? "selected" : ""}>${item.label}</option>`).join("")}
-      </select>
-      <button class="btn outline" data-export="csv">CSV</button>
-      <button class="btn outline" data-export="xlsx">Excel</button>
-    </div>
-    <div class="table-panel">
+    <header class="admin-list-header">
+      <div>
+        <span class="compact-kicker">Pedidos</span>
+        <h1>Pedidos recebidos</h1>
+      </div>
+      <div class="admin-list-actions">
+        <input type="date" value="${date}" data-filter-date aria-label="Filtrar por data" />
+        <select data-filter-leader aria-label="Filtrar encarregado">
+          <option value="">Todos</option>
+          ${state.users.map((user) => `<option value="${user.id}" ${leader === user.id ? "selected" : ""}>${user.name}</option>`).join("")}
+        </select>
+        <select data-filter-meal aria-label="Filtrar refeicao">
+          <option value="">Tipos</option>
+          ${state.mealTypes.map((item) => `<option ${meal === item.label ? "selected" : ""}>${item.label}</option>`).join("")}
+        </select>
+        ${renderExportMenu("pedidos", [["csv", "CSV", "clipboard"], ["xlsx", "Excel", "chart"]])}
+      </div>
+    </header>
+    <div class="table-panel admin-requests-panel">
       <h2 class="section-title">Lista operacional</h2>
-      ${renderRequestTable(rows, { showLeader: true, editable: true })}
+      ${renderAdminRequestCards(rows)}
+      ${rows.length ? renderRequestTable(rows, { showLeader: true, editable: true }) : ""}
     </div>`;
+}
+
+function renderAdminRequestCards(rows) {
+  if (!rows.length) return `<div class="admin-request-list"><div class="empty">Nenhum pedido encontrado.</div></div>`;
+  return `<div class="admin-request-list">${rows.map(renderAdminRequestCard).join("")}</div>`;
+}
+
+function renderAdminRequestCard(request) {
+  const editable = canEditRequest(state, request);
+  return `
+    <article class="admin-request-card">
+      <div class="admin-request-main">
+        <span class="request-meal-icon">${icon(request.mealType?.includes("Marmita") ? "package" : "utensils", 18)}</span>
+        <div>
+          <div class="request-card-title"><strong>${getUserName(state, request.leaderId)}</strong><span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span></div>
+          <small>${request.mealType} · ${request.deliveryAddress || request.location}</small>
+        </div>
+        <div class="request-card-quantity"><strong>${request.quantity}</strong><span>ref.</span></div>
+      </div>
+      <footer>
+        <span>${formatDate(request.date)} · ${formatDateTime(request.updatedAt)}</span>
+        <div class="request-card-actions">
+          ${editable ? `<button class="icon-action" data-edit-request="${request.id}" aria-label="Editar pedido">${icon("edit", 15)}Editar</button><button class="icon-action danger" data-cancel-request="${request.id}" aria-label="Cancelar pedido">${icon("trash", 15)}Cancelar</button>` : `<span class="locked-label">${icon("clock", 14)}Bloqueado</span>`}
+        </div>
+      </footer>
+    </article>`;
+}
+
+function renderAdminMore() {
+  const rows = state.requests.filter((request) => request.status !== "cancelado");
+  const auditLast = state.auditLog[0];
+  const shortcuts = [
+    ["financeiro", "chart", "Financeiro", money(rows.reduce((sum, request) => sum + requestValue(request), 0)), "Custos previstos e realizados"],
+    ["relatorios", "chart", "Relatorios", `${sumQty(rows)} refeicoes`, "Exportacoes e ranking por encarregado"],
+    ["auditoria", "history", "Auditoria", auditLast ? formatDateTime(auditLast.at) : "Sem eventos", "Registro das acoes do sistema"],
+    ["configuracoes", "settings", "Configuracoes", "Conta", "Dados do usuario e senha"]
+  ];
+  return `
+    <section class="admin-more">
+      <header class="admin-home-hero compact">
+        <div>
+          <span class="compact-kicker">Administracao</span>
+          <h1>Mais ferramentas</h1>
+          <p>Acesse as areas de consulta e ajustes sem deixar o rodape principal carregado.</p>
+        </div>
+      </header>
+      <div class="admin-more-grid">
+        ${shortcuts.map(([view, iconName, title, value, text]) => `
+          <button class="admin-more-tile" data-view="${view}">
+            <span>${icon(iconName, 20)}</span>
+            <strong>${title}</strong>
+            <b>${value}</b>
+            <small>${text}</small>
+          </button>`).join("")}
+      </div>
+    </section>`;
 }
 
 function renderConsolidacao() {
@@ -833,21 +556,27 @@ function renderConsolidacao() {
   const suppliers = getSuppliers(state);
   const selectedSupplier = consolidation.supplierId ?? suppliers[0]?.id ?? "";
   return `
-    ${topbar("Consolidacao automatica", `Pedido consolidado para ${formatDate(date)}`, `
-      <button class="btn outline" data-export="doc">Word</button>
-      <button class="btn outline" data-export="pdf">PDF</button>
-      <button class="btn primary" data-action="send-consolidation">Enviar ao fornecedor</button>
-    `)}
-    <div class="filter-bar">
-      <input type="date" value="${date}" data-filter-date />
-      <select data-supplier-id>
-        ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${supplier.name}</option>`).join("")}
-      </select>
-      <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
-    </div>
+    <header class="admin-send-header">
+      <div class="admin-send-title">
+        <span class="compact-kicker">Enviar pedido</span>
+        <h1>Pedido ao fornecedor</h1>
+        <p>${summary.total} refeicoes para ${formatDate(date)}</p>
+      </div>
+      <div class="admin-send-actions">
+        ${renderExportMenu("consolidacao", [["doc", "Word", "clipboard"], ["pdf", "PDF", "chart"]])}
+        <button class="btn primary small" data-action="send-consolidation">${icon("truck", 15)}Enviar</button>
+      </div>
+      <div class="admin-send-filters">
+        <input type="date" value="${date}" data-filter-date aria-label="Data do pedido" />
+        <select data-supplier-id aria-label="Fornecedor">
+          ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${supplier.name}</option>`).join("")}
+        </select>
+        <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
+      </div>
+    </header>
     <div class="report-grid">
       <div class="data-panel">
-        <h2 class="section-title">Pedido consolidado</h2>
+        <h2 class="section-title">Resumo do pedido</h2>
         ${renderConsolidatedSummary(summary)}
       </div>
       <div class="timeline-panel">
@@ -963,7 +692,13 @@ function renderSupplierOrderDetail(consolidation) {
   const summary = getConsolidationSummary(state, consolidation);
   const next = nextSupplierStep(consolidation.status);
   const highlights = Object.entries(summary.byMeal).map(([meal, data]) => `${meal}: ${data.total}`).join(" · ");
-  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div><div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens consolidados</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderRequestTable(summary.rows, { showLeader: true, editable: false })}</section></article>`;
+  const compositions = Object.entries(summary.byMeal)
+    .map(([meal, data]) => {
+      const description = requestMealDescription(data.rows[0]);
+      return description ? `<p><strong>${escapeHtml(meal)}:</strong> ${escapeHtml(description)}</p>` : "";
+    })
+    .join("");
+  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div>${compositions ? `<section class="supplier-composition"><h3>Composicao das marmitas</h3>${compositions}</section>` : ""}<div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens consolidados</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderRequestTable(summary.rows, { showLeader: true, editable: false })}</section></article>`;
 }
 
 function renderSupplierHistory() {
@@ -987,6 +722,7 @@ function renderRelatorios() {
   }, {})).sort((a, b) => b[1] - a[1]);
   return `
     ${topbar("Relatorios", "Diario, semanal, mensal e periodo personalizado", `
+      ${renderAdminBackButton()}
       <button class="btn outline" data-export="csv">CSV</button>
       <button class="btn outline" data-export="xlsx">Excel</button>
     `)}
@@ -1017,14 +753,14 @@ function renderRelatorios() {
       </div>
       <div class="insight-panel">
         <h2 class="section-title">Ranking por encarregado</h2>
-        <table><tbody>${byLeader.map(([leader, qty], index) => `<tr><td>${index + 1}</td><td>${leader}</td><td><strong>${qty}</strong></td></tr>`).join("")}</tbody></table>
+        <table class="ranking-table"><tbody>${byLeader.map(([leader, qty], index) => `<tr><td>${index + 1}</td><td>${leader}</td><td><strong>${qty}</strong></td></tr>`).join("")}</tbody></table>
       </div>
     </div>`;
 }
 
 function renderAuditoria() {
   return `
-    ${topbar("Auditoria", "Registro de usuario, data e horario em todas as acoes")}
+    ${topbar("Auditoria", "Registro de usuario, data e horario em todas as acoes", renderAdminBackButton())}
     <div class="audit-panel">
       <h2 class="section-title">Eventos do sistema</h2>
       <div class="timeline">
@@ -1081,11 +817,12 @@ function renderRequestActions(request) {
 }
 
 function renderConsolidatedSummary(summary) {
-  if (!summary.rows.length) return `<div class="empty">Sem pedidos enviados para consolidar.</div>`;
+  if (!summary.rows.length) return `<div class="empty">Sem pedidos recebidos para enviar ao fornecedor.</div>`;
   return `
     ${Object.entries(summary.byMeal).map(([meal, data]) => `
       <div class="consolidated-block">
         <div class="consolidated-row total-line"><span>${meal}</span><span>${data.total}</span></div>
+        ${requestMealDescription(data.rows[0]) ? `<div class="consolidated-description">${escapeHtml(requestMealDescription(data.rows[0]))}</div>` : ""}
         ${data.rows.map((request) => `<div class="consolidated-row"><span>${meal === "Marmita Campo" ? getUserName(state, request.leaderId) : request.location}</span><strong>${request.quantity}</strong></div>`).join("")}
       </div>`).join("")}
     <div class="consolidated-row total-line"><span>Total geral</span><span>${summary.total} refeicoes</span></div>`;
@@ -1135,6 +872,9 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='register']")?.addEventListener("submit", handleRegisterSubmit);
+  root.querySelectorAll("[data-toggle-password]").forEach((button) => {
+    button.addEventListener("click", () => togglePasswordVisibility(button));
+  });
   root.querySelectorAll("[data-action='logout']").forEach((button) => {
     button.addEventListener("click", handleLogout);
   });
@@ -1181,6 +921,18 @@ function bindEvents() {
   root.querySelectorAll("[data-edit-request]").forEach((button) => {
     button.addEventListener("click", () => duplicateForEdit(button.dataset.editRequest));
   });
+  root.querySelectorAll("[data-open-request]").forEach((button) => {
+    button.addEventListener("click", () => openAdminRequestDetail(button.dataset.openRequest));
+  });
+  root.querySelectorAll("[data-close-request-detail]").forEach((button) => {
+    button.addEventListener("click", () => {
+      adminRequestDetailId = null;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-send-request-date]").forEach((button) => {
+    button.addEventListener("click", () => sendConsolidationForDate(button.dataset.sendRequestDate));
+  });
   root.querySelectorAll("[data-close-edit-modal]").forEach((button) => {
     button.addEventListener("click", () => {
       editingRequestId = null;
@@ -1188,6 +940,14 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='edit-request']")?.addEventListener("submit", handleEditRequestSubmit);
+  root.querySelector("[data-form='profile-settings']")?.addEventListener("submit", handleProfileSettingsSubmit);
+  root.querySelector("[data-form='password-settings']")?.addEventListener("submit", handlePasswordSettingsSubmit);
+  root.querySelector("[data-form='meal-price-settings']")?.addEventListener("submit", handleMealPriceSettingsSubmit);
+  root.querySelector("[data-form='access-invite']")?.addEventListener("submit", handleAccessInviteSubmit);
+  root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
+  root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
+    form.addEventListener("submit", handleMealCatalogSubmit);
+  });
   root.querySelector("[data-edit-meal]")?.addEventListener("change", (event) => {
     const location = root.querySelector("#edit-request-location");
     if (location) location.innerHTML = locationOptions(event.currentTarget.value);
@@ -1228,12 +988,30 @@ function bindEvents() {
   root.querySelectorAll("[data-download-document]").forEach((button) => {
     button.addEventListener("click", () => downloadSupplierDocument(button.dataset.downloadDocument));
   });
+  root.querySelectorAll("[data-export-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      exportMenuOpen = exportMenuOpen === button.dataset.exportToggle ? null : button.dataset.exportToggle;
+      render();
+    });
+  });
   root.querySelectorAll("[data-export]").forEach((button) => {
-    button.addEventListener("click", () => handleExport(button.dataset.export));
+    button.addEventListener("click", () => {
+      exportMenuOpen = null;
+      handleExport(button.dataset.export);
+    });
   });
   root.querySelectorAll("[data-export-finance]").forEach((button) => {
     button.addEventListener("click", () => handleFinanceExport(button.dataset.exportFinance));
   });
+}
+
+function togglePasswordVisibility(button) {
+  const input = document.getElementById(button.dataset.togglePassword);
+  if (!input) return;
+  const shouldShow = input.type === "password";
+  input.type = shouldShow ? "text" : "password";
+  button.classList.toggle("active", shouldShow);
+  button.setAttribute("aria-label", shouldShow ? "Ocultar senha" : "Mostrar senha");
 }
 
 function switchAccessUser(userId) {
@@ -1292,7 +1070,8 @@ async function handleRegisterSubmit(event) {
       name: String(form.get("name")).trim(),
       email,
       team: String(form.get("team")).trim(),
-      password: String(form.get("password"))
+      password: String(form.get("password")),
+      inviteToken: String(form.get("inviteToken") ?? "")
     });
     if (!result.session) {
       loginMode = "login";
@@ -1366,14 +1145,19 @@ async function saveDeliveryAddress() {
   const label = document.querySelector("#delivery-address-label")?.value.trim();
   const addressLine = document.querySelector("#delivery-address-line")?.value.trim();
   const reference = document.querySelector("#delivery-address-reference")?.value.trim() ?? "";
+  const user = getActiveUser(state);
   if (!label || !addressLine) {
     toast("Informe o nome e o endereco completo.");
+    return;
+  }
+  if (!user?.id) {
+    toast("Nao foi possivel identificar o encarregado deste endereco.");
     return;
   }
   const button = document.querySelector("[data-save-delivery-address]");
   if (button) button.disabled = true;
   try {
-    const saved = await createDeliveryAddress({ label, addressLine, reference });
+    const saved = await createDeliveryAddress({ leaderId: user.id, label, addressLine, reference });
     leaderAddressFormOpen = false;
     await refreshData();
     const select = document.querySelector("#request-delivery-address");
@@ -1384,6 +1168,129 @@ async function saveDeliveryAddress() {
     toast(`Nao foi possivel salvar o endereco: ${error.message}`);
   } finally {
     if (button) button.disabled = false;
+  }
+}
+
+async function handleProfileSettingsSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await updateCurrentProfile({
+      name: form.get("name"),
+      team: form.get("team")
+    });
+    await refreshData();
+    toast("Configuracoes salvas.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar os dados: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handlePasswordSettingsSubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const password = String(form.get("password") ?? "");
+  const passwordConfirm = String(form.get("passwordConfirm") ?? "");
+  if (password !== passwordConfirm) {
+    toast("As senhas nao conferem.");
+    return;
+  }
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await updateUserPassword(password);
+    formElement.reset();
+    toast("Senha alterada com sucesso.");
+  } catch (error) {
+    toast(`Nao foi possivel alterar a senha: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleMealPriceSettingsSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await updateDefaultMealUnitPrice(form.get("unitPrice"));
+    await refreshData();
+    toast("Preco unico atualizado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar o preco: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleMealCatalogSubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await saveMealTypeCatalog({
+      id: String(form.get("id") ?? "") || null,
+      name: form.get("name"),
+      description: form.get("description"),
+      active: form.get("active") === "true"
+    });
+    if (!form.get("id")) formElement.reset();
+    await refreshData();
+    toast("Tipo de alimentacao salvo.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar o tipo: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleAccessInviteSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    const token = generateInviteToken();
+    await createAccessInvite({
+      token,
+      role: form.get("role"),
+      email: form.get("email"),
+      team: form.get("team"),
+      expiresInDays: form.get("expiresInDays")
+    });
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("invite", token);
+    generatedInviteLink = url.toString();
+    render();
+    toast("Link privado gerado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel gerar o convite: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function copyGeneratedInviteLink() {
+  if (!generatedInviteLink) return;
+  try {
+    await navigator.clipboard.writeText(generatedInviteLink);
+    toast("Link copiado.");
+  } catch {
+    toast("Nao foi possivel copiar automaticamente. Selecione o link na tela.");
   }
 }
 
@@ -1398,7 +1305,7 @@ async function cancelRequest(id, confirmed = false) {
   try {
     await changeRequestStatus(id, "cancelado");
     await refreshData();
-    operationNotice = { title: "Pedido cancelado", message: "O pedido foi removido da operacao e nao entrara na proxima consolidacao." };
+    operationNotice = { title: "Pedido cancelado", message: "O pedido foi removido da operacao e nao entrara no proximo envio ao fornecedor." };
     render();
   } catch (error) {
     console.error(error);
@@ -1409,7 +1316,15 @@ async function cancelRequest(id, confirmed = false) {
 async function duplicateForEdit(id) {
   const request = state.requests.find((item) => item.id === id);
   if (!request || !canEditRequest(state, request)) return;
+  adminRequestDetailId = null;
   editingRequestId = id;
+  render();
+}
+
+function openAdminRequestDetail(id) {
+  const request = state.requests.find((item) => item.id === id);
+  if (!request) return;
+  adminRequestDetailId = id;
   render();
 }
 
@@ -1451,6 +1366,24 @@ async function sendConsolidation() {
     await sendDailyConsolidation(date, supplierId);
     await refreshData();
     toast("Fornecedor notificado com o pedido consolidado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel enviar: ${error.message}`);
+  }
+}
+
+async function sendConsolidationForDate(date) {
+  const consolidation = getConsolidationForDate(state, date);
+  const supplierId = consolidation?.supplierId ?? getSuppliers(state)[0]?.id;
+  if (!supplierId) {
+    state.activeView = "consolidacao";
+    persist("Selecione um fornecedor para enviar este pedido.");
+    return;
+  }
+  try {
+    await sendDailyConsolidation(date, supplierId);
+    await refreshData();
+    toast("Pedido enviado ao fornecedor.");
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel enviar: ${error.message}`);
@@ -1540,69 +1473,14 @@ function normalizeEmail(value) {
     .toLowerCase();
 }
 
+function generateInviteToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function totalsByMeal(rows) {
-  return rows.reduce((acc, request) => {
-    acc[request.mealType] ??= 0;
-    acc[request.mealType] += Number(request.quantity);
-    return acc;
-  }, {});
-}
-
-function sumQty(rows) {
-  return rows.reduce((sum, request) => sum + Number(request.quantity), 0);
-}
-
-function countStatus(rows, status) {
-  return rows.filter((request) => request.status === status).length;
-}
-
-function pendingSyncText() {
-  const pending = state.syncQueue.filter((item) => !item.synced).length;
-  return pending ? `${pending} a sincronizar` : "sincronizado";
-}
-
-function nextSupplierStep(status) {
-  if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento" };
-  if (status === "confirmado") return { step: "producao", label: "Confirmar producao" };
-  if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida" };
-  if (status === "saiu_entrega") return { step: "entregue", label: "Confirmar entrega" };
-  return null;
-}
-
-function roleName(role) {
-  return {
-    admin: "Administrador",
-    encarregado: "Encarregado",
-    fornecedor: "Fornecedor"
-  }[role] ?? role;
-}
-
-function initials(name) {
-  return String(name)
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
-
-function viewLabel(view) {
-  return {
-    inicio: "Visao geral",
-    pedido: "Solicitacao",
-    historico: "Historico",
-    painel: "Operacao do dia",
-    pedidos: "Controle",
-    consolidacao: "Fornecedor",
-    relatorios: "Inteligencia",
-    auditoria: "Rastreabilidade",
-    fornecedor: "Producao"
-  }[view] ?? "AlimentaObra";
 }
 
 function mapApplicationData(data, profile) {
@@ -1615,22 +1493,25 @@ function mapApplicationData(data, profile) {
     team: item.team ?? "",
     active: item.active
   }));
-  state.mealTypes = data.catalog
-    .filter((item) => item.active)
+  const mappedCatalog = data.catalog
     .map((item) => ({
       id: item.id,
       label: item.name,
-      unitPrice: Number(item.unit_price ?? 0),
+      description: item.description ?? "",
+      active: item.active,
       locations: (item.meal_locations ?? [])
         .filter((location) => location.active)
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((location) => ({ id: location.id, name: location.name }))
     }));
+  state.mealCatalog = mappedCatalog;
+  state.mealTypes = mappedCatalog.filter((item) => item.active);
   state.requests = data.requests.map((item) => ({
     id: item.id,
     date: item.meal_date,
     mealTypeId: item.meal_type_id,
     mealType: item.meal_types?.name ?? "",
+    mealDescription: item.meal_types?.description ?? "",
     locationId: item.location_id,
     location: item.meal_locations?.name ?? "",
     deliveryAddressId: item.delivery_address_id,
@@ -1697,6 +1578,7 @@ function mapApplicationData(data, profile) {
   state.settings = {
     cutoffTime: String(data.settings.cutoff_time).slice(0, 5),
     supplierName: data.settings.supplier_name,
+    defaultMealUnitPrice: Number(data.settings.default_meal_unit_price ?? 0),
     defaultMealDate: data.settings.default_meal_date ?? new Date().toISOString().slice(0, 10),
     notificationChannel: data.settings.notification_channel,
     offlineSyncEnabled: data.settings.offline_sync_enabled

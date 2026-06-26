@@ -12,6 +12,9 @@ const download = (filename, mime, content) => {
   URL.revokeObjectURL(url);
 };
 
+const mealUnitPrice = (state) => Number(state.settings?.defaultMealUnitPrice ?? 0);
+const mealDescription = (state, mealTypeId) => state.mealCatalog?.find((meal) => meal.id === mealTypeId)?.description ?? "";
+
 export function exportCsv(state, rows, filename = "relatorio-refeicoes.csv") {
   const header = ["Data", "Encarregado", "Tipo", "Local", "Quantidade", "Status", "Criado em", "Atualizado em"];
   const lines = rows.map((request) => [
@@ -74,10 +77,11 @@ export function exportSupplierRomaneio(state, consolidation) {
   let documentTotal = 0;
   const sections = Object.entries(summary.byMeal).flatMap(([meal, data], groupIndex) => Object.entries(data.byLocation).map(([location, total], index) => {
     const matchingRows = data.rows.filter((row) => row.location === location);
-    const unitPrice = state.mealTypes.find((item) => item.id === matchingRows[0]?.mealTypeId)?.unitPrice ?? 0;
+    const unitPrice = mealUnitPrice(state);
+    const description = mealDescription(state, matchingRows[0]?.mealTypeId) || matchingRows[0]?.mealDescription;
     const lineTotal = Number(total) * unitPrice;
     documentTotal += lineTotal;
-    return `<tr><td>${String(groupIndex + 1).padStart(3, "0")}.${index + 1}</td><td>${meal}<small>${location}</small></td><td>UN</td><td class="number">${total}</td><td class="number">${money(unitPrice)}</td><td class="number">${money(lineTotal)}</td></tr>`;
+    return `<tr><td>${String(groupIndex + 1).padStart(3, "0")}.${index + 1}</td><td>${meal}<small>${description || location}</small></td><td>UN</td><td class="number">${total}</td><td class="number">${money(unitPrice)}</td><td class="number">${money(lineTotal)}</td></tr>`;
   })).join("");
   const popup = window.open("", "_blank");
   if (!popup) return false;
@@ -94,7 +98,7 @@ export function exportSupplierRomaneio(state, consolidation) {
 
 export function exportFinancialPdf(state, rows, title) {
   const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-  const unitPrice = (request) => state.mealTypes.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? 0;
+  const unitPrice = () => mealUnitPrice(state);
   const total = rows.reduce((sum, request) => sum + Number(request.quantity) * unitPrice(request), 0);
   const delivered = rows.filter((request) => request.status === "entregue").reduce((sum, request) => sum + Number(request.quantity) * unitPrice(request), 0);
   const table = rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${request.date}</td><td>${request.mealType}</td><td>${request.quantity}</td><td>${money(unitPrice(request))}</td><td>${money(Number(request.quantity) * unitPrice(request))}</td><td>${request.status}</td></tr>`).join("");
@@ -108,6 +112,7 @@ export function exportFinancialPdf(state, rows, title) {
 function renderReportHtml(state, consolidation, summary) {
   const sections = Object.entries(summary.byMeal).map(([meal, data]) => `
     <h2>${meal}</h2>
+    ${mealDescription(state, data.rows[0]?.mealTypeId) || data.rows[0]?.mealDescription ? `<p>${mealDescription(state, data.rows[0]?.mealTypeId) || data.rows[0]?.mealDescription}</p>` : ""}
     <table>
       <tbody>
         ${data.rows.map((request) => `<tr><td>${getUserName(state, request.leaderId)}</td><td>${request.location}</td><td>${request.quantity}</td></tr>`).join("")}

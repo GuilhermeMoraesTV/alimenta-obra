@@ -7,6 +7,7 @@ export function createEmptyState() {
     activeUserId: null,
     activeView: "inicio",
     users: [],
+    mealCatalog: [],
     mealTypes: [],
     deliveryAddresses: [],
     deliveryAddressFeatureAvailable: false,
@@ -16,6 +17,7 @@ export function createEmptyState() {
     settings: {
       cutoffTime: "18:00",
       supplierName: "Fornecedor Central",
+      defaultMealUnitPrice: 18.5,
       defaultMealDate: today,
       notificationChannel: "E-mail e push",
       offlineSyncEnabled: false

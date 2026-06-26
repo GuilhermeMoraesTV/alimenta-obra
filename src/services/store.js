@@ -1,4 +1,4 @@
-import { INITIAL_CONSOLIDATIONS, INITIAL_REQUESTS, INITIAL_SETTINGS, USERS } from "../data/seed.js";
+import { INITIAL_CONSOLIDATIONS, INITIAL_REQUESTS, INITIAL_SETTINGS, MEAL_TYPES, USERS } from "../data/seed.js";
 
 const STORAGE_KEY = "alimenta-obra-state-v1";
 
@@ -12,6 +12,8 @@ export function loadState() {
     activeUserId: "u-joaquim",
     activeView: "pedido",
     users: clone(USERS),
+    mealCatalog: clone(MEAL_TYPES),
+    mealTypes: clone(MEAL_TYPES).filter((item) => item.active !== false),
     requests: clone(INITIAL_REQUESTS),
     consolidations: clone(INITIAL_CONSOLIDATIONS),
     settings: clone(INITIAL_SETTINGS),

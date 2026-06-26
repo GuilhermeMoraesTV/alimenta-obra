@@ -10,7 +10,7 @@
     "build": "vite build",
     "build:pages": "vite build --base=/alimenta-obra/",
     "preview": "vite preview --host localhost --port 5190",
-    "check": "node --check src/app.js && node --check src/services/store-v2.js && node --check src/services/database.js && node --check src/services/supabase.js && node --check src/services/exports.js"
+    "check": "node --check src/app.js && node --check src/components/app-shell.js && node --check src/components/auth.js && node --check src/components/icons.js && node --check src/components/shared-ui.js && node --check src/core/navigation.js && node --check src/features/meals/domain.js && node --check src/features/operations/metrics.js && node --check src/pages/index.js && node --check src/pages/admin.js && node --check src/pages/encarregado.js && node --check src/pages/fornecedor.js && node --check src/pages/settings.js && node --check src/utils/formatters.js && node --check src/services/store-v2.js && node --check src/services/database.js && node --check src/services/supabase.js && node --check src/services/exports.js"
   },
   "keywords": [
     "pwa",

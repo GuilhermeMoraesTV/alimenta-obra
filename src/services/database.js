@@ -22,13 +22,47 @@ function isMissingDeliveryAddressSchema(error) {
     || String(error?.message ?? "").includes("delivery_addresses");
 }
 
+function deliveryAddressErrorMessage(error) {
+  const message = String(error?.message ?? "");
+  if (error?.code === "23505" || message.includes("delivery_addresses_leader_id_label_key")) {
+    return "Ja existe um endereco com esse nome para este encarregado.";
+  }
+  if (["PGRST202", "42883"].includes(error?.code) || message.includes("create_delivery_address_as_user")) {
+    return "A funcao de cadastro de endereco ainda nao foi aplicada no Supabase. Execute as migracoes.";
+  }
+  if (message.includes("Sessao expirada")) return "Sessao expirada. Entre novamente.";
+  if (message.includes("Apenas administradores")) return "Apenas administradores podem cadastrar endereco para outro usuario.";
+  if (message.includes("Encarregado invalido")) return "Encarregado invalido ou inativo.";
+  if (message.includes("perfil nao pode")) return "Seu perfil nao pode cadastrar enderecos.";
+  if (message.includes("row-level security")) return "Seu usuario nao tem permissao para salvar este endereco.";
+  return message || "Falha ao salvar endereco.";
+}
+
+function passwordErrorMessage(error) {
+  const message = String(error?.message ?? "");
+  const lower = message.toLowerCase();
+  if (lower.includes("jwt") || lower.includes("session") || lower.includes("not authenticated")) {
+    return "Sessao expirada. Entre novamente antes de alterar a senha.";
+  }
+  if (lower.includes("same password") || lower.includes("different from the old password")) {
+    return "A nova senha precisa ser diferente da senha atual.";
+  }
+  if (lower.includes("password") && (lower.includes("weak") || lower.includes("short") || lower.includes("least"))) {
+    return "A senha precisa ter pelo menos 8 caracteres.";
+  }
+  if (lower.includes("rate limit") || lower.includes("too many")) {
+    return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+  }
+  return message || "Falha ao alterar senha.";
+}
+
 function mealRequestsQuery(client, includeDeliveryAddress = true) {
   return client
     .from("meal_requests")
     .select(`
       id, meal_date, meal_type_id, location_id, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
       status, notes, created_at, updated_at,
-      meal_types(id, name),
+      meal_types(id, name, description),
       meal_locations!meal_requests_location_id_fkey(id, name)
       ${includeDeliveryAddress ? ", delivery_addresses(id, label, address_line)" : ""}
     `)
@@ -73,17 +107,20 @@ export async function signIn(email, password) {
   return ensure(data, error);
 }
 
-export async function signUp({ email, password, name, team }) {
+export async function signUp({ email, password, name, team, inviteToken = "" }) {
   const normalizedEmail = String(email)
     .normalize("NFKC")
     .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
     .replace(/[^\x21-\x7E]/g, "")
     .toLowerCase();
 
+  const metadata = { name, team };
+  if (inviteToken) metadata.invite_token = inviteToken;
+
   const { data, error } = await requireSupabase().auth.signUp({
     email: normalizedEmail,
     password,
-    options: { data: { name, team } }
+    options: { data: metadata }
   });
   return ensure(data, error);
 }
@@ -91,6 +128,22 @@ export async function signUp({ email, password, name, team }) {
 export async function signOut() {
   const { error } = await requireSupabase().auth.signOut();
   ensure(null, error);
+}
+
+export async function updateCurrentProfile({ name, team }) {
+  const { data, error } = await requireSupabase().rpc("update_current_profile", {
+    p_name: String(name).trim(),
+    p_team: String(team ?? "").trim()
+  });
+  return ensure(data, error);
+}
+
+export async function updateUserPassword(password) {
+  const session = await getSession();
+  if (!session) throw new Error("Sessao expirada. Entre novamente antes de alterar a senha.");
+  const { data, error } = await requireSupabase().auth.updateUser({ password });
+  if (error) throw new Error(passwordErrorMessage(error));
+  return data;
 }
 
 export async function fetchProfile(userId) {
@@ -116,7 +169,7 @@ export async function fetchApplicationData() {
     client.from("profiles").select("id, name, email, role, team, active").order("name"),
     client
       .from("meal_types")
-      .select("id, name, active, sort_order, meal_locations(id, name, active, sort_order)")
+      .select("id, name, description, active, sort_order, meal_locations(id, name, active, sort_order)")
       .order("sort_order"),
     client.from("app_settings").select("*").eq("id", true).single(),
     fetchMealRequestsWithCompatibility(client),
@@ -172,19 +225,42 @@ export async function createMealRequest(input, userId) {
   return ensure(data, error);
 }
 
-export async function createDeliveryAddress({ label, addressLine, reference = "" }) {
-  const user = await getAuthenticatedUser();
-  if (!user) throw new Error("Sessao expirada. Entre novamente.");
-  const { data, error } = await requireSupabase()
-    .from("delivery_addresses")
-    .insert({
-      leader_id: user.id,
-      label: String(label).trim(),
-      address_line: String(addressLine).trim(),
-      reference: String(reference).trim()
-    })
-    .select("id, label")
-    .single();
+export async function createDeliveryAddress({ leaderId, label, addressLine, reference = "" }) {
+  const { data, error } = await requireSupabase().rpc("create_delivery_address_as_user", {
+    p_leader_id: leaderId,
+    p_label: String(label).trim(),
+    p_address_line: String(addressLine).trim(),
+    p_reference: String(reference).trim()
+  });
+  if (error) throw new Error(deliveryAddressErrorMessage(error));
+  return data;
+}
+
+export async function saveMealTypeCatalog({ id = null, name, description = "", active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_meal_type_catalog", {
+    p_id: id,
+    p_name: String(name).trim(),
+    p_description: String(description ?? "").trim(),
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
+export async function updateDefaultMealUnitPrice(unitPrice) {
+  const { data, error } = await requireSupabase().rpc("update_default_meal_unit_price", {
+    p_unit_price: Number(unitPrice)
+  });
+  return ensure(data, error);
+}
+
+export async function createAccessInvite({ token, role, email = "", team = "", expiresInDays = 7 }) {
+  const { data, error } = await requireSupabase().rpc("create_access_invite", {
+    p_token: token,
+    p_role: role,
+    p_email: String(email ?? "").trim() || null,
+    p_team: String(team ?? "").trim() || null,
+    p_expires_in_days: Number(expiresInDays)
+  });
   return ensure(data, error);
 }
 
@@ -291,6 +367,8 @@ export function subscribeToChanges(onChange) {
     .on("postgres_changes", { event: "*", schema: "public", table: "consolidations" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_confirmations" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "consolidation_documents" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "meal_types" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onChange)
     .subscribe();
 }
 
