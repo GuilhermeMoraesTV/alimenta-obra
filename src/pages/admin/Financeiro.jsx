@@ -135,9 +135,12 @@ const financeiroStyles = `
 function FinanceMetric({ accent = false, icon, iconName, label, value, hint }) {
   return (
     <article className={`finance-metric ${accent ? "accent" : ""}`}>
-      <span>{iconName ? <Icon icon={icon} name={iconName} size={14} /> : null}{label}</span>
-      <strong>{value}</strong>
-      <small>{hint}</small>
+      {iconName ? <span className="data-card-icon"><Icon icon={icon} name={iconName} size={15} /></span> : null}
+      <div className="data-card-copy">
+        <strong>{value}</strong>
+        <span>{label}</span>
+        {hint ? <small>{hint}</small> : null}
+      </div>
     </article>
   );
 }

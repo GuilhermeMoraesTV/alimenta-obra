@@ -4,13 +4,13 @@ import { Icon, leaderRequests, primaryButtonClass, shellClass } from "./shared.j
 
 function HistoryChip({ icon, iconName, label, value }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-3 py-3 shadow-sm">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-orange-50 text-orange-700">
-        <Icon icon={icon} name={iconName} size={15} />
+    <div className="flex min-w-0 items-center gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-4 py-3 shadow-sm">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-orange-700">
+        <Icon icon={icon} name={iconName} size={16} />
       </span>
       <div className="min-w-0 leading-tight">
-        <strong className="block truncate text-lg font-black text-stone-950">{value}</strong>
-        <span className="block truncate text-[9px] font-black uppercase tracking-[.08em] text-stone-500">{label}</span>
+        <strong className="block truncate text-base font-black text-stone-900">{value}</strong>
+        <span className="block truncate text-[10px] font-bold uppercase tracking-[.08em] text-stone-500">{label}</span>
       </div>
     </div>
   );

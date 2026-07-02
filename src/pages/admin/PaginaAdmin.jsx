@@ -335,15 +335,15 @@ const adminDesignStyles = `
 
   .admin-page .stat-card.accent,
   .admin-page .finance-metric.accent {
-    border-color: #ea580c;
-    background: #ea580c;
-    color: #fff;
+    border-color: #d6d3d1;
+    background: #fff;
+    color: #1c1917;
   }
 
   .admin-page .stat-card.accent .stat-label,
   .admin-page .stat-card.accent .stat-sub,
   .admin-page .finance-metric.accent span,
-  .admin-page .finance-metric.accent small { color: rgba(255,255,255,.74); }
+  .admin-page .finance-metric.accent small { color: #78716c; }
 
   .admin-page .admin-send-summary,
   .admin-page .admin-pedidos-summary,
@@ -353,8 +353,8 @@ const adminDesignStyles = `
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .5rem;
     border-radius: 0 0 20px 20px;
-    background: #f5f1ea;
-    padding: 1.18rem 1rem .85rem;
+    background: #fafaf9;
+    padding: 1.25rem 1rem .75rem;
   }
 
   .admin-page .finance-metrics-strip {
@@ -419,27 +419,37 @@ const adminDesignStyles = `
 
   .admin-page .admin-send-chip,
   .admin-page .admin-history-chip,
+  .admin-page .stat-card,
+  .admin-page .finance-metric,
   .admin-page .finance-metrics-strip .finance-metric,
   .admin-page .admin-receipt-chip {
-    border-radius: 0 1rem 1rem .375rem;
-    border: 1px solid #ded9d1;
-    border-left: 2px dashed #d6d3d1;
-    background: #fffefa;
-    padding: .78rem;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .75rem;
+    border-radius: .375rem 1rem 1rem .375rem;
+    border: 1px dashed #d6d3d1;
+    border-left-width: 2px;
+    background: #fff;
+    padding: .75rem 1rem;
     box-shadow: 0 1px 2px rgba(0,0,0,.05);
   }
 
-  .admin-page .admin-receipt-chip {
+  .admin-page .admin-receipt-chip,
+  .admin-page .finance-metric {
     display: flex;
     min-width: 0;
     align-items: center;
     gap: .5rem;
   }
 
-  .admin-page .admin-receipt-chip-icon {
+  .admin-page .admin-receipt-chip-icon,
+  .admin-page .admin-send-chip-icon,
+  .admin-page .admin-history-chip-icon,
+  .admin-page .data-card-icon {
     display: grid;
-    width: 2rem;
-    height: 2rem;
+    width: 2.25rem;
+    height: 2.25rem;
     flex-shrink: 0;
     place-items: center;
     border-radius: 999px;
@@ -447,38 +457,57 @@ const adminDesignStyles = `
     color: #c2410c;
   }
 
-  .admin-page .admin-receipt-chip-text {
+  .admin-page .admin-receipt-chip-icon svg,
+  .admin-page .admin-send-chip-icon svg,
+  .admin-page .admin-history-chip-icon svg,
+  .admin-page .data-card-icon svg {
+    color: #c2410c;
+    stroke: #c2410c;
+  }
+
+  .admin-page .admin-receipt-chip-text,
+  .admin-page .data-card-copy {
     min-width: 0;
     line-height: 1;
   }
 
-  .admin-page .admin-receipt-chip strong {
+  .admin-page .admin-receipt-chip strong,
+  .admin-page .admin-send-chip strong,
+  .admin-page .admin-history-chip strong,
+  .admin-page .finance-metric strong {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1.12rem;
+    font-size: 1rem;
     line-height: 1;
     font-weight: 950;
     color: #1c1917;
   }
 
-  .admin-page .admin-receipt-chip span:last-child {
+  .admin-page .admin-receipt-chip span:last-child,
+  .admin-page .admin-send-chip span:last-child,
+  .admin-page .admin-history-chip span:last-child,
+  .admin-page .finance-metric .data-card-copy span {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 9px;
-    font-weight: 950;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: #78716c;
   }
 
+  .admin-page .finance-metric small {
+    display: none;
+  }
+
   .admin-page .stat-value,
   .admin-page .finance-metric strong {
-    margin-top: .25rem;
-    font-size: clamp(1.55rem, 1.1rem + 1vw, 2.15rem);
+    margin-top: 0;
+    font-size: 1.12rem;
     line-height: 1;
     font-weight: 950;
   }
@@ -864,7 +893,7 @@ const adminDesignStyles = `
     .admin-page .finance-metrics-strip,
     .admin-page .admin-receipt-metrics {
       gap: .42rem;
-      padding: .95rem .55rem .55rem;
+      padding: 1.25rem 1rem .75rem;
     }
 
     .admin-page .admin-receipt-metrics {
@@ -885,51 +914,50 @@ const adminDesignStyles = `
 
     .admin-page .admin-send-chip,
     .admin-page .admin-history-chip,
+    .admin-page .stat-card,
+    .admin-page .finance-metric,
     .admin-page .finance-metrics-strip .finance-metric,
     .admin-page .admin-receipt-chip {
-      gap: .5rem;
-      padding: .72rem .7rem;
-      border-radius: 0 1rem 1rem .375rem;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      border-radius: .375rem 1rem 1rem .375rem;
     }
 
-    .admin-page .admin-receipt-chip-icon {
-      display: grid;
-      width: 1.8rem;
-      height: 1.8rem;
-    }
-
+    .admin-page .admin-receipt-chip-icon,
     .admin-page .admin-send-chip-icon,
-    .admin-page .admin-history-chip-icon {
-      width: 1.45rem;
-      height: 1.45rem;
+    .admin-page .admin-history-chip-icon,
+    .admin-page .data-card-icon {
+      display: grid;
+      width: 2.25rem;
+      height: 2.25rem;
     }
 
     .admin-page .admin-send-chip strong,
     .admin-page .admin-history-chip strong,
     .admin-page .finance-metric strong {
-      font-size: .76rem;
+      font-size: 1rem;
       line-height: 1;
     }
 
     .admin-page .admin-receipt-chip strong {
-      font-size: 1.08rem;
+      font-size: 1rem;
       line-height: 1;
     }
 
     .admin-page .admin-send-chip span:last-child,
     .admin-page .admin-history-chip span:last-child,
-    .admin-page .finance-metric span,
+    .admin-page .finance-metric .data-card-copy span,
     .admin-page .compact-kicker,
     .admin-page .eyebrow {
-      font-size: 8.5px;
-      letter-spacing: .045em;
+      font-size: 10px;
+      letter-spacing: .08em;
     }
 
     .admin-page .admin-receipt-chip span:last-child {
-      font-size: 8.5px;
-      line-height: 1.08;
-      letter-spacing: .045em;
-      white-space: normal;
+      font-size: 10px;
+      line-height: 1;
+      letter-spacing: .08em;
+      white-space: nowrap;
     }
 
     .admin-page .admin-receipt-metrics[data-count="4"] .admin-receipt-chip,

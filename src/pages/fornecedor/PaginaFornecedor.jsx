@@ -103,14 +103,42 @@ const supplierPageStyles = `
     padding: 1rem;
     box-shadow: 0 1px 2px rgba(0,0,0,.05);
   }
-  .supplier-page .supplier-metric span,
+  .supplier-page .supplier-metric,
+  .supplier-page .finance-metric,
+  .supplier-page .supplier-order-highlights > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .5rem;
+    border-radius: .375rem 1rem 1rem .375rem;
+    border: 1px dashed #d6d3d1;
+    border-left-width: 2px;
+    background: #fff;
+    padding: .75rem 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+  .supplier-page .supplier-data-icon {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    background: #fff0e8;
+    color: #c2410c;
+  }
+  .supplier-page .supplier-data-copy {
+    min-width: 0;
+    line-height: 1;
+  }
+  .supplier-page .supplier-metric .supplier-data-copy span,
   .supplier-page .supplier-order-highlights span { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #78716c; }
-  .supplier-page .supplier-metric strong { display: block; margin-top: .5rem; font-size: 1.875rem; font-weight: 900; }
-  .supplier-page .supplier-metric small { font-size: .75rem; color: #78716c; }
+  .supplier-page .supplier-metric strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.12rem; line-height: 1; font-weight: 950; color: #1c1917; }
+  .supplier-page .supplier-metric small { display: none; }
   .supplier-page .supplier-metric.accent,
-  .supplier-page .finance-metric.accent { border-color: #ea580c; background: #ea580c; color: #fff; }
-  .supplier-page .supplier-metric.accent span,
-  .supplier-page .supplier-metric.accent small { color: rgba(255,255,255,.72); }
+  .supplier-page .finance-metric.accent { border-color: #d6d3d1; background: #fff; color: #1c1917; }
+  .supplier-page .supplier-metric.accent .supplier-data-copy span,
+  .supplier-page .supplier-metric.accent small { color: #78716c; }
   .supplier-page .supplier-next-action { display: grid; gap: .75rem; }
   .supplier-page .supplier-next-icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: .75rem; background: #fff7ed; color: #c2410c; }
   .supplier-page .supplier-next-order,
@@ -132,7 +160,6 @@ const supplierPageStyles = `
   .supplier-page .finance-grid { display: grid; gap: .75rem; }
   .supplier-page .supplier-order-list-item { display: grid; gap: .5rem; text-align: left; }
   .supplier-page .supplier-order-list-item.selected { border-color: #f97316; background: #fff7ed; }
-  .supplier-page .supplier-order-highlights > div,
   .supplier-page .supplier-detail-grid section,
   .supplier-page .supplier-document-body { border-radius: .75rem; border: 1px solid #e7e5e4; background: #fafaf9; padding: .75rem; }
   .supplier-page .consolidated-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem 0; }
@@ -145,7 +172,9 @@ const supplierPageStyles = `
   .supplier-page select { min-height: 2.5rem; border-radius: .5rem; border: 1px solid #d6d3d1; background: #fff; padding: 0 .75rem; font-size: .875rem; }
   .supplier-page .supplier-more-tile { display: grid; grid-template-columns: 44px minmax(0,1fr) auto 20px; align-items: center; gap: .75rem; text-align: left; }
   .supplier-page .supplier-file-row { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; align-items: center; gap: .5rem; border-radius: .75rem; border: 1px solid #e7e5e4; background: #fff; padding: .75rem; text-align: left; }
-  .supplier-page .finance-metric strong { display: block; font-size: 1.5rem; font-weight: 900; }
+  .supplier-page .finance-metric strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.12rem; line-height: 1; font-weight: 950; color: #1c1917; }
+  .supplier-page .finance-metric .supplier-data-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; color: #78716c; }
+  .supplier-page .finance-metric small { display: none; }
   .supplier-page .finance-progress { display: grid; gap: .5rem; padding: .5rem 0; }
   .supplier-page .finance-progress > div { display: flex; align-items: center; justify-content: space-between; }
   .supplier-page .finance-progress i { display: block; height: .5rem; overflow: hidden; border-radius: 999px; background: #f5f5f4; }
@@ -313,8 +342,17 @@ function OriginRequestCards({ formatDate, formatDateTime, rows, state, STATUS_LA
   );
 }
 
-function SupplierMetric({ accent = "", detail, label, value }) {
-  return <article className={`supplier-metric ${accent} transition duration-200 hover:-translate-y-0.5`}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
+function SupplierMetric({ accent = "", detail, icon, iconName, label, value }) {
+  return (
+    <article className={`supplier-metric ${accent} transition duration-200 hover:-translate-y-0.5`}>
+      {iconName ? <span className="supplier-data-icon"><Icon icon={icon} name={iconName} size={15} /></span> : null}
+      <div className="supplier-data-copy">
+        <strong>{value}</strong>
+        <span>{label}</span>
+        <small>{detail}</small>
+      </div>
+    </article>
+  );
 }
 
 function EmptyNextAction({ icon }) {
@@ -379,10 +417,10 @@ function Dashboard(props) {
         <button className="btn primary" data-view="fornecedor-pedidos"><Icon icon={icon} name="clipboard" size={15} />Pedidos</button>
       </header>
       <div className="supplier-metrics-grid">
-        <SupplierMetric label="Recebidos do dia" value={totalToday} detail={`para ${formatDate(state.settings.defaultMealDate)}`} accent="accent" />
-        <SupplierMetric label="A confirmar" value={supplierStatusCount(rows, "enviado")} detail="pedidos recebidos" />
-        <SupplierMetric label="Em producao" value={supplierStatusCount(rows, "confirmado") + supplierStatusCount(rows, "producao")} detail="em preparo" />
-        <SupplierMetric label="Entregues" value={supplierStatusCount(rows, "entregue")} detail="historico total" />
+        <SupplierMetric icon={icon} iconName="utensils" label="Recebidos do dia" value={totalToday} detail={`para ${formatDate(state.settings.defaultMealDate)}`} accent="accent" />
+        <SupplierMetric icon={icon} iconName="clipboard" label="A confirmar" value={supplierStatusCount(rows, "enviado")} detail="pedidos recebidos" />
+        <SupplierMetric icon={icon} iconName="clock" label="Em producao" value={supplierStatusCount(rows, "confirmado") + supplierStatusCount(rows, "producao")} detail="em preparo" />
+        <SupplierMetric icon={icon} iconName="check" label="Entregues" value={supplierStatusCount(rows, "entregue")} detail="historico total" />
       </div>
       {priority ? <SupplierNextAction {...props} consolidation={priority} /> : <EmptyNextAction icon={icon} />}
       <section className="supplier-panel-card supplier-queue-card">
@@ -516,7 +554,12 @@ function Financeiro(props) {
   return (
     <section className="finance-page">
       <Topbar title="Financeiro do fornecedor" subtitle={`Analise de ${month}`} actions={<><SupplierBackButton icon={icon} /><button className="btn primary" data-export-finance="fornecedor"><Icon icon={icon} name="chart" size={15} />Gerar PDF</button></>} />
-      <div className="finance-metrics"><article className="finance-metric accent"><span>Faturamento previsto</span><strong>{money(projected)}</strong><small>{sumQty(rows)} refeicoes no mes</small></article><article className="finance-metric"><span>Faturado</span><strong>{money(deliveredValue)}</strong><small>{delivered.length} pedidos entregues</small></article><article className="finance-metric"><span>Em aberto</span><strong>{money(pendingValue)}</strong><small>pedidos ainda em operacao</small></article><article className="finance-metric"><span>Ticket medio</span><strong>{money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div>
+      <div className="finance-metrics">
+        <article className="finance-metric accent"><span className="supplier-data-icon"><Icon icon={icon} name="chart" size={15} /></span><div className="supplier-data-copy"><strong>{money(projected)}</strong><span>Faturamento previsto</span><small>{sumQty(rows)} refeicoes no mes</small></div></article>
+        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="truck" size={15} /></span><div className="supplier-data-copy"><strong>{money(deliveredValue)}</strong><span>Faturado</span><small>{delivered.length} pedidos entregues</small></div></article>
+        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="clock" size={15} /></span><div className="supplier-data-copy"><strong>{money(pendingValue)}</strong><span>Em aberto</span><small>pedidos ainda em operacao</small></div></article>
+        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="utensils" size={15} /></span><div className="supplier-data-copy"><strong>{money(rows.length ? projected / sumQty(rows) : 0)}</strong><span>Ticket medio</span><small>por refeicao</small></div></article>
+      </div>
       <div className="finance-grid"><article className="finance-card"><h2>Composicao por refeicao</h2>{byMeal.length ? byMeal.map((item) => <div className="finance-progress" key={item.label}><div><span>{item.label}</span><strong>{money(item.value)}</strong></div><i><b style={{ width: `${Math.max(3, Math.round((item.value / max) * 100))}%` }} /></i></div>) : <div className="empty">Sem movimentacao no periodo.</div>}</article><article className="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div className="finance-bars">{days.map((item) => <div key={item.key}><strong>{item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style={{ height: `${Math.max(5, Math.round((item.value / dailyMax) * 126))}px` }} /><span>{item.label}</span></div>)}</div></article></div>
       <article className="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div className="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>{[...rows].sort((a, b) => b.date.localeCompare(a.date)).map((request) => <tr key={request.id}><td>{formatDate(request.date)}</td><td>{request.mealType}</td><td>{request.quantity}</td><td><strong>{money(requestValue(request))}</strong></td><td><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></td></tr>)}</tbody></table></div></article>
     </section>
