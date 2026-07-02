@@ -101,6 +101,12 @@ export function Inicio(props) {
           </div>
         </div>
 
+        {/* canhotos de resumo */}
+        <div className="grid grid-cols-2 gap-2 bg-stone-50 px-4 pb-3 pt-5 sm:px-6">
+          <StubChip icon={icon} iconName="utensils" value={todayQuantity} label="Refeicoes hoje" />
+          <StubChip icon={icon} iconName="clipboard" value={draftCount} label={draftCount === 1 ? "Rascunho" : "Rascunhos"} />
+        </div>
+
         {/* corpo: detalhe do pedido */}
         <div className="bg-white px-4 pb-3 pt-5 text-stone-900 sm:px-6">
           {featuredRequest ? (
@@ -133,12 +139,6 @@ export function Inicio(props) {
           </button>
         </div>
       </section>
-
-      {/* CANHOTOS DE RESUMO */}
-      <div className="flex gap-3 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] sm:grid sm:grid-cols-2 sm:overflow-visible">
-        <StubChip icon={icon} iconName="utensils" value={todayQuantity} label="Refeicoes hoje" />
-        <StubChip icon={icon} iconName="clipboard" value={draftCount} label={draftCount === 1 ? "Rascunho" : "Rascunhos"} />
-      </div>
     </div>
   );
 }

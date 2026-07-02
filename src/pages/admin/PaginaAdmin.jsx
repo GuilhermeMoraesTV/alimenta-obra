@@ -13,7 +13,7 @@ const adminDesignStyles = `
     max-width: 80rem;
     margin: 0 auto;
     display: grid;
-    gap: .85rem;
+    gap: .95rem;
     color: #1c1917;
   }
 
@@ -23,12 +23,12 @@ const adminDesignStyles = `
   .admin-page p { margin: 0; letter-spacing: 0; }
 
   .admin-page h1 {
-    font-size: clamp(1.35rem, 1rem + .9vw, 2rem);
+    font-size: clamp(1.46rem, 1.05rem + 1vw, 2.14rem);
     line-height: .96;
     font-weight: 950;
   }
 
-  .admin-page h2 { font-size: 1.05rem; line-height: 1.1; font-weight: 950; color: #1c1917; }
+  .admin-page h2 { font-size: 1.12rem; line-height: 1.1; font-weight: 950; color: #1c1917; }
   .admin-page h3 { font-weight: 950; color: #1c1917; }
   .admin-page p,
   .admin-page small { color: #6f6b63; }
@@ -182,14 +182,14 @@ const adminDesignStyles = `
   .admin-page .admin-filter-menu summary,
   .admin-page .export-options button {
     display: inline-flex;
-    min-height: 2.55rem;
+    min-height: 2.7rem;
     align-items: center;
     justify-content: center;
     gap: .5rem;
     border-radius: .55rem;
     border: 1px solid transparent;
     padding: 0 .9rem;
-    font-size: .84rem;
+    font-size: .9rem;
     font-weight: 900;
     color: #1c1917;
     transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
@@ -382,7 +382,7 @@ const adminDesignStyles = `
   }
 
   .admin-page .admin-receipt-total strong {
-    font-size: clamp(2rem, 1.5rem + 2vw, 3.15rem);
+    font-size: clamp(2.25rem, 1.7rem + 2.2vw, 3.55rem);
     line-height: .82;
     font-weight: 950;
   }
@@ -433,13 +433,13 @@ const adminDesignStyles = `
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: .65rem;
+    gap: .5rem;
   }
 
   .admin-page .admin-receipt-chip-icon {
     display: grid;
-    width: 1.85rem;
-    height: 1.85rem;
+    width: 2rem;
+    height: 2rem;
     flex-shrink: 0;
     place-items: center;
     border-radius: 999px;
@@ -457,7 +457,7 @@ const adminDesignStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1rem;
+    font-size: 1.12rem;
     line-height: 1;
     font-weight: 950;
     color: #1c1917;
@@ -619,22 +619,22 @@ const adminDesignStyles = `
 
   @media (max-width: 767px) {
     .admin-page {
-      gap: .55rem;
+      gap: .7rem;
     }
 
     .admin-page h1 {
-      font-size: 1.22rem;
+      font-size: 1.38rem;
       line-height: 1.02;
     }
 
     .admin-page h2 {
-      font-size: .96rem;
+      font-size: 1.04rem;
     }
 
     .admin-page p,
     .admin-page small,
     .admin-page .page-subtitle {
-      font-size: .72rem;
+      font-size: .78rem;
       line-height: 1.25;
     }
 
@@ -647,7 +647,7 @@ const adminDesignStyles = `
       flex-direction: column;
       border-radius: 16px;
       gap: .55rem;
-      padding: .68rem;
+      padding: .78rem;
     }
 
     .admin-page .finance-hero,
@@ -662,7 +662,7 @@ const adminDesignStyles = `
     .admin-page .admin-send-receipt .admin-send-header,
     .admin-page .admin-receipt-head {
       border-radius: 16px 16px 0 0;
-      padding: .5rem .62rem .46rem;
+      padding: .64rem .76rem .58rem;
       gap: .42rem;
     }
 
@@ -677,14 +677,14 @@ const adminDesignStyles = `
     }
 
     .admin-page .admin-receipt-total strong {
-      font-size: 1.56rem;
+      font-size: 1.92rem;
       line-height: .86;
     }
 
     .admin-page .admin-receipt-total span {
       max-width: 6rem;
       padding-bottom: .12rem;
-      font-size: 7.5px;
+      font-size: 8.5px;
       line-height: 1.05;
     }
 
@@ -746,9 +746,9 @@ const adminDesignStyles = `
 
     .admin-page .admin-receipt-actions .btn,
     .admin-page .admin-receipt-actions .admin-filter-menu summary {
-      min-height: 1.9rem;
-      padding-inline: .5rem;
-      font-size: .66rem;
+      min-height: 2.05rem;
+      padding-inline: .56rem;
+      font-size: .7rem;
       gap: .28rem;
       white-space: nowrap;
     }
@@ -809,10 +809,10 @@ const adminDesignStyles = `
     .admin-page .admin-back-button,
     .admin-page .admin-filter-menu summary,
     .admin-page .export-options button {
-      min-height: 2.08rem;
+      min-height: 2.22rem;
       border-radius: .48rem;
       padding-inline: .58rem;
-      font-size: .7rem;
+      font-size: .74rem;
       gap: .34rem;
     }
 
@@ -833,10 +833,10 @@ const adminDesignStyles = `
     .admin-page input,
     .admin-page select,
     .admin-page textarea {
-      min-height: 2.12rem;
+      min-height: 2.25rem;
       border-radius: .52rem;
       padding-inline: .58rem;
-      font-size: .75rem;
+      font-size: .8rem;
     }
 
     .admin-page .admin-filter-popover,
@@ -871,7 +871,10 @@ const adminDesignStyles = `
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 
-    .admin-page .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child,
+    .admin-page .admin-receipt-metrics[data-count="3"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
     .admin-page .admin-receipt-metrics[data-count="5"] .admin-receipt-chip:last-child {
       grid-column: 1 / -1;
     }
@@ -884,19 +887,21 @@ const adminDesignStyles = `
     .admin-page .admin-history-chip,
     .admin-page .finance-metrics-strip .finance-metric,
     .admin-page .admin-receipt-chip {
-      gap: .38rem;
-      padding: .52rem .58rem;
-      border-radius: 0 .62rem .62rem .24rem;
+      gap: .5rem;
+      padding: .72rem .7rem;
+      border-radius: 0 1rem 1rem .375rem;
     }
 
     .admin-page .admin-receipt-chip-icon {
-      display: none;
+      display: grid;
+      width: 1.8rem;
+      height: 1.8rem;
     }
 
     .admin-page .admin-send-chip-icon,
     .admin-page .admin-history-chip-icon {
-      width: 1.2rem;
-      height: 1.2rem;
+      width: 1.45rem;
+      height: 1.45rem;
     }
 
     .admin-page .admin-send-chip strong,
@@ -907,7 +912,7 @@ const adminDesignStyles = `
     }
 
     .admin-page .admin-receipt-chip strong {
-      font-size: .98rem;
+      font-size: 1.08rem;
       line-height: 1;
     }
 
@@ -921,7 +926,7 @@ const adminDesignStyles = `
     }
 
     .admin-page .admin-receipt-chip span:last-child {
-      font-size: 8px;
+      font-size: 8.5px;
       line-height: 1.08;
       letter-spacing: .045em;
       white-space: normal;
