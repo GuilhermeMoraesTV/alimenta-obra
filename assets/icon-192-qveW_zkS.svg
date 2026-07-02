@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-label="AlimentaObra">
-  <rect width="192" height="192" rx="42" fill="#e8520a"/>
-  <path d="M48 124h96v16H48zM58 70h76a18 18 0 0 1 18 18v16H40V88a18 18 0 0 1 18-18z" fill="#fff"/>
-  <path d="M72 58h48v14H72zM82 38h28v22H82z" fill="#1a1a1a"/>
-  <circle cx="66" cy="96" r="8" fill="#1a1a1a"/>
-  <circle cx="96" cy="96" r="8" fill="#1a1a1a"/>
-  <circle cx="126" cy="96" r="8" fill="#1a1a1a"/>
-</svg>

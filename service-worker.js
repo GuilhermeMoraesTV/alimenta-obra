@@ -1,11 +1,11 @@
-const CACHE_NAME = "alimenta-obra-v10";
+const CACHE_NAME = "alimenta-obra-v11";
 const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const withScope = (path) => `${scopePath}${path.startsWith("/") ? path : `/${path}`}` || "/";
 const ASSETS = [
   withScope("/"),
   withScope("/index.html"),
-  withScope("/assets/icon-192.svg"),
-  withScope("/assets/icon-512.svg")
+  withScope("/assets/icone-alimentaobra.png"),
+  withScope("/assets/logo-alimentaobra.png")
 ];
 
 self.addEventListener("install", (event) => {
