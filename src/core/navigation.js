@@ -11,15 +11,13 @@ export const NAV_BY_ROLE = {
     ["financeiro", "chart", "Financeiro"],
     ["relatorios", "chart", "Relatorios"],
     ["auditoria", "history", "Auditoria"],
-    ["configuracoes", "settings", "Config."],
     ["mais", "settings", "Mais"]
   ],
   fornecedor: [
-    ["fornecedor", "dashboard", "Painel"],
+    ["fornecedor", "home", "Home"],
     ["fornecedor-pedidos", "clipboard", "Pedidos"],
     ["fornecedor-historico", "history", "Historico"],
-    ["fornecedor-documentos", "package", "Documentos"],
-    ["fornecedor-financeiro", "chart", "Financeiro"]
+    ["fornecedor-mais", "settings", "Mais"]
   ]
 };
 
@@ -50,6 +48,7 @@ export function viewLabel(view) {
     fornecedor: "Producao",
     "fornecedor-pedidos": "Pedidos",
     "fornecedor-historico": "Historico",
+    "fornecedor-mais": "Mais",
     "fornecedor-documentos": "Documentos",
     "fornecedor-financeiro": "Financeiro"
   }[view] ?? "AlimentaObra";

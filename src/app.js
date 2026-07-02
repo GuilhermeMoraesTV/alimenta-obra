@@ -6,6 +6,9 @@ import { createSharedUi } from "./components/shared-ui.js";
 import { NAV_BY_ROLE, STATUS_LABEL, viewLabel } from "./core/navigation.js";
 import { createMealDomain } from "./features/meals/domain.js";
 import { countStatus, initials, nextSupplierStep, roleName, sumQty, totalsByMeal } from "./features/operations/metrics.js";
+import { mountAdminReactPage, unmountAdminReactPage } from "./pages/admin/mount.jsx";
+import { mountLeaderReactPage, unmountLeaderReactPage } from "./pages/encarregado/mount.jsx";
+import { mountSupplierReactPage, unmountSupplierReactPage } from "./pages/fornecedor/mount.jsx";
 import { createPageRegistry } from "./pages/index.js";
 import {
   canEditRequest,
@@ -61,10 +64,24 @@ let exportMenuOpen = null;
 let generatedInviteLink = "";
 let pendingCancelRequestId = null;
 let operationNotice = null;
+let adminConsumptionWeekOffset = 0;
 
 const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
 const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
+const appLogoAsset = `${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`;
+const modalBackdropClass = "fixed inset-0 z-50 grid place-items-end bg-stone-950/50 p-0 backdrop-blur-sm sm:place-items-center sm:p-4";
+const modalPanelClass = "max-h-[92vh] w-full max-w-2xl overflow-auto rounded-t-3xl border border-white/70 bg-white p-4 shadow-2xl sm:rounded-3xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
+const modalHeaderClass = "mb-4 flex items-start justify-between gap-3 border-b border-stone-100 pb-3";
+const modalTitleClass = "m-0 text-2xl font-black leading-none tracking-normal text-stone-950";
+const modalKickerClass = "text-[10px] font-black uppercase tracking-[.12em] text-orange-700";
+const modalCloseClass = "grid h-9 w-9 place-items-center rounded-full border border-stone-200 bg-white text-xl font-black text-stone-500";
+const modalFieldClass = "grid gap-1.5";
+const modalLabelClass = "text-[10px] font-black uppercase tracking-[.08em] text-stone-500";
+const modalInputClass = "min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100";
+const modalButtonPrimaryClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-orange-600 bg-orange-600 px-4 text-sm font-extrabold text-white";
+const modalButtonOutlineClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-extrabold text-stone-900";
+const modalButtonDangerClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700";
 
 let loginMode = initialInviteToken ? "register" : "login";
 let supplierOrderStatus = "ativos";
@@ -116,12 +133,21 @@ function setView(view) {
   adminRequestDetailId = null;
   exportMenuOpen = null;
   state.activeView = view;
+  if (view !== "painel") adminConsumptionWeekOffset = 0;
   persist();
 }
 
 function render() {
+  const adminFilters = {
+    date: activeDate(),
+    leader: document.querySelector("[data-filter-leader]")?.value ?? "",
+    meal: document.querySelector("[data-filter-meal]")?.value ?? ""
+  };
+  unmountAdminReactPage(root);
+  unmountLeaderReactPage(root);
+  unmountSupplierReactPage(root);
   if (state.loading) {
-    root.innerHTML = `<section class="app-loader" aria-live="polite"><div class="app-loader-brand"><span class="brand-mark">AO</span><span class="brand-name">Alimenta<span>Obra</span></span></div><div class="app-loader-progress" aria-hidden="true"><i></i></div><p>Preparando sua operação</p></section>`;
+    root.innerHTML = `<section class="grid min-h-screen place-content-center justify-items-center gap-4 bg-[#1b1c1a] p-6 text-white" aria-live="polite"><img class="h-24 w-auto max-w-[360px] object-contain brightness-110" src="${appLogoAsset}" alt="AlimentaObra" /><div class="h-1 w-40 overflow-hidden rounded-full bg-white/15" aria-hidden="true"><i class="block h-full w-1/2 animate-pulse rounded-full bg-orange-600"></i></div><p class="m-0 text-xs font-black uppercase tracking-[.08em] text-white/60">Preparando sua operação</p></section>`;
     return;
   }
   const user = getActiveUser(state);
@@ -129,7 +155,8 @@ function render() {
     renderLogin();
     return;
   }
-  const allowedViews = [...NAV_BY_ROLE[user.role].map(([view]) => view), "configuracoes"];
+  const roleExtraViews = user.role === "fornecedor" ? ["fornecedor-documentos", "fornecedor-financeiro"] : user.role === "admin" ? ["financeiro", "relatorios", "auditoria"] : [];
+  const allowedViews = [...NAV_BY_ROLE[user.role].map(([view]) => view), ...roleExtraViews, "configuracoes"];
   if (!allowedViews.includes(state.activeView)) {
     state.activeView = allowedViews[0];
     saveUiState(state);
@@ -147,6 +174,61 @@ function render() {
     user,
     workspaceIntro: renderWorkspaceIntro(user)
   });
+  mountLeaderReactPage(root, {
+    STATUS_LABEL,
+    canEditRequest,
+    countStatus,
+    formatDate,
+    formatDateTime,
+    getLeaderAddressFormOpen: () => leaderAddressFormOpen,
+    icon,
+    page: state.activeView,
+    requestMealDescription,
+    state,
+    sumQty,
+    user
+  });
+  mountAdminReactPage(root, {
+    STATUS_LABEL,
+    adminConsumptionWeekOffset,
+    adminFilters,
+    canEditRequest,
+    consolidationValue,
+    countStatus,
+    exportMenuOpen,
+    formatDate,
+    formatDateTime,
+    getConsolidationForDate,
+    getConsolidationSummary,
+    icon,
+    money,
+    page: state.activeView,
+    requestMealDescription,
+    requestValue,
+    state,
+    sumQty,
+    totalsByMeal,
+    user
+  });
+  mountSupplierReactPage(root, {
+    STATUS_LABEL,
+    consolidationValue,
+    formatDate,
+    formatDateTime,
+    getConsolidationSummary,
+    icon,
+    money,
+    nextSupplierStep,
+    page: state.activeView,
+    requestMealDescription,
+    requestValue,
+    selectedSupplierConsolidationId,
+    state,
+    sumQty,
+    supplierOrderDate,
+    supplierOrderStatus,
+    user
+  });
   bindEvents();
 }
 
@@ -157,17 +239,32 @@ function renderLogin() {
 
 function renderNav(user) {
   const adminMoreViews = ["financeiro", "relatorios", "auditoria", "configuracoes"];
-  return NAV_BY_ROLE[user.role].map(([view, iconName, label]) => `
-    <button class="${state.activeView === view || (view === "mais" && adminMoreViews.includes(state.activeView)) ? "active" : ""}" data-view="${view}">
-      <span class="nav-icon">${icon(iconName, 18)}</span>
-      <span>${label}</span>
-    </button>`).join("");
+  const supplierMoreViews = ["fornecedor-mais", "fornecedor-documentos", "fornecedor-financeiro"];
+  return NAV_BY_ROLE[user.role].map(([view, iconName, label]) => {
+    const active = state.activeView === view || (view === "mais" && adminMoreViews.includes(state.activeView)) || (view === "fornecedor-mais" && supplierMoreViews.includes(state.activeView));
+    const responsiveClass = user.role === "admin" && view === "mais"
+      ? "md:hidden"
+      : user.role === "admin" && adminMoreViews.includes(view)
+        ? "hidden md:flex"
+        : "";
+    return `
+    <button class="group relative grid min-w-0 flex-1 place-items-center gap-0.5 rounded-[16px] border border-white/10 !bg-[#242622] px-1 py-1 text-center text-[8px] font-black leading-tight text-white/65 transition hover:!bg-[#2f312d] hover:text-white md:flex md:min-h-11 md:w-full md:flex-none md:justify-start md:gap-3 md:rounded-r-2xl md:rounded-l-md md:px-2.5 md:text-left md:text-sm ${responsiveClass} ${active ? "active !border-orange-500 !bg-orange-600 !text-white shadow-[0_10px_18px_rgba(239,91,29,.25)] md:shadow-[inset_4px_0_0_rgba(249,115,22,.95)]" : ""}" data-view="${view}">
+      <span class="grid h-7 w-7 place-items-center rounded-[12px] bg-white/10 text-white/75 transition group-hover:bg-orange-500/15 group-hover:text-orange-100 md:h-8 md:w-8 md:rounded-r-xl md:rounded-l-md ${active ? "!bg-white/18 !text-white" : ""}">${icon(iconName, 17)}</span>
+      <span class="max-w-full truncate">${label}</span>
+    </button>`;
+  }).join("");
 }
 
 function renderAdminBackButton() {
   const user = getActiveUser(state);
   if (user?.role !== "admin") return "";
-  return `<button class="btn outline small admin-back-button" data-view="mais">${icon("arrow", 15)}Voltar</button>`;
+  return `<button class="admin-back-button" data-view="mais" aria-label="Voltar para mais ferramentas">${icon("arrow-left", 15)}<span>Voltar</span></button>`;
+}
+
+function renderSupplierBackButton() {
+  const user = getActiveUser(state);
+  if (user?.role !== "fornecedor") return "";
+  return `<button class="admin-back-button supplier-back-button" data-view="fornecedor-mais" aria-label="Voltar para mais">${icon("arrow-left", 15)}<span>Voltar</span></button>`;
 }
 
 function renderAccessSwitcher(user) {
@@ -189,16 +286,15 @@ function renderAccessSwitcher(user) {
     .join("");
 
   return `
-    <section class="access-switcher ${isRepresentingUser ? "is-representing" : ""}">
+    <section class="mb-3 grid gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto] ${isRepresentingUser ? "is-representing" : ""}">
       <div>
-        <span class="eyebrow">${isRepresentingUser ? "Modo de acesso ativo" : "Acesso administrativo"}</span>
-        <strong>${isRepresentingUser ? `Voce esta acessando como ${user.name}` : "Escolha qual usuario deseja acessar"}</strong>
-        <small>A identidade autenticada continua sendo ${authenticatedUser.name}; todas as acoes permanecem rastreaveis.</small>
+        <span class="text-[10px] font-black uppercase tracking-[.12em] text-orange-700">${isRepresentingUser ? "Modo de acesso ativo" : "Acesso administrativo"}</span>
+        <strong class="block text-base font-black">${isRepresentingUser ? `Voce esta acessando como ${user.name}` : "Escolha qual usuario deseja acessar"}</strong>
+        <small class="text-xs font-semibold text-stone-500">A identidade autenticada continua sendo ${authenticatedUser.name}; todas as acoes permanecem rastreaveis.</small>
       </div>
-      <div class="access-switcher-controls">
-        <label for="access-user">Usuario</label>
-        <select id="access-user" data-access-user>${options}</select>
-        ${isRepresentingUser ? `<button class="btn outline small" type="button" data-action="return-admin">Voltar ao administrador</button>` : ""}
+      <div class="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_auto] sm:items-end">
+        <label class="grid gap-1 text-[10px] font-black uppercase tracking-[.08em] text-stone-500" for="access-user">Usuario<select class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-stone-950" id="access-user" data-access-user>${options}</select></label>
+        ${isRepresentingUser ? `<button class="inline-flex min-h-10 items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-xs font-extrabold text-stone-900" type="button" data-action="return-admin">Voltar ao administrador</button>` : ""}
       </div>
     </section>`;
 }
@@ -259,13 +355,13 @@ function renderEditRequestModal() {
   const user = getActiveUser(state);
   const addresses = state.deliveryAddresses.filter((address) => address.leaderId === user?.id && address.active !== false);
   const addressOptions = `<option value="">Selecione um endereco</option>${addresses.map((address) => `<option value="${address.id}" ${address.id === request.deliveryAddressId ? "selected" : ""}>${address.label} · ${address.addressLine}</option>`).join("")}`;
-  return `<div class="request-edit-backdrop" data-close-edit-modal><section class="request-edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-request-title" onclick="event.stopPropagation()"><header><div><span class="eyebrow">Edicao de pedido</span><h2 id="edit-request-title">Atualizar solicitacao</h2><p>As alteracoes serao aplicadas ao pedido ja registrado.</p></div><button class="modal-close" type="button" data-close-edit-modal aria-label="Fechar">×</button></header><form data-form="edit-request"><div class="form-grid"><div class="field"><label for="edit-request-date">Data da refeicao</label><input id="edit-request-date" name="date" type="date" value="${request.date}" required /></div><div class="field"><label for="edit-request-quantity">Quantidade</label><input id="edit-request-quantity" name="quantity" type="number" min="1" value="${request.quantity}" required /></div></div><div class="form-grid"><div class="field"><label for="edit-request-meal">Tipo de refeicao</label><select id="edit-request-meal" name="mealTypeId" data-edit-meal>${state.mealTypes.map((meal) => `<option value="${meal.id}" ${meal.id === request.mealTypeId ? "selected" : ""}>${meal.label}</option>`).join("")}</select></div><div class="field"><label for="edit-request-location">Local operacional</label><select id="edit-request-location" name="locationId">${locationOptions(request.mealTypeId, request.locationId)}</select></div></div>${state.deliveryAddressFeatureAvailable ? `<div class="field"><label for="edit-request-address">Endereco de entrega</label><select id="edit-request-address" name="deliveryAddressId" required>${addressOptions}</select></div>` : ""}<div class="field"><label for="edit-request-notes">Observacao</label><textarea id="edit-request-notes" name="notes">${request.notes}</textarea></div><footer><button class="btn outline" type="button" data-close-edit-modal>Cancelar</button><button class="btn primary" type="submit">Salvar alteracoes</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-edit-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="edit-request-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Edicao de pedido</span><h2 class="${modalTitleClass}" id="edit-request-title">Atualizar solicitacao</h2><p class="mt-1 text-sm text-stone-500">As alteracoes serao aplicadas ao pedido ja registrado.</p></div><button class="${modalCloseClass}" type="button" data-close-edit-modal aria-label="Fechar">×</button></header><form class="grid gap-3" data-form="edit-request"><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-date">Data da refeicao</label><input class="${modalInputClass}" id="edit-request-date" name="date" type="date" value="${request.date}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-quantity">Quantidade</label><input class="${modalInputClass}" id="edit-request-quantity" name="quantity" type="number" min="1" value="${request.quantity}" required /></div></div><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="edit-request-meal" name="mealTypeId" data-edit-meal>${state.mealTypes.map((meal) => `<option value="${meal.id}" ${meal.id === request.mealTypeId ? "selected" : ""}>${meal.label}</option>`).join("")}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-location">Local operacional</label><select class="${modalInputClass}" id="edit-request-location" name="locationId">${locationOptions(request.mealTypeId, request.locationId)}</select></div></div>${state.deliveryAddressFeatureAvailable ? `<div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-address">Endereco de entrega</label><select class="${modalInputClass}" id="edit-request-address" name="deliveryAddressId" required>${addressOptions}</select></div>` : ""}<div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="edit-request-notes" name="notes">${request.notes}</textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-edit-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar alteracoes</button></footer></form></section></div>`;
 }
 
 function renderOperationModal() {
   const request = state.requests.find((item) => item.id === pendingCancelRequestId);
-  if (request) return `<div class="operation-backdrop"><section class="operation-modal confirm"><span class="operation-icon danger">${icon("trash", 23)}</span><span class="eyebrow">Confirmar cancelamento</span><h2>Cancelar este pedido?</h2><p>O pedido de ${request.quantity} refeicoes para ${formatDate(request.date)} sera cancelado e nao entrara no envio ao fornecedor.</p><div><button class="btn outline" data-dismiss-operation>Voltar</button><button class="btn danger" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
-  if (operationNotice) return `<div class="operation-backdrop"><section class="operation-modal success"><span class="operation-icon">${icon("clipboard", 23)}</span><span class="eyebrow">Operacao registrada</span><h2>${operationNotice.title}</h2><p>${operationNotice.message}</p><button class="btn primary" data-dismiss-operation>Continuar</button></section></div>`;
+  if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar cancelamento</span><h2 class="${modalTitleClass} mt-1">Cancelar este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeicoes para ${formatDate(request.date)} sera cancelado e nao entrara no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
+  if (operationNotice) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-orange-700">${icon("clipboard", 23)}</span><span class="${modalKickerClass} mt-3 block">Operacao registrada</span><h2 class="${modalTitleClass} mt-1">${operationNotice.title}</h2><p class="mt-2 text-sm text-stone-500">${operationNotice.message}</p><button class="${modalButtonPrimaryClass} mt-4 w-full" data-dismiss-operation>Continuar</button></section></div>`;
   return "";
 }
 
@@ -293,7 +389,7 @@ function renderFinanceiro(mode) {
   });
   const dailyMax = Math.max(...days.map((item) => item.value), 1);
   const title = isSupplier ? "Financeiro do fornecedor" : "Financeiro administrativo";
-  return `<section class="finance-page">${topbar(title, `Analise de ${month}`, `${!isSupplier ? renderAdminBackButton() : ""}<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${sumQty(rows)} refeicoes no mes</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operacao</small></article><article class="finance-metric"><span>Ticket medio</span><strong>${money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Composicao por refeicao</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentacao no periodo.</div>`}</article><article class="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div class="finance-bars">${days.map((item) => `<div><strong>${item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style="height:${Math.max(5, Math.round((item.value / dailyMax) * 126))}px"></i><span>${item.label}</span></div>`).join("")}</div></article></div><article class="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${request.quantity}</td><td><strong>${money(requestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
+  return `<section class="finance-page">${topbar(title, `Analise de ${month}`, `${isSupplier ? renderSupplierBackButton() : renderAdminBackButton()}<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${sumQty(rows)} refeicoes no mes</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operacao</small></article><article class="finance-metric"><span>Ticket medio</span><strong>${money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Composicao por refeicao</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentacao no periodo.</div>`}</article><article class="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div class="finance-bars">${days.map((item) => `<div><strong>${item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style="height:${Math.max(5, Math.round((item.value / dailyMax) * 126))}px"></i><span>${item.label}</span></div>`).join("")}</div></article></div><article class="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${request.quantity}</td><td><strong>${money(requestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
 }
 
 function renderPainel() {
@@ -324,14 +420,71 @@ function renderPainel() {
     </section>
     <div class="report-grid">
       <div class="insight-panel">
-        <h2 class="section-title">Consumo recente</h2>
-        <div class="chart">${[42, 65, 58, 71, 89, 94, 78, 88, 102, 115, 109, 130, sumQty(rows), 0].map((value, index) => `
-          <div class="bar ${index === 12 ? "today" : ""}">
-            <span style="height:${Math.max(4, Math.round((value / 140) * 150))}px"></span>
-            <span>${index + 1}</span>
-          </div>`).join("")}</div>
+        ${renderWeeklyConsumptionChart(date)}
       </div>
     </div>`;
+}
+
+function renderWeeklyConsumptionChart(referenceDate) {
+  const weekStart = getWeekStart(referenceDate, adminConsumptionWeekOffset);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    const key = date.toISOString().slice(0, 10);
+    const rows = state.requests.filter((request) => request.date === key && request.status !== "cancelado");
+    return {
+      date,
+      key,
+      label: new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(date).replace(".", ""),
+      total: sumQty(rows),
+      value: rows.reduce((sum, request) => sum + requestValue(request), 0),
+      waiting: countStatus(rows, "enviado"),
+      delivered: countStatus(rows, "entregue")
+    };
+  });
+  const max = Math.max(...days.map((day) => day.total), 1);
+  const weekTotal = days.reduce((sum, day) => sum + day.total, 0);
+  const weekCost = days.reduce((sum, day) => sum + day.value, 0);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const periodLabel = `${formatDate(days[0].key)} a ${formatDate(days[6].key)}`;
+
+  return `
+    <div class="weekly-consumption-card">
+      <div class="weekly-consumption-head">
+        <div>
+          <h2 class="section-title">Consumo semanal</h2>
+          <p>${periodLabel}</p>
+        </div>
+        <div class="week-nav" aria-label="Navegar semanas">
+          <button class="icon-action" type="button" data-week-nav="-1" aria-label="Semana anterior">${icon("arrow", 14)}</button>
+          <button class="btn outline small" type="button" data-week-nav="0">Semana atual</button>
+          <button class="icon-action next" type="button" data-week-nav="1" aria-label="Proxima semana">${icon("arrow", 14)}</button>
+        </div>
+      </div>
+      <div class="weekly-consumption-summary">
+        <span><strong>${weekTotal}</strong> refeicoes</span>
+        <span><strong>${money(weekCost)}</strong> custo previsto</span>
+      </div>
+      <div class="weekly-chart" role="list" aria-label="Consumo semanal por dia">
+        ${days.map((day) => `
+          <button class="weekly-bar ${day.key === todayKey ? "today" : ""}" type="button" role="listitem" data-filter-date-set="${day.key}" aria-label="${day.label}, ${day.total} refeicoes">
+            <span class="weekly-bar-value">${day.total || "-"}</span>
+            <i style="height:${Math.max(8, Math.round((day.total / max) * 150))}px"></i>
+            <span class="weekly-bar-label">${day.label}</span>
+            <small>${day.date.getDate().toString().padStart(2, "0")}</small>
+            <b class="weekly-tooltip">${formatDate(day.key)}<br>${day.total} refeicoes<br>${day.waiting} a enviar · ${day.delivered} entregues</b>
+          </button>`).join("")}
+      </div>
+    </div>`;
+}
+
+function getWeekStart(referenceDate, offset = 0) {
+  const date = new Date(`${referenceDate}T12:00:00`);
+  const day = date.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diffToMonday + offset * 7);
+  date.setHours(12, 0, 0, 0);
+  return date;
 }
 
 function renderAdminLiveOrders(rows) {
@@ -418,8 +571,8 @@ function renderAdminRequestDetailModal() {
   const destination = request.deliveryAddress || request.location;
   const composition = requestMealDescription(request);
   return `
-    <div class="request-detail-backdrop" data-close-request-detail>
-    <section class="request-detail-modal" role="dialog" aria-modal="true" aria-labelledby="request-detail-title" onclick="event.stopPropagation()">
+    <div class="${modalBackdropClass}" data-close-request-detail>
+    <section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="request-detail-title" onclick="event.stopPropagation()">
       <header>
         <div>
           <span class="eyebrow">Detalhe do pedido</span>
@@ -563,15 +716,15 @@ function renderConsolidacao() {
         <p>${summary.total} refeicoes para ${formatDate(date)}</p>
       </div>
       <div class="admin-send-actions">
+        <div class="admin-send-filters">
+          <input type="date" value="${date}" data-filter-date aria-label="Data do pedido" />
+          <select data-supplier-id aria-label="Fornecedor">
+            ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${supplier.name}</option>`).join("")}
+          </select>
+          <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
+        </div>
         ${renderExportMenu("consolidacao", [["doc", "Word", "clipboard"], ["pdf", "PDF", "chart"]])}
-        <button class="btn primary small" data-action="send-consolidation">${icon("truck", 15)}Enviar</button>
-      </div>
-      <div class="admin-send-filters">
-        <input type="date" value="${date}" data-filter-date aria-label="Data do pedido" />
-        <select data-supplier-id aria-label="Fornecedor">
-          ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${supplier.name}</option>`).join("")}
-        </select>
-        <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
+        <button class="btn primary admin-send-submit" data-action="send-consolidation">${icon("truck", 15)}Enviar</button>
       </div>
     </header>
     <div class="report-grid">
@@ -676,8 +829,7 @@ function renderSupplierOrders() {
   });
   const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? rows[0] ?? null;
   return `<section class="supplier-workspace">
-    ${topbar("Pedidos", "Fila de producao, entrega e acompanhamento")}
-    <div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${supplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${supplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${supplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${supplierOrderStatus === "confirmado" ? "selected" : ""}>Em producao</option><option value="saiu_entrega" ${supplierOrderStatus === "saiu_entrega" ? "selected" : ""}>Em rota</option><option value="entregue" ${supplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>
+    ${topbar("Pedidos", "Fila de producao, entrega e acompanhamento", `<div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${supplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${supplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${supplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${supplierOrderStatus === "confirmado" ? "selected" : ""}>Em producao</option><option value="saiu_entrega" ${supplierOrderStatus === "saiu_entrega" ? "selected" : ""}>Em rota</option><option value="entregue" ${supplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>`)}
     <div class="supplier-orders-layout"><div class="supplier-order-list">${rows.map((item) => renderSupplierOrderListItem(item, item.id === selected?.id)).join("") || `<div class="empty">Nenhum pedido encontrado.</div>`}</div>${selected ? renderSupplierOrderDetail(selected) : `<div class="empty supplier-detail-empty">Selecione um pedido para ver os detalhes.</div>`}</div>
   </section>`;
 }
@@ -698,7 +850,12 @@ function renderSupplierOrderDetail(consolidation) {
       return description ? `<p><strong>${escapeHtml(meal)}:</strong> ${escapeHtml(description)}</p>` : "";
     })
     .join("");
-  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div>${compositions ? `<section class="supplier-composition"><h3>Composicao das marmitas</h3>${compositions}</section>` : ""}<div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens consolidados</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderRequestTable(summary.rows, { showLeader: true, editable: false })}</section></article>`;
+  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div>${compositions ? `<section class="supplier-composition"><h3>Composicao das marmitas</h3>${compositions}</section>` : ""}<div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens consolidados</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderSupplierOriginCards(summary.rows)}</section></article>`;
+}
+
+function renderSupplierOriginCards(rows) {
+  if (!rows.length) return `<div class="empty">Nenhum pedido de origem encontrado.</div>`;
+  return `<div class="supplier-origin-list">${rows.map((request) => `<article class="supplier-origin-card"><div><strong>${request.mealType}</strong><span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span></div><p>${getUserName(state, request.leaderId)} - ${request.location}</p><footer><span>${formatDate(request.date)}</span><b>${request.quantity} ref.</b><small>${formatDateTime(request.updatedAt)}</small></footer></article>`).join("")}</div>`;
 }
 
 function renderSupplierHistory() {
@@ -708,7 +865,7 @@ function renderSupplierHistory() {
 
 function renderSupplierDocuments() {
   const rows = supplierConsolidations();
-  return `<section class="supplier-workspace">${topbar("Documentos", "Notas de fornecimento e notas fiscais anexadas")}<div class="supplier-documents-list">${rows.map((consolidation) => { const summary = getConsolidationSummary(state, consolidation); const docs = supplierDocuments(consolidation.id); return `<article class="supplier-document-card"><div class="supplier-document-title"><div><span class="eyebrow">${formatDate(consolidation.date)}</span><h2>Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</h2><p>${summary.total} refeicoes · ${STATUS_LABEL[consolidation.status]}</p></div><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota</button></div><div class="supplier-document-body"><div><strong>Nota fiscal</strong><small>Anexe o PDF fiscal emitido fora do sistema.</small></div><label class="btn primary small supplier-upload-label">Anexar PDF<input type="file" accept="application/pdf" data-document-upload="${consolidation.id}" hidden /></label></div>${docs.length ? `<div class="supplier-attached-files">${docs.map((doc) => `<button class="supplier-file-row" data-download-document="${doc.id}">${icon("package", 16)}<span>${doc.originalName}</span><small>${formatDateTime(doc.createdAt)}</small></button>`).join("")}</div>` : `<div class="supplier-no-documents">Nenhuma nota fiscal anexada.</div>`}</article>`; }).join("") || `<div class="empty">Ainda nao ha pedidos para documentar.</div>`}</div></section>`;
+  return `<section class="supplier-workspace">${topbar("Documentos", "Notas de fornecimento e notas fiscais anexadas", renderSupplierBackButton())}<div class="supplier-documents-list">${rows.map((consolidation) => { const summary = getConsolidationSummary(state, consolidation); const docs = supplierDocuments(consolidation.id); return `<article class="supplier-document-card"><div class="supplier-document-title"><div><span class="eyebrow">${formatDate(consolidation.date)}</span><h2>Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</h2><p>${summary.total} refeicoes · ${STATUS_LABEL[consolidation.status]}</p></div><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota</button></div><div class="supplier-document-body"><div><strong>Nota fiscal</strong><small>Anexe o PDF fiscal emitido fora do sistema.</small></div><label class="btn primary small supplier-upload-label">Anexar PDF<input type="file" accept="application/pdf" data-document-upload="${consolidation.id}" hidden /></label></div>${docs.length ? `<div class="supplier-attached-files">${docs.map((doc) => `<button class="supplier-file-row" data-download-document="${doc.id}">${icon("package", 16)}<span>${doc.originalName}</span><small>${formatDateTime(doc.createdAt)}</small></button>`).join("")}</div>` : `<div class="supplier-no-documents">Nenhuma nota fiscal anexada.</div>`}</article>`; }).join("") || `<div class="empty">Ainda nao ha pedidos para documentar.</div>`}</div></section>`;
 }
 
 function renderRelatorios() {
@@ -722,11 +879,7 @@ function renderRelatorios() {
   }, {})).sort((a, b) => b[1] - a[1]);
   return `
     ${topbar("Relatorios", "Diario, semanal, mensal e periodo personalizado", `
-      ${renderAdminBackButton()}
-      <button class="btn outline" data-export="csv">CSV</button>
-      <button class="btn outline" data-export="xlsx">Excel</button>
-    `)}
-    <div class="filter-bar">
+      <div class="filter-bar report-filter-bar">
       <select data-report-range>
         <option value="day">Data</option>
         <option value="week">Semana</option>
@@ -739,8 +892,11 @@ function renderRelatorios() {
         <option>Todos os encarregados</option>
         ${getLeaders(state).map((leader) => `<option>${leader.name}</option>`).join("")}
       </select>
-    </div>
-    <div class="stats-grid">
+      </div>
+      ${renderExportMenu("relatorios", [["csv", "CSV", "clipboard"], ["xlsx", "Excel", "chart"]])}
+      ${renderAdminBackButton()}
+    `)}
+    <div class="stats-grid report-metrics-grid">
       <div class="stat-card accent"><div class="stat-label">Total</div><div class="stat-value">${total}</div><div class="stat-sub">refeicoes no periodo</div></div>
       <div class="stat-card"><div class="stat-label">Marmitas</div><div class="stat-value">${totalsByMeal(rows)["Marmita Campo"] ?? 0}</div></div>
       <div class="stat-card"><div class="stat-label">Almocos</div><div class="stat-value">${totalsByMeal(rows)["Buffer Almoco"] ?? 0}</div></div>
@@ -894,12 +1050,6 @@ function bindEvents() {
     render();
   });
   root.querySelector("[data-save-delivery-address]")?.addEventListener("click", saveDeliveryAddress);
-  root.querySelectorAll("input[name='mealTypeId']").forEach((input) => {
-    input.addEventListener("change", () => {
-      const select = document.querySelector("#request-location");
-      if (select) select.innerHTML = locationOptions(input.value);
-    });
-  });
   root.querySelectorAll("[data-filter-date], [data-filter-leader], [data-filter-meal]").forEach((control) => {
     control.addEventListener("change", () => render());
   });
@@ -1002,6 +1152,21 @@ function bindEvents() {
   });
   root.querySelectorAll("[data-export-finance]").forEach((button) => {
     button.addEventListener("click", () => handleFinanceExport(button.dataset.exportFinance));
+  });
+  root.querySelectorAll("[data-week-nav]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const direction = Number(button.dataset.weekNav);
+      adminConsumptionWeekOffset = direction === 0 ? 0 : adminConsumptionWeekOffset + direction;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-filter-date-set]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const filter = root.querySelector("[data-filter-date]");
+      if (filter) filter.value = button.dataset.filterDateSet;
+      state.settings.defaultMealDate = button.dataset.filterDateSet;
+      render();
+    });
   });
 }
 
