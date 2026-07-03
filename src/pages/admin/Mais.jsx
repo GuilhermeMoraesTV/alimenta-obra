@@ -109,11 +109,9 @@ const baseAdminScreenStyles = `
 
 const maisStyles = `
   .admin-page .admin-home-hero.compact { margin-bottom: .75rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; border-radius: 18px; border: 1px solid #e7e5e4; border-left: 5px solid #ea580c; background: rgba(255,255,255,.9); color: #1c1917; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-  .admin-page .admin-more-grid { display: grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap: .5rem; }
+  .admin-page .admin-more-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: .5rem; }
   .admin-page .admin-more-tile { display: grid; min-height: 8rem; gap: .5rem; border-radius: 1rem; border: 1px solid #e7e5e4; background: rgba(255,255,255,.9); padding: 1rem; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
   .admin-page .admin-more-tile:hover { border-color: #fdba74; background: #fff7ed; }
-  @media (min-width: 640px) { .admin-page .admin-more-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-  @media (min-width: 1024px) { .admin-page .admin-more-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 `;
 
 export function Mais(props) {
