@@ -4,13 +4,13 @@ import { Icon, leaderRequests, primaryButtonClass, shellClass } from "./shared.j
 
 function HistoryChip({ icon, iconName, label, value }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-4 py-3 shadow-sm">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-orange-700">
+    <div className="flex min-w-0 flex-col items-start gap-1.5 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-2.5 py-3 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-orange-50 text-orange-700 sm:h-9 sm:w-9">
         <Icon icon={icon} name={iconName} size={16} />
       </span>
-      <div className="min-w-0 leading-tight">
+      <div className="min-w-0 flex-1 leading-tight">
         <strong className="block truncate text-base font-black text-stone-900">{value}</strong>
-        <span className="block truncate text-[10px] font-bold uppercase tracking-[.08em] text-stone-500">{label}</span>
+        <span className="block text-[10px] font-bold uppercase leading-[1.15] tracking-normal text-stone-500">{label}</span>
       </div>
     </div>
   );
@@ -62,7 +62,7 @@ export function Historico(props) {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 bg-stone-50 px-4 pb-3 pt-5 sm:px-6">
-          <HistoryChip icon={icon} iconName="clipboard" value={rows.length} label="Pedidos" />
+          <HistoryChip icon={icon} iconName="clipboard" value={rows.length} label="Pedidos registrados" />
           <HistoryChip icon={icon} iconName="utensils" value={totalQty} label="Refeicoes" />
           <HistoryChip icon={icon} iconName="clock" value={draftCount} label="Rascunhos" />
         </div>

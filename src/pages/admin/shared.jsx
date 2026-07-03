@@ -19,8 +19,10 @@ export function Topbar({ actions, subtitle, title }) {
 }
 
 export function AdminReceiptMetric({ icon, iconName, label, value }) {
+  const valueText = String(value);
+  const longValueClass = valueText.length > 10 ? " is-long-value" : "";
   return (
-    <div className="admin-receipt-chip">
+    <div className={`admin-receipt-chip${longValueClass}`}>
       <span className="admin-receipt-chip-icon"><Icon icon={icon} name={iconName} size={15} /></span>
       <div className="admin-receipt-chip-text">
         <strong>{value}</strong>

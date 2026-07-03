@@ -18,13 +18,13 @@ const STATUS_STAMP = {
 
 function StubChip({ icon, iconName, value, label }) {
   return (
-    <div className="flex min-w-[172px] flex-1 items-center gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-4 py-3 shadow-sm sm:min-w-0">
+    <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-300 bg-white px-3 py-3 shadow-sm sm:gap-3 sm:px-4">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-50 text-orange-700">
         <Icon icon={icon} name={iconName} size={16} />
       </span>
-      <div className="min-w-0 leading-tight">
+      <div className="min-w-0 flex-1 leading-tight">
         <div className="truncate text-base font-black text-stone-900">{value}</div>
-        <div className="truncate text-[10px] font-bold uppercase tracking-[.08em] text-stone-500">{label}</div>
+        <div className="line-clamp-2 text-[10px] font-bold uppercase leading-[1.15] tracking-normal text-stone-500">{label}</div>
       </div>
     </div>
   );

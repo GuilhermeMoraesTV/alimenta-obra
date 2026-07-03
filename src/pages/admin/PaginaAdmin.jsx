@@ -485,18 +485,27 @@ const adminDesignStyles = `
     color: #1c1917;
   }
 
+  .admin-page .admin-receipt-chip.is-long-value strong {
+    font-size: .82rem;
+    letter-spacing: 0;
+  }
+
   .admin-page .admin-receipt-chip span:last-child,
   .admin-page .admin-send-chip span:last-child,
   .admin-page .admin-history-chip span:last-child,
   .admin-page .finance-metric .data-card-copy span {
     display: block;
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
+    line-height: 1.08;
     color: #78716c;
   }
 
@@ -893,7 +902,7 @@ const adminDesignStyles = `
     .admin-page .finance-metrics-strip,
     .admin-page .admin-receipt-metrics {
       gap: .42rem;
-      padding: 1.25rem 1rem .75rem;
+      padding: 1.2rem .75rem .75rem;
     }
 
     .admin-page .admin-receipt-metrics {
@@ -918,8 +927,9 @@ const adminDesignStyles = `
     .admin-page .finance-metric,
     .admin-page .finance-metrics-strip .finance-metric,
     .admin-page .admin-receipt-chip {
-      gap: .75rem;
-      padding: .75rem 1rem;
+      min-height: 3.55rem;
+      gap: .52rem;
+      padding: .62rem .68rem;
       border-radius: .375rem 1rem 1rem .375rem;
     }
 
@@ -928,8 +938,8 @@ const adminDesignStyles = `
     .admin-page .admin-history-chip-icon,
     .admin-page .data-card-icon {
       display: grid;
-      width: 2.25rem;
-      height: 2.25rem;
+      width: 1.9rem;
+      height: 1.9rem;
     }
 
     .admin-page .admin-send-chip strong,
@@ -949,15 +959,29 @@ const adminDesignStyles = `
     .admin-page .finance-metric .data-card-copy span,
     .admin-page .compact-kicker,
     .admin-page .eyebrow {
-      font-size: 10px;
-      letter-spacing: .08em;
+      font-size: 8.5px;
+      letter-spacing: .07em;
     }
 
     .admin-page .admin-receipt-chip span:last-child {
-      font-size: 10px;
-      line-height: 1;
-      letter-spacing: .08em;
-      white-space: nowrap;
+      font-size: 8.5px;
+      line-height: 1.08;
+      letter-spacing: .07em;
+      white-space: normal;
+    }
+
+    .admin-page .admin-receipt-metrics[data-count="3"] .admin-receipt-chip span:last-child,
+    .admin-page .admin-receipt-metrics[data-count="4"] .admin-receipt-chip span:last-child,
+    .admin-page .admin-receipt-metrics[data-count="5"] .admin-receipt-chip span:last-child {
+      font-size: 7.2px;
+      line-height: 1.05;
+      letter-spacing: .045em;
+      -webkit-line-clamp: 2;
+    }
+
+    .admin-page .admin-receipt-chip.is-long-value strong {
+      font-size: .72rem;
+      line-height: 1.05;
     }
 
     .admin-page .admin-receipt-metrics[data-count="4"] .admin-receipt-chip,
