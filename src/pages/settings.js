@@ -31,7 +31,14 @@ export function createSettingsPage(ctx) {
     [&_.settings-back-row]:min-h-6 [&_.settings-back-row]:flex [&_.settings-back-row]:items-center
     [&_.admin-back-button]:inline-flex [&_.admin-back-button]:min-h-5 [&_.admin-back-button]:items-center [&_.admin-back-button]:gap-1.5 [&_.admin-back-button]:border-0 [&_.admin-back-button]:bg-transparent [&_.admin-back-button]:p-0 [&_.admin-back-button]:text-xs [&_.admin-back-button]:font-extrabold [&_.admin-back-button]:text-stone-500 [&_.admin-back-button]:shadow-none [&_.admin-back-button]:transition hover:[&_.admin-back-button]:text-orange-700
     [&_.settings-price-preview]:rounded-xl [&_.settings-price-preview]:border [&_.settings-price-preview]:border-orange-200 [&_.settings-price-preview]:bg-orange-50 [&_.settings-price-preview]:p-3 [&_.settings-price-preview_span]:text-[10px] [&_.settings-price-preview_span]:font-black [&_.settings-price-preview_span]:uppercase [&_.settings-price-preview_span]:text-orange-700 [&_.settings-price-preview_strong]:block [&_.settings-price-preview_strong]:text-2xl [&_.settings-price-preview_strong]:font-black
-    [&_.meal-catalog-list]:grid [&_.meal-catalog-list]:gap-2 [&_.meal-catalog-item]:grid [&_.meal-catalog-item]:gap-3 [&_.meal-catalog-item]:rounded-r-2xl [&_.meal-catalog-item]:rounded-l-md [&_.meal-catalog-item]:border [&_.meal-catalog-item]:border-l-2 [&_.meal-catalog-item]:border-dashed [&_.meal-catalog-item]:border-stone-200 [&_.meal-catalog-item]:bg-[#fffefa] [&_.meal-catalog-item]:p-3 [&_.meal-catalog-new]:mt-3 [&_.meal-catalog-new]:overflow-hidden [&_.meal-catalog-new]:rounded-[18px] [&_.meal-catalog-new]:border [&_.meal-catalog-new]:border-orange-200 [&_.meal-catalog-new]:bg-orange-50/60
+    lg:[&_.meal-catalog-panel]:col-span-2 [&_.meal-catalog-panel]:gap-3 [&_.meal-catalog-panel_.settings-panel-title]:py-2.5 [&_.meal-catalog-panel_.settings-panel-title>span]:h-8 [&_.meal-catalog-panel_.settings-panel-title>span]:w-8 [&_.meal-catalog-panel_h2]:text-base [&_.meal-catalog-panel_p]:text-xs
+    [&_.meal-catalog-toolbar]:flex [&_.meal-catalog-toolbar]:items-center [&_.meal-catalog-toolbar]:justify-between [&_.meal-catalog-toolbar]:gap-3
+    [&_.meal-catalog-list]:grid [&_.meal-catalog-list]:grid-cols-1 [&_.meal-catalog-list]:gap-2 sm:[&_.meal-catalog-list]:grid-cols-2 xl:[&_.meal-catalog-list]:grid-cols-3
+    [&_.meal-catalog-card]:grid [&_.meal-catalog-card]:min-w-0 [&_.meal-catalog-card]:gap-2 [&_.meal-catalog-card]:rounded-r-xl [&_.meal-catalog-card]:rounded-l-md [&_.meal-catalog-card]:border [&_.meal-catalog-card]:border-l-2 [&_.meal-catalog-card]:border-dashed [&_.meal-catalog-card]:border-stone-200 [&_.meal-catalog-card]:bg-[#fffefa] [&_.meal-catalog-card]:p-3 [&_.meal-catalog-card]:shadow-sm
+    [&_.meal-catalog-card-head]:grid [&_.meal-catalog-card-head]:grid-cols-[minmax(0,1fr)_auto] [&_.meal-catalog-card-head]:items-start [&_.meal-catalog-card-head]:gap-2 [&_.meal-catalog-card-title]:min-w-0 [&_.meal-catalog-card-title_strong]:block [&_.meal-catalog-card-title_strong]:truncate [&_.meal-catalog-card-title_strong]:text-sm [&_.meal-catalog-card-title_strong]:font-black [&_.meal-catalog-card-title_p]:mt-1 [&_.meal-catalog-card-title_p]:line-clamp-2 [&_.meal-catalog-card-title_p]:text-xs [&_.meal-catalog-card-actions]:flex [&_.meal-catalog-card-actions]:gap-1
+    [&_.meal-status-chip]:inline-flex [&_.meal-status-chip]:w-max [&_.meal-status-chip]:items-center [&_.meal-status-chip]:rounded-full [&_.meal-status-chip]:border [&_.meal-status-chip]:px-2 [&_.meal-status-chip]:py-1 [&_.meal-status-chip]:text-[10px] [&_.meal-status-chip]:font-black [&_.meal-status-chip]:uppercase [&_.meal-status-chip]:tracking-[.08em] [&_.meal-status-chip.active]:border-emerald-200 [&_.meal-status-chip.active]:bg-emerald-50 [&_.meal-status-chip.active]:text-emerald-700 [&_.meal-status-chip.inactive]:border-stone-200 [&_.meal-status-chip.inactive]:bg-stone-100 [&_.meal-status-chip.inactive]:text-stone-500
+    [&_.icon-btn]:grid [&_.icon-btn]:h-9 [&_.icon-btn]:w-9 [&_.icon-btn]:place-items-center [&_.icon-btn]:rounded-lg [&_.icon-btn]:border [&_.icon-btn]:border-stone-300 [&_.icon-btn]:bg-white [&_.icon-btn]:p-0 [&_.icon-btn]:text-stone-800 hover:[&_.icon-btn]:border-orange-300 hover:[&_.icon-btn]:bg-orange-50 hover:[&_.icon-btn]:text-orange-700 [&_.icon-btn.danger]:border-red-200 [&_.icon-btn.danger]:bg-red-50 [&_.icon-btn.danger]:text-red-700 hover:[&_.icon-btn.danger]:border-red-300 hover:[&_.icon-btn.danger]:bg-red-100
+    [&_.meal-catalog-edit]:overflow-hidden [&_.meal-catalog-edit]:rounded-xl [&_.meal-catalog-edit]:border [&_.meal-catalog-edit]:border-stone-200 [&_.meal-catalog-edit]:bg-white [&_.meal-catalog-edit_summary]:flex [&_.meal-catalog-edit_summary]:min-h-9 [&_.meal-catalog-edit_summary]:cursor-pointer [&_.meal-catalog-edit_summary]:list-none [&_.meal-catalog-edit_summary]:items-center [&_.meal-catalog-edit_summary]:justify-center [&_.meal-catalog-edit_summary]:gap-2 [&_.meal-catalog-edit_summary]:px-3 [&_.meal-catalog-edit_summary]:text-xs [&_.meal-catalog-edit_summary]:font-black [&_.meal-catalog-edit_summary::-webkit-details-marker]:hidden [&_.meal-catalog-item]:grid [&_.meal-catalog-item]:gap-2 [&_.meal-catalog-item]:border-t [&_.meal-catalog-item]:border-stone-100 [&_.meal-catalog-item]:p-3 [&_.meal-catalog-item_.form-grid]:gap-2 [&_.meal-catalog-item_textarea]:min-h-[4.25rem] [&_.meal-catalog-item_textarea]:py-1.5 [&_.meal-catalog-footer]:pt-2 [&_.meal-catalog-footer_span]:text-xs [&_.meal-catalog-new]:overflow-hidden [&_.meal-catalog-new]:rounded-[14px] [&_.meal-catalog-new]:border [&_.meal-catalog-new]:border-orange-200 [&_.meal-catalog-new]:bg-orange-50/60
     [&_.meal-catalog-new_summary]:flex [&_.meal-catalog-new_summary]:min-h-11 [&_.meal-catalog-new_summary]:cursor-pointer [&_.meal-catalog-new_summary]:list-none [&_.meal-catalog-new_summary]:items-center [&_.meal-catalog-new_summary]:justify-between [&_.meal-catalog-new_summary]:gap-2 [&_.meal-catalog-new_summary]:px-3 [&_.meal-catalog-new_summary]:text-sm [&_.meal-catalog-new_summary]:font-black [&_.meal-catalog-new_summary]:text-orange-700 [&_.meal-catalog-new_summary::-webkit-details-marker]:hidden
     [&_.meal-catalog-new-form]:grid [&_.meal-catalog-new-form]:gap-3 [&_.meal-catalog-new-form]:border-t [&_.meal-catalog-new-form]:border-orange-100 [&_.meal-catalog-new-form]:bg-white/80 [&_.meal-catalog-new-form]:p-3
     [&_.invite-link-box]:grid [&_.invite-link-box]:gap-2 [&_.invite-link-box]:rounded-xl [&_.invite-link-box]:border [&_.invite-link-box]:border-orange-200 [&_.invite-link-box]:bg-orange-50 [&_.invite-link-box]:p-3 [&_.invite-link-box_span]:text-[10px] [&_.invite-link-box_span]:font-black [&_.invite-link-box_span]:uppercase [&_.invite-link-box_strong]:break-all [&_.invite-link-box_strong]:text-sm
@@ -145,15 +152,16 @@ export function createSettingsPage(ctx) {
     const state = getState();
     if (!["admin", "fornecedor"].includes(user.role)) return "";
     return `
-      <section class="settings-panel settings-panel-wide meal-catalog-panel">
+      <section class="settings-panel meal-catalog-panel">
         <div class="settings-panel-title">
           <span>${icon("utensils", 18)}</span>
           <div><h2>Tipos de alimentacao</h2><p>${user.role === "fornecedor" ? "Cadastre o tipo e o que vem na marmita." : "Gerencie os tipos disponiveis para pedidos."}</p></div>
         </div>
-        <div class="meal-catalog-list">
-          ${state.mealCatalog.map(renderMealCatalogItem).join("") || `<div class="empty">Nenhum tipo cadastrado.</div>`}
+        <div class="meal-catalog-toolbar">
+          <span class="text-xs font-black text-stone-500">${state.mealCatalog.length} tipos cadastrados</span>
+          <button class="btn primary small" type="button" data-open-new-meal>${icon("plus", 15)}Novo</button>
         </div>
-        <details class="meal-catalog-new">
+        <details class="meal-catalog-new" data-new-meal-panel>
           <summary>${icon("plus", 15)}Novo tipo de alimento <span>${icon("arrow", 14)}</span></summary>
           <form class="meal-catalog-new-form" data-form="meal-catalog">
             <input type="hidden" name="id" value="" />
@@ -179,6 +187,9 @@ export function createSettingsPage(ctx) {
             </footer>
           </form>
         </details>
+        <div class="meal-catalog-list">
+          ${state.mealCatalog.map(renderMealCatalogItem).join("") || `<div class="empty">Nenhum tipo cadastrado.</div>`}
+        </div>
       </section>`;
   }
 
@@ -225,31 +236,47 @@ export function createSettingsPage(ctx) {
   }
 
   function renderMealCatalogItem(meal) {
+    const statusClass = meal.active ? "active" : "inactive";
     return `
-      <form class="meal-catalog-item" data-form="meal-catalog">
-        <input type="hidden" name="id" value="${meal.id}" />
-        <div class="form-grid">
-          <div class="field">
-            <label for="meal-name-${meal.id}">Tipo</label>
-            <input id="meal-name-${meal.id}" name="name" value="${escapeHtml(meal.label)}" required />
+      <article class="meal-catalog-card">
+        <div class="meal-catalog-card-head">
+          <div class="meal-catalog-card-title">
+            <strong>${escapeHtml(meal.label)}</strong>
+            <p>${escapeHtml(meal.description || "Sem composicao informada.")}</p>
           </div>
-          <div class="field">
-            <label for="meal-active-${meal.id}">Status</label>
-            <select id="meal-active-${meal.id}" name="active">
-              <option value="true" ${meal.active ? "selected" : ""}>Ativo</option>
-              <option value="false" ${!meal.active ? "selected" : ""}>Inativo</option>
-            </select>
+          <div class="meal-catalog-card-actions">
+            <button class="icon-btn danger" type="button" data-delete-meal-type="${meal.id}" aria-label="Excluir ${escapeHtml(meal.label)}">${icon("trash", 15)}</button>
           </div>
         </div>
-        <div class="field">
-          <label for="meal-description-${meal.id}">O que vem nessa marmita</label>
-          <textarea id="meal-description-${meal.id}" name="description">${escapeHtml(meal.description)}</textarea>
-        </div>
-        <footer class="meal-catalog-footer">
-          <span>${meal.active ? "Disponivel nos pedidos" : "Oculto para novos pedidos"}</span>
-          <button class="btn outline small" type="submit">Salvar</button>
-        </footer>
-      </form>`;
+        <span class="meal-status-chip ${statusClass}">${meal.active ? "Ativo" : "Inativo"}</span>
+        <details class="meal-catalog-edit">
+          <summary>${icon("edit", 14)}Editar</summary>
+          <form class="meal-catalog-item" data-form="meal-catalog">
+            <input type="hidden" name="id" value="${meal.id}" />
+            <div class="form-grid">
+              <div class="field">
+                <label for="meal-name-${meal.id}">Tipo</label>
+                <input id="meal-name-${meal.id}" name="name" value="${escapeHtml(meal.label)}" required />
+              </div>
+              <div class="field">
+                <label for="meal-active-${meal.id}">Status</label>
+                <select id="meal-active-${meal.id}" name="active">
+                  <option value="true" ${meal.active ? "selected" : ""}>Ativo</option>
+                  <option value="false" ${!meal.active ? "selected" : ""}>Inativo</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="meal-description-${meal.id}">O que vem nessa marmita</label>
+              <textarea id="meal-description-${meal.id}" name="description">${escapeHtml(meal.description)}</textarea>
+            </div>
+            <footer class="meal-catalog-footer">
+              <span>${meal.active ? "Disponivel nos pedidos" : "Oculto para novos pedidos"}</span>
+              <button class="btn outline small" type="submit">Salvar</button>
+            </footer>
+          </form>
+        </details>
+      </article>`;
   }
 
   return renderConfiguracoes;

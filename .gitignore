@@ -3,6 +3,7 @@ vite-preview*.out
 vite-preview*.err
 node_modules/
 dist/
+tmp/
 .env
 .env.*
 !.env.example

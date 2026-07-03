@@ -1,4 +1,10 @@
 import React from "react";
+import { Dashboard } from "./Dashboard.jsx";
+import { Orders } from "./Pedidos.jsx";
+import { History } from "./Historico.jsx";
+import { More } from "./Mais.jsx";
+import { Documents } from "./Documentos.jsx";
+import { Financeiro } from "./Financeiro.jsx";
 
 const supplierPageStyles = `
   .supplier-page {
@@ -228,343 +234,1562 @@ const supplierPageStyles = `
     .supplier-page .supplier-detail-grid,
     .supplier-page .supplier-more-grid,
     .supplier-page .finance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .supplier-page .supplier-documents-list {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+      align-items: start;
+    }
+    .supplier-page .supplier-document-card {
+      gap: .75rem;
+      padding: .9rem;
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-title {
+      min-width: 0;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-title .badge {
+      width: max-content;
+      max-width: 100%;
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-title h2 {
+      max-width: none;
+      overflow-wrap: normal;
+      word-break: normal;
+      font-size: 1rem;
+      line-height: 1.16;
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-title p {
+      display: block;
+    }
+    .supplier-page .supplier-document-card .supplier-document-actions {
+      justify-content: flex-end;
+      flex-wrap: nowrap;
+    }
+    .supplier-page .supplier-document-card .supplier-order-card-meta {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .supplier-page {
+    gap: .95rem;
+    min-width: 0;
+  }
+
+  .supplier-page *,
+  .supplier-page .admin-receipt,
+  .supplier-page .admin-receipt-head,
+  .supplier-page .admin-receipt-main,
+  .supplier-page .supplier-dashboard,
+  .supplier-page .supplier-workspace,
+  .supplier-page .supplier-more,
+  .supplier-page .finance-page,
+  .supplier-page .finance-card,
+  .supplier-page .table-wrap {
+    min-width: 0;
+  }
+
+  .supplier-page h1,
+  .supplier-page h2,
+  .supplier-page h3,
+  .supplier-page p {
+    letter-spacing: 0;
+  }
+
+  .supplier-page h1 {
+    font-size: clamp(1.46rem, 1.05rem + 1vw, 2.14rem);
+    line-height: .96;
+    font-weight: 950;
+  }
+
+  .supplier-page h2 {
+    font-size: 1.12rem;
+    line-height: 1.1;
+    font-weight: 950;
+    color: #1c1917;
+  }
+
+  .supplier-page h3 {
+    font-size: .96rem;
+    line-height: 1.12;
+    font-weight: 950;
+    color: #1c1917;
+  }
+
+  .supplier-page p,
+  .supplier-page small {
+    color: #6f6b63;
+  }
+
+  .supplier-page .supplier-heading,
+  .supplier-page .app-page-header,
+  .supplier-page .admin-receipt {
+    overflow: visible;
+    border-radius: 22px;
+    border: 1px solid #27251f;
+    border-left: 0;
+    background: #242622;
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,.55);
+    isolation: isolate;
+  }
+
+  .supplier-page .supplier-heading,
+  .supplier-page .app-page-header,
+  .supplier-page .admin-receipt-head {
+    position: relative;
+    background: linear-gradient(135deg, #242622, #1c1d1b);
+    color: #fff;
+  }
+
+  .supplier-page .admin-receipt-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: .65rem;
+    border-radius: 22px 22px 0 0;
+    padding: .82rem 1rem .78rem;
+  }
+
+  .supplier-page .supplier-heading::before,
+  .supplier-page .app-page-header::before,
+  .supplier-page .admin-receipt-head::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .055;
+    background-image: radial-gradient(currentColor 1.4px, transparent 1.4px);
+    background-size: 16px 16px;
+  }
+
+  .supplier-page .supplier-heading > *,
+  .supplier-page .app-page-header > *,
+  .supplier-page .admin-receipt-head > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .supplier-page .supplier-heading h1,
+  .supplier-page .app-page-header h1,
+  .supplier-page .admin-receipt h1 {
+    color: #fff;
+  }
+
+  .supplier-page .supplier-heading p,
+  .supplier-page .app-page-header .page-subtitle,
+  .supplier-page .admin-receipt p {
+    max-width: 42rem;
+    color: rgba(255,255,255,.62);
+    font-weight: 700;
+  }
+
+  .supplier-page .supplier-heading .eyebrow,
+  .supplier-page .app-page-header .eyebrow,
+  .supplier-page .admin-receipt .compact-kicker {
+    color: #fed7aa;
+  }
+
+  .supplier-page .eyebrow,
+  .supplier-page .compact-kicker,
+  .supplier-page .supplier-data-copy span,
+  .supplier-page .supplier-order-highlights span,
+  .supplier-page .finance-metric .supplier-data-copy span {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .supplier-page .actions,
+  .supplier-page .supplier-next-actions,
+  .supplier-page .supplier-detail-actions,
+  .supplier-page .supplier-history-actions,
+  .supplier-page .filter-bar,
+  .supplier-page .admin-receipt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+  }
+
+  .supplier-page .btn,
+  .supplier-page .supplier-back-button,
+  .supplier-page .admin-filter-menu summary {
+    min-height: 2.7rem;
+    border-radius: .55rem;
+    padding: 0 .9rem;
+    font-size: .9rem;
+    font-weight: 900;
+    color: #1c1917;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+  }
+
+  .supplier-page .btn:hover,
+  .supplier-page .supplier-back-button:hover,
+  .supplier-page .admin-filter-menu summary:hover {
+    transform: translateY(-1px);
+  }
+
+  .supplier-page .btn.primary:hover {
+    background: #c2410c;
+  }
+
+  .supplier-page .btn.outline,
+  .supplier-page .supplier-back-button,
+  .supplier-page .admin-filter-menu summary {
+    border-color: #ddd8cf;
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  .supplier-page .supplier-heading .btn.outline,
+  .supplier-page .app-page-header .btn.outline,
+  .supplier-page .app-page-header .supplier-back-button,
+  .supplier-page .admin-receipt .btn.outline,
+  .supplier-page .admin-receipt .supplier-back-button,
+  .supplier-page .admin-receipt .admin-filter-menu summary {
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.1);
+    color: #fff;
+  }
+
+  .supplier-page .admin-filter-menu {
+    position: relative;
+  }
+
+  .supplier-page .admin-filter-menu summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    border: 1px solid transparent;
+    list-style: none;
+    cursor: pointer;
+    font-weight: 900;
+  }
+
+  .supplier-page .admin-filter-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .supplier-page .admin-filter-popover {
+    position: absolute;
+    right: 0;
+    z-index: 30;
+    margin-top: .5rem;
+    display: grid;
+    min-width: min(20rem, calc(100vw - 1.5rem));
+    gap: .55rem;
+    border-radius: 1rem;
+    border: 1px solid #ded9d1;
+    background: #fffefa;
+    padding: .75rem;
+    box-shadow: 0 24px 54px rgba(25,27,24,.22);
+  }
+
+  .supplier-page .btn.small {
+    min-height: 2.25rem;
+    padding-inline: .72rem;
+    font-size: .76rem;
+  }
+
+  .supplier-page input,
+  .supplier-page select {
+    min-height: 2.65rem;
+    width: 100%;
+    border-radius: .65rem;
+    border: 1px solid #d7d2ca;
+    background: #fffefa;
+    padding: 0 .78rem;
+    font-size: .88rem;
+    font-weight: 700;
+    color: #1c1917;
+    outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(0,0,0,.035);
+  }
+
+  .supplier-page input:focus,
+  .supplier-page select:focus {
+    border-color: #ea580c;
+    box-shadow: 0 0 0 4px rgba(234,88,12,.13);
+  }
+
+  .supplier-page .admin-receipt-main {
+    min-width: 0;
+  }
+
+  .supplier-page .admin-receipt-total {
+    margin-top: .28rem;
+    display: flex;
+    align-items: end;
+    gap: .45rem;
+    color: #fff;
+  }
+
+  .supplier-page .admin-receipt-total strong {
+    font-size: clamp(2.25rem, 1.7rem + 2.2vw, 3.55rem);
+    line-height: .82;
+    font-weight: 950;
+  }
+
+  .supplier-page .admin-receipt-total span {
+    max-width: 7.5rem;
+    padding-bottom: .28rem;
+    color: rgba(255,255,255,.58);
+    font-size: 9px;
+    font-weight: 950;
+    line-height: 1.12;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .supplier-page .admin-receipt-holes {
+    pointer-events: none;
+    display: flex;
+    justify-content: space-around;
+    padding: 0 1rem;
+    transform: translateY(50%);
+  }
+
+  .supplier-page .admin-receipt-holes span {
+    width: .65rem;
+    height: .65rem;
+    border-radius: 999px;
+    background: #fffefa;
+  }
+
+  .supplier-page .admin-receipt-metrics {
+    display: grid;
+    grid-template-columns: repeat(var(--receipt-metric-count), minmax(0, 1fr));
+    gap: .5rem;
+    border-radius: 0 0 20px 20px;
+    background: #fafaf9;
+    padding: 1.25rem 1rem .75rem;
+  }
+
+  .supplier-page .admin-receipt-chip,
+  .supplier-page .supplier-metric,
+  .supplier-page .finance-metric,
+  .supplier-page .supplier-order-highlights > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .5rem;
+    border-radius: .375rem 1rem 1rem .375rem;
+    border: 1px dashed #d6d3d1;
+    border-left-width: 2px;
+    background: #fff;
+    padding: .75rem 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  .supplier-page .admin-receipt-chip-icon,
+  .supplier-page .supplier-data-icon {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    background: #fff0e8;
+    color: #c2410c;
+  }
+
+  .supplier-page .admin-receipt-chip-icon svg,
+  .supplier-page .supplier-data-icon svg {
+    color: #c2410c;
+    stroke: #c2410c;
+  }
+
+  .supplier-page .admin-receipt-chip-text,
+  .supplier-page .supplier-data-copy {
+    min-width: 0;
+    line-height: 1;
+  }
+
+  .supplier-page .admin-receipt-chip strong,
+  .supplier-page .supplier-metric strong,
+  .supplier-page .finance-metric strong,
+  .supplier-page .supplier-order-highlights strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.12rem;
+    line-height: 1;
+    font-weight: 950;
+    color: #1c1917;
+  }
+
+  .supplier-page .admin-receipt-chip.is-long-value strong {
+    font-size: .82rem;
+    letter-spacing: 0;
+  }
+
+  .supplier-page .admin-receipt-chip span:last-child,
+  .supplier-page .supplier-metric .supplier-data-copy span,
+  .supplier-page .finance-metric .supplier-data-copy span,
+  .supplier-page .supplier-order-highlights span {
+    display: block;
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    line-height: 1.08;
+    color: #78716c;
+  }
+
+  .supplier-page .supplier-dashboard,
+  .supplier-page .supplier-workspace,
+  .supplier-page .supplier-more,
+  .supplier-page .finance-page,
+  .supplier-page .supplier-queue,
+  .supplier-page .supplier-order-list,
+  .supplier-page .supplier-origin-list,
+  .supplier-page .supplier-history-list,
+  .supplier-page .supplier-documents-list,
+  .supplier-page .supplier-attached-files {
+    display: grid;
+    gap: .75rem;
+  }
+
+  .supplier-page .supplier-next-action,
+  .supplier-page .supplier-panel-card,
+  .supplier-page .supplier-queue-row,
+  .supplier-page .supplier-order-list-item,
+  .supplier-page .supplier-order-detail,
+  .supplier-page .supplier-origin-card,
+  .supplier-page .supplier-history-row,
+  .supplier-page .supplier-more-tile,
+  .supplier-page .supplier-document-card,
+  .supplier-page .finance-card,
+  .supplier-page .consolidated-block {
+    border-radius: 18px;
+    border: 1px solid #ded9d1;
+    background: rgba(255,254,250,.94);
+    padding: 1rem;
+    box-shadow: 0 12px 30px rgba(25,27,24,.055);
+  }
+
+  .supplier-page .supplier-next-action {
+    align-items: center;
+  }
+
+  .supplier-page .supplier-next-icon,
+  .supplier-page .supplier-more-tile > span:first-child {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: .8rem;
+    background: #fff0e8;
+    color: #c2410c;
+  }
+
+  .supplier-page .supplier-next-order span {
+    background: #f5f1ea;
+    color: #57534e;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+
+  .supplier-page .supplier-section-heading,
+  .supplier-page .supplier-detail-top,
+  .supplier-page .supplier-origin-card > div,
+  .supplier-page .supplier-document-title,
+  .supplier-page .supplier-document-body,
+  .supplier-page .supplier-history-row {
+    align-items: flex-start;
+  }
+
+  .supplier-page .text-action {
+    min-height: 2.25rem;
+    border-radius: .55rem;
+    border: 1px solid #ddd8cf;
+    background: #fffefa;
+    padding: 0 .72rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    color: #c2410c;
+    font-size: .76rem;
+    font-weight: 900;
+  }
+
+  .supplier-page .supplier-queue-row {
+    grid-template-columns: minmax(5rem, .6fr) minmax(0,1.5fr) auto auto;
+    gap: .75rem;
+    border-radius: .85rem;
+    padding: .75rem;
+  }
+
+  .supplier-page .supplier-queue-row small,
+  .supplier-page .supplier-order-list-item small,
+  .supplier-page .supplier-more-tile small,
+  .supplier-page .supplier-file-row small {
+    display: block;
+    margin-top: .15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .74rem;
+    font-weight: 750;
+  }
+
+  .supplier-page .supplier-order-list-item {
+    border-left: 2px dashed #d6d3d1;
+  }
+
+  .supplier-page .supplier-simple-orders {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 32rem), 1fr));
+    align-items: start;
+    gap: .75rem;
+  }
+
+  .supplier-page .supplier-request-shell {
+    display: grid;
+    min-width: 0;
+    gap: .35rem;
+  }
+
+  .supplier-page .supplier-request-owner {
+    display: inline-flex;
+    width: max-content;
+    max-width: 100%;
+    align-items: center;
+    gap: .45rem;
+    border-radius: .5rem;
+    border: 1px dashed #d6d3d1;
+    background: #fffefa;
+    padding: .35rem .55rem;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #78716c;
+  }
+
+  .supplier-page .supplier-request-owner strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1c1917;
+  }
+
+  .supplier-page .supplier-order-card {
+    display: grid;
+    gap: .65rem;
+    border: 1px solid #e7e5e4;
+    border-left: 2px dashed #d6d3d1;
+    background: #fffefa;
+    padding: .75rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+
+  .supplier-page .supplier-order-card:hover {
+    transform: translateY(-2px);
+    border-color: #fdba74;
+    box-shadow: 0 18px 34px rgba(34,29,24,.12);
+  }
+
+  .supplier-page .supplier-order-card-head,
+  .supplier-page .supplier-order-card-actions,
+  .supplier-page .supplier-order-card-meta,
+  .supplier-page .supplier-document-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .supplier-page .supplier-order-card-head {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    justify-content: stretch;
+    align-items: flex-start;
+    gap: .75rem;
+  }
+
+  .supplier-page .supplier-order-card-icon {
+    display: grid;
+    height: 2.5rem;
+    width: 2.5rem;
+    place-items: center;
+    border-radius: .85rem;
+    border: 1px solid #ffedd5;
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .supplier-page .supplier-order-card-title {
+    min-width: 0;
+    display: grid;
+    gap: .28rem;
+  }
+
+  .supplier-page .supplier-order-card-title h2 {
+    max-width: 42rem;
+    overflow-wrap: anywhere;
+    font-size: .98rem;
+    line-height: 1.12;
+  }
+
+  .supplier-page .supplier-order-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .supplier-page .supplier-order-card-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .48rem;
+  }
+
+  .supplier-page .supplier-order-card-meta span {
+    display: grid;
+    gap: .18rem;
+    border-radius: .7rem;
+    background: #f5f1ea;
+    padding: .52rem .6rem;
+    color: #746f66;
+    font-size: .7rem;
+    font-weight: 850;
+  }
+
+  .supplier-page .supplier-order-card-meta strong {
+    overflow-wrap: anywhere;
+    color: #1c1917;
+    font-size: .92rem;
+    line-height: 1;
+    font-weight: 950;
+  }
+
+  .supplier-page .supplier-order-card-actions {
+    justify-content: flex-end;
+  }
+
+  .supplier-page .supplier-order-card-actions .btn {
+    min-height: 2.25rem;
+  }
+
+  .supplier-page .supplier-order-details {
+    border-radius: .85rem;
+    border: 1px dashed #d8d1c7;
+    background: #fffefa;
+  }
+
+  .supplier-page .supplier-order-details summary {
+    display: flex;
+    min-height: 2.45rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: 0 .8rem;
+    color: #1c1917;
+    font-size: .78rem;
+    font-weight: 950;
+    list-style: none;
+  }
+
+  .supplier-page .supplier-order-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .supplier-page .supplier-order-details summary::after {
+    content: "+";
+    color: #c2410c;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .supplier-page .supplier-order-details[open] summary::after {
+    content: "-";
+  }
+
+  .supplier-page .supplier-order-details-body {
+    display: grid;
+    gap: .65rem;
+    border-top: 1px dashed #d8d1c7;
+    padding: .75rem;
+  }
+
+  .supplier-page .supplier-order-items-summary {
+    display: grid;
+    gap: .45rem;
+  }
+
+  .supplier-page .supplier-order-item-line {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    border-radius: .75rem;
+    background: #f5f1ea;
+    padding: .55rem .65rem;
+  }
+
+  .supplier-page .supplier-order-item-line span {
+    min-width: 0;
+    display: grid;
+    gap: .18rem;
+  }
+
+  .supplier-page .supplier-order-item-line strong {
+    overflow-wrap: anywhere;
+    color: #1c1917;
+    font-size: .88rem;
+    line-height: 1.12;
+    font-weight: 950;
+  }
+
+  .supplier-page .supplier-order-item-line small {
+    color: #746f66;
+    font-size: .74rem;
+    font-weight: 750;
+    line-height: 1.18;
+  }
+
+  .supplier-page .supplier-order-item-line b {
+    flex-shrink: 0;
+    color: #1c1917;
+    font-weight: 950;
+  }
+
+  .supplier-page .supplier-order-detail-section {
+    display: grid;
+    gap: .45rem;
+  }
+
+  .supplier-page .supplier-order-detail-section h3 {
+    font-size: .78rem;
+    text-transform: uppercase;
+    color: #746f66;
+  }
+
+  .supplier-page .supplier-order-list-item.selected {
+    border-color: #fdba74;
+    background: #fff7ed;
+  }
+
+  .supplier-page .supplier-detail-grid section,
+  .supplier-page .supplier-document-body,
+  .supplier-page .timeline-item,
+  .supplier-page .supplier-file-row {
+    border-radius: .9rem;
+    border: 1px solid #e4ded4;
+    background: #fffefa;
+  }
+
+  .supplier-page .supplier-composition,
+  .supplier-page .supplier-origin-requests {
+    display: grid;
+    gap: .55rem;
+  }
+
+  .supplier-page .consolidated-row {
+    border-top: 1px solid #eee8df;
+  }
+
+  .supplier-page .consolidated-row:first-child,
+  .supplier-page .total-line {
+    border-top: 0;
+  }
+
+  .supplier-page .table-wrap {
+    border-radius: .9rem;
+    border-color: #e4ded4;
+    background: #fffefa;
+  }
+
+  .supplier-page th {
+    background: #f6f1ea;
+    font-weight: 950;
+    color: #746f66;
+  }
+
+  .supplier-page td {
+    border-top: 1px solid #eee8df;
+    font-size: .88rem;
+  }
+
+  .supplier-page .empty,
+  .supplier-page .supplier-no-documents {
+    border-radius: 1rem;
+    border: 1px dashed #d8d1c7;
+    background: #f8f5ef;
+    padding: 1rem;
+    text-align: center;
+    font-size: .88rem;
+    font-weight: 800;
+    color: #746f66;
+  }
+
+  .supplier-page .supplier-more-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .supplier-page .supplier-more {
+    gap: 0;
+  }
+
+  .supplier-page .supplier-more-hero.compact,
+  .supplier-page .admin-home-hero.compact {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: .35rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    border-radius: 22px;
+    border: 1px solid #27251f;
+    border-left: 0;
+    background: linear-gradient(135deg, #242622, #1c1d1b);
+    color: #fff;
+    padding: 1rem;
+    box-shadow: 0 18px 40px -24px rgba(0,0,0,.65);
+  }
+
+  .supplier-page .supplier-more-hero.compact::before,
+  .supplier-page .admin-home-hero.compact::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .055;
+    background-image: radial-gradient(currentColor 1.4px, transparent 1.4px);
+    background-size: 16px 16px;
+  }
+
+  .supplier-page .supplier-more-hero.compact > *,
+  .supplier-page .admin-home-hero.compact > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .supplier-page .supplier-more-hero.compact h1,
+  .supplier-page .admin-home-hero.compact h1 {
+    color: #fff;
+  }
+
+  .supplier-page .supplier-more-hero.compact p,
+  .supplier-page .admin-home-hero.compact p {
+    max-width: 42rem;
+    color: rgba(255,255,255,.62);
+    font-weight: 700;
+  }
+
+  .supplier-page .supplier-more-hero.compact .compact-kicker,
+  .supplier-page .admin-home-hero.compact .compact-kicker {
+    color: #fed7aa;
+  }
+
+  .supplier-page .supplier-history-receipt .admin-receipt-metrics[data-count="3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .supplier-page .supplier-history-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .supplier-page .supplier-history-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .supplier-page .supplier-history-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 32rem), 1fr));
+    align-items: start;
+  }
+
+  .supplier-page .supplier-more-tile {
+    min-height: 4.7rem;
+    grid-template-columns: 3rem minmax(0,1fr);
+    align-items: center;
+    gap: .9rem;
+    border-radius: 1rem;
+    border: 1px solid #e7e5e4;
+    background: rgba(255,255,255,.9);
+    padding: .9rem 1rem;
+    text-align: left;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  .supplier-page .supplier-more-tile:hover {
+    border-color: #fdba74;
+    background: #fff7ed;
+  }
+
+  .supplier-page .supplier-more-tile b {
+    display: none;
+  }
+
+  .supplier-page .supplier-more-tile i,
+  .supplier-page .supplier-more-tile small {
+    display: none;
+  }
+
+  .supplier-page .supplier-more-tile strong {
+    min-width: 0;
+    font-size: 1.12rem;
+    line-height: 1.05;
+    color: #78716c;
+  }
+
+  .supplier-page .supplier-more-tile > span:first-child {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: .8rem;
+    background: #fff0e8;
+    color: #c2410c;
+  }
+
+  .supplier-page .finance-bars strong,
+  .supplier-page .finance-bars span,
+  .supplier-page .finance-progress span {
+    font-size: .72rem;
+    font-weight: 800;
+    color: #746f66;
+  }
+
+  .supplier-page .finance-bars i,
+  .supplier-page .finance-progress b {
+    background: #ea580c;
+  }
+
+  .supplier-page .finance-mobile-movements {
+    display: none;
+  }
+
+  .supplier-page .finance-mobile-row {
+    display: grid;
+    gap: .45rem;
+    border-radius: .85rem;
+    border: 1px solid #e7e5e4;
+    border-left: 2px dashed #d6d3d1;
+    background: #fffefa;
+    padding: .65rem;
+  }
+
+  .supplier-page .finance-mobile-row-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .55rem;
+  }
+
+  .supplier-page .finance-mobile-row h3 {
+    margin: 0;
+    font-size: .84rem;
+    font-weight: 950;
+    color: #1c1917;
+  }
+
+  .supplier-page .finance-mobile-row time {
+    font-size: .68rem;
+    font-weight: 800;
+    color: #78716c;
+  }
+
+  .supplier-page .finance-mobile-row-meta {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: .35rem;
+  }
+
+  .supplier-page .finance-mobile-row-meta span {
+    border-radius: .55rem;
+    background: #f5f1ea;
+    padding: .38rem .45rem;
+    font-size: .68rem;
+    font-weight: 850;
+    color: #78716c;
+  }
+
+  .supplier-page .finance-mobile-row-meta strong {
+    display: block;
+    margin-top: .12rem;
+    overflow-wrap: anywhere;
+    font-size: .82rem;
+    line-height: 1;
+    font-weight: 950;
+    color: #1c1917;
+  }
+
+  @media (max-width: 767px) {
+    .supplier-page {
+      gap: .7rem;
+    }
+
+    .supplier-page h1 {
+      font-size: 1.38rem;
+      line-height: 1.02;
+    }
+
+    .supplier-page h2 {
+      font-size: 1.04rem;
+    }
+
+    .supplier-page p,
+    .supplier-page small,
+    .supplier-page .page-subtitle {
+      font-size: .78rem;
+      line-height: 1.25;
+    }
+
+    .supplier-page .supplier-heading,
+    .supplier-page .app-page-header,
+    .supplier-page .admin-receipt {
+      border-radius: 16px;
+    }
+
+    .supplier-page .supplier-heading,
+    .supplier-page .app-page-header {
+      align-items: stretch;
+      flex-direction: column;
+      gap: .55rem;
+      padding: .78rem;
+    }
+
+    .supplier-page .admin-receipt-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      border-radius: 16px 16px 0 0;
+      padding: .64rem .76rem .58rem;
+      gap: .42rem;
+    }
+
+    .supplier-page .admin-receipt-total {
+      margin-top: .14rem;
+      gap: .32rem;
+      flex-wrap: wrap;
+    }
+
+    .supplier-page .admin-receipt-total strong {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      font-size: clamp(1.42rem, 7.2vw, 1.92rem);
+      line-height: .86;
+    }
+
+    .supplier-page .admin-receipt-total span {
+      max-width: 6rem;
+      padding-bottom: .12rem;
+      font-size: 8.5px;
+      line-height: 1.05;
+    }
+
+    .supplier-page .admin-receipt p {
+      display: none;
+    }
+
+    .supplier-page .admin-receipt:has(.supplier-back-button) {
+      margin-top: 1.75rem;
+    }
+
+    .supplier-page .admin-receipt-head:has(.supplier-back-button) {
+      overflow: visible;
+    }
+
+    .supplier-page .admin-receipt-head:has(.supplier-back-button) .admin-receipt-main {
+      min-height: 0;
+      padding-left: 0;
+    }
+
+    .supplier-page .admin-receipt-head .supplier-back-button,
+    .supplier-page .app-page-header .supplier-back-button,
+    .supplier-page .supplier-heading .supplier-back-button {
+      position: absolute;
+      top: -1.72rem;
+      left: 0;
+      z-index: 3;
+      width: auto;
+      min-width: 0;
+      min-height: 1.25rem;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      color: #78716c;
+      font-size: .75rem;
+      font-weight: 800;
+      gap: .25rem;
+    }
+
+    .supplier-page .actions,
+    .supplier-page .supplier-next-actions,
+    .supplier-page .supplier-detail-actions,
+    .supplier-page .supplier-history-actions,
+    .supplier-page .filter-bar {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      justify-content: stretch;
+      gap: .45rem;
+    }
+
+    .supplier-page .admin-receipt-actions {
+      width: auto;
+      max-width: min(100%, 13.5rem);
+      display: flex;
+      flex-wrap: nowrap;
+      justify-self: end;
+      align-self: start;
+      justify-content: flex-end;
+      gap: .35rem;
+    }
+
+    .supplier-page .actions > *,
+    .supplier-page .supplier-next-actions > *,
+    .supplier-page .supplier-detail-actions > *,
+    .supplier-page .supplier-history-actions > *,
+    .supplier-page .filter-bar > *,
+    .supplier-page .btn {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .supplier-page .admin-receipt-actions > *,
+    .supplier-page .admin-receipt-actions .btn {
+      width: auto;
+      min-width: 0;
+    }
+
+    .supplier-page .btn {
+      min-height: 2.22rem;
+      border-radius: .48rem;
+      padding-inline: .58rem;
+      font-size: .74rem;
+      gap: .34rem;
+    }
+
+    .supplier-page .admin-filter-menu summary {
+      min-height: 2.22rem;
+      border-radius: .48rem;
+      padding-inline: .58rem;
+      font-size: .74rem;
+      gap: .34rem;
+    }
+
+    .supplier-page .admin-filter-popover {
+      left: 0;
+      right: auto;
+      min-width: min(18rem, calc(100vw - 1.5rem));
+    }
+
+    .supplier-page .admin-receipt-actions .btn {
+      min-height: 2.05rem;
+      padding-inline: .56rem;
+      font-size: .7rem;
+      gap: .28rem;
+      white-space: nowrap;
+    }
+
+    .supplier-page input,
+    .supplier-page select {
+      min-height: 2.25rem;
+      border-radius: .52rem;
+      padding-inline: .58rem;
+      font-size: .8rem;
+    }
+
+    .supplier-page .supplier-metrics-grid,
+    .supplier-page .finance-metrics,
+    .supplier-page .supplier-order-highlights {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .5rem;
+    }
+
+    .supplier-page .admin-receipt-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: .42rem;
+      padding: 1.2rem .75rem .75rem;
+    }
+
+    .supplier-page .admin-receipt-metrics[data-count="3"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    .supplier-page .admin-receipt-chip,
+    .supplier-page .supplier-metric,
+    .supplier-page .finance-metric,
+    .supplier-page .supplier-order-highlights > div {
+      min-height: 3.55rem;
+      gap: .52rem;
+      padding: .62rem .68rem;
+      border-radius: .375rem 1rem 1rem .375rem;
+    }
+
+    .supplier-page .admin-receipt-chip-icon,
+    .supplier-page .supplier-data-icon {
+      width: 1.9rem;
+      height: 1.9rem;
+    }
+
+    .supplier-page .admin-receipt-chip strong,
+    .supplier-page .supplier-metric strong,
+    .supplier-page .finance-metric strong,
+    .supplier-page .supplier-order-highlights strong {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .supplier-page .admin-receipt-chip span:last-child,
+    .supplier-page .supplier-metric .supplier-data-copy span,
+    .supplier-page .finance-metric .supplier-data-copy span,
+    .supplier-page .supplier-order-highlights span,
+    .supplier-page .compact-kicker,
+    .supplier-page .eyebrow {
+      font-size: 8.5px;
+      line-height: 1.08;
+      letter-spacing: .07em;
+    }
+
+    .supplier-page .admin-receipt-metrics[data-count="3"] .admin-receipt-chip span:last-child,
+    .supplier-page .admin-receipt-metrics[data-count="4"] .admin-receipt-chip span:last-child,
+    .supplier-page .admin-receipt-metrics[data-count="5"] .admin-receipt-chip span:last-child {
+      font-size: 7.2px;
+      line-height: 1.05;
+      letter-spacing: .045em;
+      -webkit-line-clamp: 2;
+    }
+
+    .supplier-page .supplier-next-action,
+    .supplier-page .supplier-panel-card,
+    .supplier-page .supplier-queue-row,
+    .supplier-page .supplier-order-list-item,
+    .supplier-page .supplier-order-detail,
+    .supplier-page .supplier-origin-card,
+    .supplier-page .supplier-history-row,
+    .supplier-page .supplier-more-tile,
+    .supplier-page .supplier-document-card,
+    .supplier-page .finance-card,
+    .supplier-page .consolidated-block {
+      border-radius: 15px;
+      padding: .68rem;
+    }
+
+    .supplier-page .supplier-next-action {
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: .6rem;
+    }
+
+    .supplier-page .supplier-next-actions {
+      grid-column: 1 / -1;
+    }
+
+    .supplier-page .supplier-next-icon,
+    .supplier-page .supplier-more-tile > span:first-child {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: .55rem;
+    }
+
+    .supplier-page .supplier-queue-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .5rem;
+    }
+
+    .supplier-page .supplier-queue-row > span:nth-child(2) {
+      grid-column: 1 / -1;
+      order: 3;
+    }
+
+    .supplier-page .supplier-queue-row > .badge {
+      justify-self: end;
+    }
+
+    .supplier-page .supplier-section-heading,
+    .supplier-page .supplier-detail-top,
+    .supplier-page .supplier-document-title,
+    .supplier-page .supplier-document-body,
+    .supplier-page .supplier-history-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .5rem;
+    }
+
+    .supplier-page .supplier-order-card-head {
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: .55rem;
+    }
+
+    .supplier-page .supplier-order-card-icon {
+      height: 2.125rem;
+      width: 2.125rem;
+      border-radius: .7rem;
+    }
+
+    .supplier-page .supplier-order-card-actions,
+    .supplier-page .supplier-history-actions {
+      grid-column: 1 / -1;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-icon {
+      display: none;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-head {
+      grid-template-columns: minmax(0, 1fr);
+      gap: .45rem;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .45rem;
+      align-items: start;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-title h2 {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      font-size: .92rem;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-title p {
+      display: none;
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .supplier-page .supplier-history-row .supplier-order-card-meta span:nth-child(2),
+    .supplier-page .supplier-history-row .supplier-order-card-meta span:nth-child(3) {
+      display: none;
+    }
+
+    .supplier-page .supplier-history-row .supplier-history-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-head {
+      grid-template-columns: minmax(0, 1fr);
+      gap: .5rem;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-title {
+      grid-template-columns: minmax(0, 1fr);
+      gap: .35rem;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-title h2 {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      font-size: .95rem;
+      line-height: 1.08;
+      overflow-wrap: anywhere;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-title p {
+      display: none;
+    }
+
+    .supplier-page .supplier-document-card .supplier-document-actions {
+      grid-column: auto;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-meta span:nth-child(3) {
+      display: none;
+    }
+
+    .supplier-page .supplier-document-card .supplier-no-documents {
+      padding: .72rem;
+      font-size: .78rem;
+    }
+
+    .supplier-page .supplier-order-details-body {
+      gap: .5rem;
+      padding: .58rem;
+    }
+
+    .supplier-page .supplier-order-item-line {
+      padding: .48rem .55rem;
+      border-radius: .65rem;
+    }
+
+    .supplier-page .supplier-order-item-line strong {
+      font-size: .82rem;
+    }
+
+    .supplier-page .supplier-order-item-line small {
+      display: none;
+    }
+
+    .supplier-page .supplier-more-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: .42rem;
+    }
+
+    .supplier-page .supplier-more-tile {
+      min-height: 4.7rem;
+      grid-template-columns: 3rem minmax(0, 1fr);
+      gap: .9rem;
+      padding: .9rem 1rem;
+      border-radius: 1rem;
+    }
+
+    .supplier-page .supplier-more-tile strong {
+      font-size: 1.12rem;
+      line-height: 1.05;
+    }
+
+    .supplier-page .supplier-more-tile > span:first-child {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: .8rem;
+    }
+
+    .supplier-page .supplier-file-row {
+      grid-template-columns: 20px minmax(0, 1fr);
+    }
+
+    .supplier-page .supplier-file-row small {
+      grid-column: 2;
+    }
+
+    .supplier-page .supplier-order-card-meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .supplier-page .supplier-order-card-actions,
+    .supplier-page .supplier-document-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .supplier-page .supplier-order-card-actions > *,
+    .supplier-page .supplier-document-actions > * {
+      width: 100%;
+    }
+
+    .supplier-page .table-wrap {
+      max-width: 100%;
+    }
+
+    .supplier-page .finance-desktop-movements {
+      display: none;
+    }
+
+    .supplier-page .finance-mobile-movements {
+      display: grid;
+      gap: .5rem;
+    }
+
+    .supplier-page .finance-page .admin-receipt-head {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .supplier-page .finance-page .admin-receipt-actions {
+      width: 100%;
+      max-width: none;
+      display: grid;
+      grid-template-columns: 1fr;
+      justify-self: stretch;
+    }
+
+    .supplier-page .finance-page .admin-receipt-actions .btn {
+      width: 100%;
+    }
+
+    .supplier-page .finance-page .admin-receipt-actions .admin-filter-popover,
+    .supplier-page .admin-receipt-actions .admin-filter-popover {
+      left: auto;
+      right: 0;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .supplier-page .supplier-documents-list {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+      align-items: start;
+    }
+
+    .supplier-page .supplier-document-card {
+      gap: .75rem;
+      padding: .9rem;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-title h2 {
+      display: block;
+      max-width: none;
+      overflow: visible;
+      overflow-wrap: normal;
+      word-break: normal;
+      font-size: 1rem;
+      line-height: 1.16;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-title p {
+      display: block;
+    }
+
+    .supplier-page .supplier-document-card .supplier-document-actions {
+      width: auto;
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
+
+    .supplier-page .supplier-document-card .supplier-document-actions > * {
+      width: auto;
+    }
+
+    .supplier-page .supplier-document-card .supplier-order-card-meta {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 640px) {
+    .supplier-page .supplier-more-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .supplier-page .supplier-back-button {
+      display: none;
+    }
   }
 `;
 
-function Icon({ icon, name, size = 16 }) {
-  return <span dangerouslySetInnerHTML={{ __html: icon(name, size) }} />;
-}
-
-function Topbar({ actions, subtitle, title }) {
-  return (
-    <header className="topbar app-page-header supplier-page-header">
-      <div><span className="eyebrow">{title}</span><h1 className="page-title">{title}</h1><div className="page-subtitle">{subtitle}</div></div>
-      {actions ? <div className="actions">{actions}</div> : null}
-    </header>
-  );
-}
-
-function SupplierBackButton({ icon }) {
-  return <button className="admin-back-button supplier-back-button" data-view="fornecedor-mais" aria-label="Voltar para mais"><Icon icon={icon} name="arrow-left" size={15} /><span>Voltar</span></button>;
-}
-
-function getUserName(state, userId) {
-  return state.users.find((user) => user.id === userId)?.name ?? "Usuario";
-}
-
-function supplierConsolidations(state, user) {
-  return state.consolidations
-    .filter((item) => item.supplierId === user?.id)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-}
-
-function supplierDocuments(state, consolidationId) {
-  return state.consolidationDocuments.filter((item) => item.consolidationId === consolidationId);
-}
-
-function supplierStatusCount(rows, status) {
-  return rows.filter((item) => item.status === status).length;
-}
-
-function supplierActionLabel(consolidation, nextSupplierStep) {
-  const next = nextSupplierStep(consolidation.status);
-  return next?.label ?? "Entrega concluida";
-}
-
-function foodSummary(summary) {
-  return Object.entries(summary.byMeal).map(([meal, data]) => `${data.total} ${meal}`).join(" - ");
-}
-
-function ConsolidatedSummary({ requestMealDescription, state, summary }) {
-  if (!summary.rows.length) return <div className="empty">Sem pedidos recebidos para enviar ao fornecedor.</div>;
-  return (
-    <>
-      {Object.entries(summary.byMeal).map(([meal, data]) => (
-        <div className="consolidated-block" key={meal}>
-          <div className="consolidated-row total-line"><span>{meal}</span><span>{data.total}</span></div>
-          {requestMealDescription(data.rows[0]) ? <div className="consolidated-description">{requestMealDescription(data.rows[0])}</div> : null}
-          {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{meal === "Marmita Campo" ? getUserName(state, request.leaderId) : request.location}</span><strong>{request.quantity}</strong></div>)}
-        </div>
-      ))}
-      <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeicoes</span></div>
-    </>
-  );
-}
-
-function ConsolidationTimeline({ consolidation, formatDateTime, state }) {
-  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou producao"], ["saiu_entrega", "Saida para entrega registrada"], ["entregue", "Entrega concluida"]];
-  return (
-    <div className="timeline">
-      {steps.map(([step, label]) => {
-        const confirmation = consolidation.confirmations.find((item) => item.step === step);
-        return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : "Aguardando"}</div></div>;
-      })}
-    </div>
-  );
-}
-
-function RequestTable({ formatDate, formatDateTime, rows, state, STATUS_LABEL }) {
-  if (!rows.length) return <div className="empty">Nenhum pedido encontrado.</div>;
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Data</th><th>Encarregado</th><th>Tipo</th><th>Local</th><th>Qtd</th><th>Status</th><th>Atualizacao</th></tr></thead>
-        <tbody>
-          {rows.map((request) => (
-            <tr key={request.id}>
-              <td>{formatDate(request.date)}</td>
-              <td><strong>{getUserName(state, request.leaderId)}</strong></td>
-              <td>{request.mealType}</td>
-              <td>{request.location}</td>
-              <td><strong>{request.quantity}</strong></td>
-              <td><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></td>
-              <td>{formatDateTime(request.updatedAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function OriginRequestCards({ formatDate, formatDateTime, rows, state, STATUS_LABEL }) {
-  if (!rows.length) return <div className="empty">Nenhum pedido de origem encontrado.</div>;
-  return (
-    <div className="supplier-origin-list">
-      {rows.map((request) => (
-        <article className="supplier-origin-card" key={request.id}>
-          <div><strong>{request.mealType}</strong><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></div>
-          <p>{getUserName(state, request.leaderId)} - {request.location}</p>
-          <footer><span>{formatDate(request.date)}</span><b>{request.quantity} ref.</b><small>{formatDateTime(request.updatedAt)}</small></footer>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function SupplierMetric({ accent = "", detail, icon, iconName, label, value }) {
-  return (
-    <article className={`supplier-metric ${accent} transition duration-200 hover:-translate-y-0.5`}>
-      {iconName ? <span className="supplier-data-icon"><Icon icon={icon} name={iconName} size={15} /></span> : null}
-      <div className="supplier-data-copy">
-        <strong>{value}</strong>
-        <span>{label}</span>
-        <small>{detail}</small>
-      </div>
-    </article>
-  );
-}
-
-function EmptyNextAction({ icon }) {
-  return (
-    <section className="supplier-next-action is-empty">
-      <span className="supplier-next-icon"><Icon icon={icon} name="package" size={22} /></span>
-      <div><span className="eyebrow">Tudo em dia</span><h2>Sem acao pendente</h2><p>Quando o administrador enviar um consolidado, ele aparecera aqui.</p></div>
-    </section>
-  );
-}
-
-function SupplierNextAction(props) {
-  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, icon, money, nextSupplierStep } = props;
-  const summary = getConsolidationSummary(props.state, consolidation);
-  const next = nextSupplierStep(consolidation.status);
-  return (
-    <section className="supplier-next-action">
-      <span className="supplier-next-icon"><Icon icon={icon} name={consolidation.status === "saiu_entrega" ? "truck" : "clipboard"} size={22} /></span>
-      <div className="supplier-next-copy">
-        <span className="eyebrow">Proxima acao</span>
-        <h2>{supplierActionLabel(consolidation, nextSupplierStep)}</h2>
-        <div className="supplier-next-order">
-          <strong>{foodSummary(summary)}</strong>
-          <span>Pedido {consolidation.id.slice(0, 8).toUpperCase()}</span>
-          <span>{summary.total} refeicoes</span>
-          <span>{money(consolidationValue(consolidation))}</span>
-          <span>Entrega: {formatDate(consolidation.date)}</span>
-        </div>
-      </div>
-      <div className="supplier-next-actions"><button className="btn outline small" data-supplier-select={consolidation.id}>Detalhes</button>{next ? <button className="btn primary" data-step={next.step} data-id={consolidation.id}>{next.label}</button> : null}</div>
-    </section>
-  );
-}
-
-function SupplierQueueRow(props) {
-  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, icon, money, STATUS_LABEL } = props;
-  const summary = getConsolidationSummary(props.state, consolidation);
-  return (
-    <button className="supplier-queue-row" data-supplier-select={consolidation.id}>
-      <span className="supplier-queue-date">Entrega<br /><b>{formatDate(consolidation.date)}</b></span>
-      <span><strong>{foodSummary(summary)}</strong><small>Pedido {consolidation.id.slice(0, 8).toUpperCase()} - {summary.total} refeicoes - {money(consolidationValue(consolidation))}</small></span>
-      <span className={`badge ${consolidation.status}`}>{STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
-      <Icon icon={icon} name="arrow" size={16} />
-    </button>
-  );
-}
-
-function Dashboard(props) {
-  const { formatDate, getConsolidationSummary, icon, state, user } = props;
-  const rows = supplierConsolidations(state, user);
-  const activeRows = rows.filter((item) => !["entregue", "rascunho"].includes(item.status));
-  const priority = [...activeRows].sort((a, b) => {
-    const rank = { enviado: 0, confirmado: 1, producao: 2, saiu_entrega: 3 };
-    return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || new Date(a.date) - new Date(b.date);
-  })[0];
-  const totalToday = rows.filter((item) => item.date === state.settings.defaultMealDate).reduce((sum, item) => sum + getConsolidationSummary(state, item).total, 0);
-
-  return (
-    <section className="supplier-dashboard">
-      <header className="supplier-heading">
-        <div><span className="eyebrow">Fornecedor</span><h1>Home</h1><p>Pedidos recebidos, producao e entregas em um fluxo simples.</p></div>
-        <button className="btn primary" data-view="fornecedor-pedidos"><Icon icon={icon} name="clipboard" size={15} />Pedidos</button>
-      </header>
-      <div className="supplier-metrics-grid">
-        <SupplierMetric icon={icon} iconName="utensils" label="Recebidos do dia" value={totalToday} detail={`para ${formatDate(state.settings.defaultMealDate)}`} accent="accent" />
-        <SupplierMetric icon={icon} iconName="clipboard" label="A confirmar" value={supplierStatusCount(rows, "enviado")} detail="pedidos recebidos" />
-        <SupplierMetric icon={icon} iconName="clock" label="Em producao" value={supplierStatusCount(rows, "confirmado") + supplierStatusCount(rows, "producao")} detail="em preparo" />
-        <SupplierMetric icon={icon} iconName="check" label="Entregues" value={supplierStatusCount(rows, "entregue")} detail="historico total" />
-      </div>
-      {priority ? <SupplierNextAction {...props} consolidation={priority} /> : <EmptyNextAction icon={icon} />}
-      <section className="supplier-panel-card supplier-queue-card">
-        <div className="supplier-section-heading"><div><span className="eyebrow">Fila operacional</span><h2>Pedidos prioritarios</h2></div><button className="text-action" data-view="fornecedor-pedidos">Ver todos <Icon icon={icon} name="arrow" size={15} /></button></div>
-        <div className="supplier-queue">{activeRows.length ? activeRows.slice(0, 5).map((item) => <SupplierQueueRow {...props} consolidation={item} key={item.id} />) : <div className="empty">Nenhum pedido pendente no momento.</div>}</div>
-      </section>
-    </section>
-  );
-}
-
-function OrderListItem(props) {
-  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, money, selected, STATUS_LABEL } = props;
-  const summary = getConsolidationSummary(props.state, consolidation);
-  return <button className={`supplier-order-list-item ${selected ? "selected" : ""}`} data-supplier-select={consolidation.id}><span className={`badge ${consolidation.status}`}>{STATUS_LABEL[consolidation.status] ?? consolidation.status}</span><strong>{foodSummary(summary)}</strong><small>{summary.total} refeicoes - {money(consolidationValue(consolidation))} - Entrega {formatDate(consolidation.date)}</small></button>;
-}
-
-function OrderDetail(props) {
-  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, icon, money, nextSupplierStep, requestMealDescription, STATUS_LABEL } = props;
-  const summary = getConsolidationSummary(props.state, consolidation);
-  const next = nextSupplierStep(consolidation.status);
-  const highlights = Object.entries(summary.byMeal).map(([meal, data]) => `${meal}: ${data.total}`).join(" - ");
-  const compositions = Object.entries(summary.byMeal).map(([meal, data]) => [meal, requestMealDescription(data.rows[0])]).filter(([, description]) => description);
-
-  return (
-    <article className="supplier-order-detail">
-      <div className="supplier-detail-top"><div><span className="eyebrow">Pedido {consolidation.id.slice(0, 8).toUpperCase()}</span><h2>{summary.total} refeicoes para {formatDate(consolidation.date)}</h2></div><span className={`badge ${consolidation.status}`}>{STATUS_LABEL[consolidation.status] ?? consolidation.status}</span></div>
-      <div className="supplier-order-highlights"><div><span>Alimentacao</span><strong>{highlights}</strong></div><div><span>Quantidade</span><strong>{summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>{money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>{formatDate(consolidation.date)}</strong></div></div>
-      {compositions.length ? <section className="supplier-composition"><h3>Composicao das marmitas</h3>{compositions.map(([meal, description]) => <p key={meal}><strong>{meal}:</strong> {description}</p>)}</section> : null}
-      <div className="supplier-detail-actions"><button className="btn outline small" data-generate-romaneio={consolidation.id}>Gerar nota de fornecimento</button>{next ? <button className="btn primary" data-step={next.step} data-id={consolidation.id}>{next.label}</button> : null}</div>
-      <div className="supplier-detail-grid"><section><h3>Itens consolidados</h3><ConsolidatedSummary {...props} summary={summary} /></section><section><h3>Rastreabilidade</h3><ConsolidationTimeline {...props} consolidation={consolidation} /></section></div>
-      <section className="supplier-origin-requests"><h3>Pedidos de origem</h3><OriginRequestCards {...props} rows={summary.rows} /></section>
-    </article>
-  );
-}
-
-function Orders(props) {
-  const { state, supplierOrderDate, supplierOrderStatus, selectedSupplierConsolidationId, user } = props;
-  const rows = supplierConsolidations(state, user).filter((item) => {
-    const matchesStatus = supplierOrderStatus === "todos" || (supplierOrderStatus === "ativos" ? !["entregue", "rascunho"].includes(item.status) : item.status === supplierOrderStatus);
-    return matchesStatus && (!supplierOrderDate || item.date === supplierOrderDate);
-  });
-  const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? rows[0] ?? null;
-
-  return (
-    <section className="supplier-workspace">
-      <Topbar title="Pedidos" subtitle="Fila de producao, entrega e acompanhamento" actions={<div className="filter-bar supplier-filter-bar">
-        <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">Em producao</option><option value="saiu_entrega">Em rota</option><option value="entregue">Entregues</option></select>
-        <input type="date" defaultValue={supplierOrderDate} data-supplier-date />
-        <button className="btn outline small" data-supplier-clear-filter>Limpar filtros</button>
-      </div>} />
-      <div className="supplier-orders-layout"><div className="supplier-order-list">{rows.length ? rows.map((item) => <OrderListItem {...props} consolidation={item} selected={item.id === selected?.id} key={item.id} />) : <div className="empty">Nenhum pedido encontrado.</div>}</div>{selected ? <OrderDetail {...props} consolidation={selected} /> : <div className="empty supplier-detail-empty">Selecione um pedido para ver os detalhes.</div>}</div>
-    </section>
-  );
-}
-
-function History(props) {
-  const { formatDate, formatDateTime, getConsolidationSummary, state, user } = props;
-  const rows = supplierConsolidations(state, user).filter((item) => item.status === "entregue");
-  return (
-    <section className="supplier-workspace">
-      <Topbar title="Historico de entregas" subtitle="Pedidos concluidos pelo fornecedor" />
-      <div className="supplier-history-list">{rows.length ? rows.map((item) => { const summary = getConsolidationSummary(state, item); const delivered = item.confirmations.find((confirmation) => confirmation.step === "entregue"); return <article className="supplier-history-row" key={item.id}><div><span className="badge entregue">Entregue</span><h2>{formatDate(item.date)} - {summary.total} refeicoes</h2><p>Concluido em {formatDateTime(delivered?.at)}</p></div><div className="supplier-history-actions"><button className="btn outline small" data-generate-romaneio={item.id}>Nota de fornecimento</button><button className="btn outline small" data-view="fornecedor-documentos">Documentos</button></div></article>; }) : <div className="empty">Nenhuma entrega concluida ainda.</div>}</div>
-    </section>
-  );
-}
-
-function More(props) {
-  const { consolidationValue, formatDateTime, icon, money, state, user } = props;
-  const rows = supplierConsolidations(state, user);
-  const delivered = rows.filter((item) => item.status === "entregue");
-  const documents = state.consolidationDocuments.filter((item) => rows.some((row) => row.id === item.consolidationId));
-  const openValue = rows
-    .filter((item) => item.status !== "entregue" && item.status !== "rascunho")
-    .reduce((sum, item) => sum + consolidationValue(item), 0);
-  const latestDoc = documents[0];
-  const tools = [
-    ["fornecedor-documentos", "package", "Documentos", `${documents.length} arquivo${documents.length === 1 ? "" : "s"}`, latestDoc ? `Ultimo envio ${formatDateTime(latestDoc.createdAt)}` : "Notas e comprovantes"],
-    ["fornecedor-financeiro", "chart", "Financeiro", money(openValue), `${delivered.length} entrega${delivered.length === 1 ? "" : "s"} concluida${delivered.length === 1 ? "" : "s"}`]
-  ];
-
-  return (
-    <section className="supplier-more">
-      <header className="supplier-heading supplier-more-heading">
-        <div><span className="eyebrow">Mais</span><h1>Documentos e financeiro</h1><p>Acesse arquivos fiscais, notas de fornecimento e valores sem lotar a barra principal.</p></div>
-      </header>
-      <div className="supplier-more-grid">
-        {tools.map(([view, iconName, title, value, text]) => (
-          <button className="supplier-more-tile" data-view={view} key={view}>
-            <span><Icon icon={icon} name={iconName} size={22} /></span>
-            <div><strong>{title}</strong><small>{text}</small></div>
-            <b>{value}</b>
-            <i><Icon icon={icon} name="arrow" size={16} /></i>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Documents(props) {
-  const { formatDate, formatDateTime, getConsolidationSummary, icon, state, STATUS_LABEL, user } = props;
-  const rows = supplierConsolidations(state, user);
-  return (
-    <section className="supplier-workspace">
-      <Topbar title="Documentos" subtitle="Notas de fornecimento e notas fiscais anexadas" actions={<SupplierBackButton icon={icon} />} />
-      <div className="supplier-documents-list">{rows.length ? rows.map((consolidation) => { const summary = getConsolidationSummary(state, consolidation); const docs = supplierDocuments(state, consolidation.id); return (
-        <article className="supplier-document-card" key={consolidation.id}>
-          <div className="supplier-document-title"><div><span className="eyebrow">{formatDate(consolidation.date)}</span><h2>Pedido {consolidation.id.slice(0, 8).toUpperCase()}</h2><p>{summary.total} refeicoes - {STATUS_LABEL[consolidation.status] ?? consolidation.status}</p></div><button className="btn outline small" data-generate-romaneio={consolidation.id}>Gerar nota</button></div>
-          <div className="supplier-document-body"><div><strong>Nota fiscal</strong><small>Anexe o PDF fiscal emitido fora do sistema.</small></div><label className="btn primary small supplier-upload-label">Anexar PDF<input type="file" accept="application/pdf" data-document-upload={consolidation.id} hidden /></label></div>
-          {docs.length ? <div className="supplier-attached-files">{docs.map((doc) => <button className="supplier-file-row" data-download-document={doc.id} key={doc.id}><Icon icon={icon} name="package" size={16} /><span>{doc.originalName}</span><small>{formatDateTime(doc.createdAt)}</small></button>)}</div> : <div className="supplier-no-documents">Nenhuma nota fiscal anexada.</div>}
-        </article>
-      ); }) : <div className="empty">Ainda nao ha pedidos para documentar.</div>}</div>
-    </section>
-  );
-}
-
-function Financeiro(props) {
-  const { formatDate, icon, money, requestValue, state, sumQty, user, STATUS_LABEL } = props;
-  const sourceRows = supplierConsolidations(state, user).flatMap((consolidation) => props.getConsolidationSummary(state, consolidation).rows);
-  const month = state.settings.defaultMealDate.slice(0, 7);
-  const rows = sourceRows.filter((request) => request.date.startsWith(month));
-  const delivered = rows.filter((request) => request.status === "entregue");
-  const projected = rows.reduce((sum, request) => sum + requestValue(request), 0);
-  const deliveredValue = delivered.reduce((sum, request) => sum + requestValue(request), 0);
-  const pendingValue = projected - deliveredValue;
-  const byMeal = state.mealTypes.map((meal) => ({ label: meal.label, value: rows.filter((request) => request.mealTypeId === meal.id).reduce((sum, request) => sum + requestValue(request), 0) })).filter((item) => item.value > 0);
-  const max = Math.max(...byMeal.map((item) => item.value), 1);
-  const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(`${state.settings.defaultMealDate}T12:00:00`); date.setDate(date.getDate() - (6 - index)); const key = date.toISOString().slice(0, 10); return { key, label: String(date.getDate()).padStart(2, "0"), value: sourceRows.filter((request) => request.date === key).reduce((sum, request) => sum + requestValue(request), 0) }; });
-  const dailyMax = Math.max(...days.map((item) => item.value), 1);
-
-  return (
-    <section className="finance-page">
-      <Topbar title="Financeiro do fornecedor" subtitle={`Analise de ${month}`} actions={<><SupplierBackButton icon={icon} /><button className="btn primary" data-export-finance="fornecedor"><Icon icon={icon} name="chart" size={15} />Gerar PDF</button></>} />
-      <div className="finance-metrics">
-        <article className="finance-metric accent"><span className="supplier-data-icon"><Icon icon={icon} name="chart" size={15} /></span><div className="supplier-data-copy"><strong>{money(projected)}</strong><span>Faturamento previsto</span><small>{sumQty(rows)} refeicoes no mes</small></div></article>
-        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="truck" size={15} /></span><div className="supplier-data-copy"><strong>{money(deliveredValue)}</strong><span>Faturado</span><small>{delivered.length} pedidos entregues</small></div></article>
-        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="clock" size={15} /></span><div className="supplier-data-copy"><strong>{money(pendingValue)}</strong><span>Em aberto</span><small>pedidos ainda em operacao</small></div></article>
-        <article className="finance-metric"><span className="supplier-data-icon"><Icon icon={icon} name="utensils" size={15} /></span><div className="supplier-data-copy"><strong>{money(rows.length ? projected / sumQty(rows) : 0)}</strong><span>Ticket medio</span><small>por refeicao</small></div></article>
-      </div>
-      <div className="finance-grid"><article className="finance-card"><h2>Composicao por refeicao</h2>{byMeal.length ? byMeal.map((item) => <div className="finance-progress" key={item.label}><div><span>{item.label}</span><strong>{money(item.value)}</strong></div><i><b style={{ width: `${Math.max(3, Math.round((item.value / max) * 100))}%` }} /></i></div>) : <div className="empty">Sem movimentacao no periodo.</div>}</article><article className="finance-card"><h2>Evolucao dos ultimos 7 dias</h2><div className="finance-bars">{days.map((item) => <div key={item.key}><strong>{item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style={{ height: `${Math.max(5, Math.round((item.value / dailyMax) * 126))}px` }} /><span>{item.label}</span></div>)}</div></article></div>
-      <article className="finance-card finance-table-card"><h2>Movimentacoes do periodo</h2><div className="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>{[...rows].sort((a, b) => b.date.localeCompare(a.date)).map((request) => <tr key={request.id}><td>{formatDate(request.date)}</td><td>{request.mealType}</td><td>{request.quantity}</td><td><strong>{money(requestValue(request))}</strong></td><td><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></td></tr>)}</tbody></table></div></article>
-    </section>
-  );
-}
 
 export function SupplierReactPage(props) {
   let content;

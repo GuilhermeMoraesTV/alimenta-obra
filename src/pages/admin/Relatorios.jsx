@@ -104,10 +104,13 @@ function FinanceMetric({ accent = false, icon, iconName, label, value, hint }) {
 }
 
 export function Relatorios(props) {
-  const { icon, state, sumQty, totalsByMeal } = props;
-  const rows = state.requests.filter((request) => request.status !== "cancelado");
+  const { icon, reportFilter, reportPeriodLabel, reportRows, state, sumQty, totalsByMeal } = props;
+  const rows = reportRows ?? state.requests.filter((request) => request.status !== "cancelado");
+  const currentFilter = reportFilter ?? { range: "all", start: state.settings.defaultMealDate, end: state.settings.defaultMealDate };
   const total = sumQty(rows);
   const mealTotals = totalsByMeal(rows);
+  const isAllPeriod = currentFilter.range === "all";
+  const isCustomPeriod = currentFilter.range === "custom";
 
   return (
     <>
@@ -118,19 +121,20 @@ export function Relatorios(props) {
         title="Visao geral e desempenho"
         totalValue={total}
         totalLabel="refeicoes no periodo"
-        description="Filtre por periodo diario, semanal, mensal ou personalizado."
+        description={`Periodo: ${reportPeriodLabel ?? "Todo periodo"}`}
         actions={(
           <>
             <AdminBackButton icon={icon} />
             <AdminFilterMenu icon={icon}>
-              <select data-report-range>
-                <option value="day">Data</option>
+              <select data-report-range value={currentFilter.range} onChange={() => {}}>
+                <option value="all">Todo periodo</option>
+                <option value="day">Dia</option>
                 <option value="week">Semana</option>
                 <option value="month">Mes</option>
                 <option value="custom">Periodo personalizado</option>
               </select>
-              <input type="date" defaultValue={state.settings.defaultMealDate} />
-              <input type="date" defaultValue={state.settings.defaultMealDate} />
+              <input type="date" value={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} onChange={() => {}} />
+              <input type="date" value={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} onChange={() => {}} />
             </AdminFilterMenu>
 
             <ExportButtons
@@ -170,14 +174,15 @@ export function Relatorios(props) {
             {/* Ações Redesenhadas */}
             <div className="finance-hero-actions">
               <AdminFilterMenu icon={icon}>
-                <select data-report-range>
-                  <option value="day">Data</option>
+                <select data-report-range value={currentFilter.range} onChange={() => {}}>
+                  <option value="all">Todo periodo</option>
+                  <option value="day">Dia</option>
                   <option value="week">Semana</option>
                   <option value="month">Mês</option>
                   <option value="custom">Período personalizado</option>
                 </select>
-                <input type="date" defaultValue={state.settings.defaultMealDate} />
-                <input type="date" defaultValue={state.settings.defaultMealDate} />
+                <input type="date" value={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} onChange={() => {}} />
+                <input type="date" value={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} onChange={() => {}} />
               </AdminFilterMenu>
 
               <ExportButtons

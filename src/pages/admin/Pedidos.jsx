@@ -126,6 +126,8 @@ const pedidosStyles = `
   .admin-page .admin-request-shell { display: grid; min-width: 0; gap: .35rem; }
   .admin-page .admin-request-owner { display: inline-flex; width: max-content; max-width: 100%; align-items: center; gap: .45rem; border-radius: .5rem; border: 1px dashed #d6d3d1; background: #fffefa; padding: .35rem .55rem; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #78716c; }
   .admin-page .admin-request-owner strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1c1917; }
+  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: 1 / -1; }
   @media (max-width: 767px) {
     .admin-page .admin-history-hero .admin-history-actions { width: 100%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
     .admin-page .admin-pedidos-summary { padding-inline: .75rem; }
@@ -136,11 +138,12 @@ const pedidosStyles = `
 `;
 
 function AdminRequestCard(props) {
-  const { request, state } = props;
+  const { formatDateTime, request, state } = props;
   return (
     <article className="admin-request-shell">
-      <div className="admin-request-owner">Encarregado <strong>{getUserName(state, request.leaderId)}</strong></div>
+      <div className="admin-request-owner">Encarregado <strong>{getUserName(state, request.leaderId)}</strong><span>Pedido em {formatDateTime(request.createdAt)}</span></div>
       <RequestCard {...props} request={request} compact />
+      {request.status === "enviado" ? <button className="btn outline small" type="button" data-send-request-date={request.date}>Enviar pedidos de {props.formatDate(request.date)} ao fornecedor</button> : null}
     </article>
   );
 }
@@ -150,7 +153,9 @@ export function Pedidos(props) {
   const date = adminFilters.date;
   const leader = adminFilters.leader;
   const meal = adminFilters.meal;
-  const rows = state.requests.filter((request) => (!date || request.date === date) && (!leader || request.leaderId === leader) && (!meal || request.mealType === meal));
+  const rows = state.requests
+    .filter((request) => (!date || request.date === date) && (!leader || request.leaderId === leader) && (!meal || request.mealType === meal))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const activeRows = rows.filter((request) => request.status !== "cancelado");
   const waitingCount = countStatus(rows, "enviado");
 
@@ -159,6 +164,7 @@ export function Pedidos(props) {
       <style>{baseAdminScreenStyles + pedidosStyles}</style>
       <div className="grid w-full gap-3 sm:gap-4 admin-history-shell">
         <AdminReceiptHeader
+          className="admin-pedidos-receipt"
           kicker="Pedidos administrativos"
           title="Pedidos recebidos"
           totalValue={rows.length}
@@ -170,6 +176,7 @@ export function Pedidos(props) {
                 <input type="date" defaultValue={date} data-filter-date aria-label="Filtrar por data" />
                 <select defaultValue={leader} data-filter-leader aria-label="Filtrar encarregado"><option value="">Todos</option>{state.users.map((user) => <option value={user.id} key={user.id}>{user.name}</option>)}</select>
                 <select defaultValue={meal} data-filter-meal aria-label="Filtrar refeicao"><option value="">Tipos</option>{state.mealTypes.map((item) => <option value={item.label} key={item.id}>{item.label}</option>)}</select>
+                <button className="btn outline small" type="button" data-clear-admin-request-filters>Todos os dias</button>
               </AdminFilterMenu>
               <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="pedidos" items={[["csv", "CSV", "clipboard"], ["xlsx", "Excel", "chart"]]} />
             </>

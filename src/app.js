@@ -1,4 +1,4 @@
-import { exportCsv, exportExcel, exportFinancialPdf, exportPdf, exportSupplierRomaneio, exportWord } from "./services/exports.js";
+import { exportAuditPdf, exportCsv, exportExcel, exportFinancialPdf, exportPdf, exportSupplierRomaneio, exportWord } from "./services/exports.js";
 import { renderAppShell } from "./components/app-shell.js";
 import { renderLoginScreen } from "./components/auth.js";
 import { icon } from "./components/icons.js";
@@ -65,6 +65,12 @@ let generatedInviteLink = "";
 let pendingCancelRequestId = null;
 let operationNotice = null;
 let adminConsumptionWeekOffset = 0;
+let adminRequestDateFilter = "";
+let reportFilter = {
+  range: "all",
+  start: "",
+  end: ""
+};
 
 const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
@@ -126,7 +132,9 @@ function toast(message) {
 }
 
 function activeDate() {
-  return document.querySelector("[data-filter-date]")?.value || state.settings.defaultMealDate;
+  const currentValue = document.querySelector("[data-filter-date]")?.value;
+  if (state.activeView === "pedidos") return currentValue ?? adminRequestDateFilter;
+  return currentValue || state.settings.defaultMealDate;
 }
 
 function setView(view) {
@@ -139,7 +147,7 @@ function setView(view) {
 
 function render() {
   const adminFilters = {
-    date: activeDate(),
+    date: state.activeView === "pedidos" ? adminRequestDateFilter : activeDate(),
     leader: document.querySelector("[data-filter-leader]")?.value ?? "",
     meal: document.querySelector("[data-filter-meal]")?.value ?? ""
   };
@@ -205,6 +213,9 @@ function render() {
     page: state.activeView,
     requestMealDescription,
     requestValue,
+    reportFilter,
+    reportPeriodLabel: getReportPeriodLabel(),
+    reportRows: getReportRows(),
     state,
     sumQty,
     totalsByMeal,
@@ -239,14 +250,18 @@ function renderLogin() {
 
 function renderNav(user) {
   const adminMoreViews = ["financeiro", "relatorios", "auditoria", "configuracoes"];
-  const supplierMoreViews = ["fornecedor-mais", "fornecedor-documentos", "fornecedor-financeiro"];
+  const supplierMoreViews = ["fornecedor-mais", "fornecedor-documentos", "fornecedor-financeiro", "configuracoes"];
   return NAV_BY_ROLE[user.role].map(([view, iconName, label]) => {
     const active = state.activeView === view || (view === "mais" && adminMoreViews.includes(state.activeView)) || (view === "fornecedor-mais" && supplierMoreViews.includes(state.activeView));
     const responsiveClass = user.role === "admin" && view === "mais"
       ? "md:hidden"
       : user.role === "admin" && adminMoreViews.includes(view)
         ? "hidden md:flex"
-        : "";
+        : user.role === "fornecedor" && view === "fornecedor-mais"
+          ? "md:hidden"
+          : user.role === "fornecedor" && ["fornecedor-documentos", "fornecedor-financeiro"].includes(view)
+            ? "hidden md:flex"
+            : "";
     return `
     <button class="group relative grid min-w-0 flex-1 place-items-center gap-0.5 rounded-[16px] border border-white/10 !bg-[#242622] px-1 py-1 text-center text-[8px] font-black leading-tight text-white/65 transition hover:!bg-[#2f312d] hover:text-white md:flex md:min-h-11 md:w-full md:flex-none md:justify-start md:gap-3 md:rounded-r-2xl md:rounded-l-md md:px-2.5 md:text-left md:text-sm ${responsiveClass} ${active ? "active !border-orange-500 !bg-orange-600 !text-white shadow-[0_10px_18px_rgba(239,91,29,.25)] md:shadow-[inset_4px_0_0_rgba(249,115,22,.95)]" : ""}" data-view="${view}">
       <span class="grid h-7 w-7 place-items-center rounded-[12px] bg-white/10 text-white/75 transition group-hover:bg-orange-500/15 group-hover:text-orange-100 md:h-8 md:w-8 md:rounded-r-xl md:rounded-l-md ${active ? "!bg-white/18 !text-white" : ""}">${icon(iconName, 17)}</span>
@@ -485,6 +500,61 @@ function getWeekStart(referenceDate, offset = 0) {
   date.setDate(date.getDate() + diffToMonday + offset * 7);
   date.setHours(12, 0, 0, 0);
   return date;
+}
+
+function toDateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeReportFilter(nextFilter = reportFilter) {
+  const baseDate = nextFilter.start || state.settings.defaultMealDate;
+  if (nextFilter.range === "all") return { range: "all", start: "", end: "" };
+  if (nextFilter.range === "day") return { range: "day", start: baseDate, end: baseDate };
+  if (nextFilter.range === "week") {
+    const start = getWeekStart(baseDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { range: "week", start: toDateKey(start), end: toDateKey(end) };
+  }
+  if (nextFilter.range === "month") {
+    const [year, month] = baseDate.split("-").map(Number);
+    const start = new Date(year, month - 1, 1, 12);
+    const end = new Date(year, month, 0, 12);
+    return { range: "month", start: toDateKey(start), end: toDateKey(end) };
+  }
+  const start = nextFilter.start || state.settings.defaultMealDate;
+  const end = nextFilter.end || start;
+  return start <= end ? { range: "custom", start, end } : { range: "custom", start: end, end: start };
+}
+
+function getReportRows() {
+  const filter = normalizeReportFilter(reportFilter);
+  return state.requests
+    .filter((request) => request.status !== "cancelado")
+    .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end));
+}
+
+function getReportPeriodLabel() {
+  const filter = normalizeReportFilter(reportFilter);
+  if (filter.range === "all") return "Todo periodo";
+  if (filter.start === filter.end) return formatDate(filter.start);
+  return `${formatDate(filter.start)} a ${formatDate(filter.end)}`;
+}
+
+function auditEntityLabel(entity) {
+  return {
+    pedido: "Pedido de refeicao",
+    meal_request: "Pedido de refeicao",
+    tipo_alimentacao: "Tipo de alimentacao",
+    meal_type: "Tipo de alimentacao",
+    consolidacao: "Envio ao fornecedor",
+    consolidation: "Envio ao fornecedor",
+    fornecedor: "Fornecedor",
+    supplier: "Fornecedor",
+    usuario: "Usuario",
+    user: "Usuario",
+    seed: "Carga inicial"
+  }[entity] ?? String(entity ?? "Registro").replaceAll("_", " ");
 }
 
 function renderAdminLiveOrders(rows) {
@@ -796,7 +866,7 @@ function renderFornecedor() {
 }
 
 function renderSupplierEmptyState() {
-  return `<section class="supplier-next-action is-empty"><span class="supplier-next-icon">${icon("package", 22)}</span><div><span class="eyebrow">Tudo em dia</span><h2>Sem acao pendente</h2><p>Quando o administrador enviar um consolidado, ele aparecera aqui.</p></div></section>`;
+  return `<section class="supplier-next-action is-empty"><span class="supplier-next-icon">${icon("package", 22)}</span><div><span class="eyebrow">Tudo em dia</span><h2>Sem acao pendente</h2><p>Quando o administrador enviar um pedido ao fornecedor, ele aparecera aqui.</p></div></section>`;
 }
 
 function renderSupplierNextAction(consolidation) {
@@ -846,7 +916,7 @@ function renderSupplierOrderDetail(consolidation) {
       return description ? `<p><strong>${escapeHtml(meal)}:</strong> ${escapeHtml(description)}</p>` : "";
     })
     .join("");
-  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div>${compositions ? `<section class="supplier-composition"><h3>Composicao das marmitas</h3>${compositions}</section>` : ""}<div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens consolidados</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderSupplierOriginCards(summary.rows)}</section></article>`;
+  return `<article class="supplier-order-detail"><div class="supplier-detail-top"><div><span class="eyebrow">Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><h2>${summary.total} refeicoes para ${formatDate(consolidation.date)}</h2></div><span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status]}</span></div><div class="supplier-order-highlights"><div><span>Alimentacao</span><strong>${highlights}</strong></div><div><span>Quantidade</span><strong>${summary.total} refeicoes</strong></div><div><span>Valor do pedido</span><strong>${money(consolidationValue(consolidation))}</strong></div><div><span>Entrega prevista</span><strong>${formatDate(consolidation.date)}</strong></div></div>${compositions ? `<section class="supplier-composition"><h3>Composicao das marmitas</h3>${compositions}</section>` : ""}<div class="supplier-detail-actions"><button class="btn outline small" data-generate-romaneio="${consolidation.id}">Gerar nota de fornecimento</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div><div class="supplier-detail-grid"><section><h3>Itens do pedido</h3>${renderConsolidatedSummary(summary)}</section><section><h3>Rastreabilidade</h3>${renderConsolidationTimeline(consolidation)}</section></div><section class="supplier-origin-requests"><h3>Pedidos de origem</h3>${renderSupplierOriginCards(summary.rows)}</section></article>`;
 }
 
 function renderSupplierOriginCards(rows) {
@@ -865,7 +935,8 @@ function renderSupplierDocuments() {
 }
 
 function renderRelatorios() {
-  const rows = state.requests.filter((request) => request.status !== "cancelado");
+  const filter = normalizeReportFilter(reportFilter);
+  const rows = getReportRows();
   const total = sumQty(rows);
   const byLeader = Object.entries(rows.reduce((acc, request) => {
     const leader = getUserName(state, request.leaderId);
@@ -874,16 +945,17 @@ function renderRelatorios() {
     return acc;
   }, {})).sort((a, b) => b[1] - a[1]);
   return `
-    ${topbar("Relatorios", "Diario, semanal, mensal e periodo personalizado", `
+    ${topbar("Relatorios", `Periodo: ${getReportPeriodLabel()}`, `
       <div class="filter-bar report-filter-bar">
       <select data-report-range>
-        <option value="day">Data</option>
-        <option value="week">Semana</option>
-        <option value="month">Mes</option>
-        <option value="custom">Periodo personalizado</option>
+        <option value="all" ${filter.range === "all" ? "selected" : ""}>Todo periodo</option>
+        <option value="day" ${filter.range === "day" ? "selected" : ""}>Dia</option>
+        <option value="week" ${filter.range === "week" ? "selected" : ""}>Semana</option>
+        <option value="month" ${filter.range === "month" ? "selected" : ""}>Mes</option>
+        <option value="custom" ${filter.range === "custom" ? "selected" : ""}>Periodo personalizado</option>
       </select>
-      <input type="date" value="${state.settings.defaultMealDate}" />
-      <input type="date" value="${state.settings.defaultMealDate}" />
+      <input type="date" value="${filter.start || state.settings.defaultMealDate}" data-report-start ${filter.range === "all" ? "disabled" : ""} />
+      <input type="date" value="${filter.end || filter.start || state.settings.defaultMealDate}" data-report-end ${filter.range === "custom" ? "" : "disabled"} />
       <select>
         <option>Todos os encarregados</option>
         ${getLeaders(state).map((leader) => `<option>${leader.name}</option>`).join("")}
@@ -919,7 +991,7 @@ function renderAuditoria() {
         ${state.auditLog.map((item) => `
           <div class="timeline-item">
             <div class="timeline-dot"></div>
-            <div class="timeline-body"><strong>${item.action}</strong><br>${getUserName(state, item.userId)} · ${formatDateTime(item.at)} · ${item.entity}</div>
+            <div class="timeline-body"><strong>${item.action}</strong><br>${getUserName(state, item.userId)} · ${formatDateTime(item.at)} · ${auditEntityLabel(item.entity)}</div>
           </div>`).join("")}
       </div>
     </div>`;
@@ -1047,7 +1119,34 @@ function bindEvents() {
   });
   root.querySelector("[data-save-delivery-address]")?.addEventListener("click", saveDeliveryAddress);
   root.querySelectorAll("[data-filter-date], [data-filter-leader], [data-filter-meal]").forEach((control) => {
-    control.addEventListener("change", () => render());
+    control.addEventListener("change", (event) => {
+      if (state.activeView === "pedidos" && event.currentTarget.matches("[data-filter-date]")) {
+        adminRequestDateFilter = event.currentTarget.value;
+      }
+      render();
+    });
+  });
+  root.querySelector("[data-clear-admin-request-filters]")?.addEventListener("click", () => {
+    adminRequestDateFilter = "";
+    render();
+  });
+  root.querySelectorAll("[data-report-range]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      reportFilter = normalizeReportFilter({ ...reportFilter, range: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-report-start]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      reportFilter = normalizeReportFilter({ ...reportFilter, start: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-report-end]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      reportFilter = normalizeReportFilter({ ...reportFilter, end: event.currentTarget.value });
+      render();
+    });
   });
   root.querySelectorAll("[data-cancel-request]").forEach((button) => {
     button.addEventListener("click", () => cancelRequest(button.dataset.cancelRequest));
@@ -1093,6 +1192,13 @@ function bindEvents() {
   root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
   root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
     form.addEventListener("submit", handleMealCatalogSubmit);
+  });
+  root.querySelector("[data-open-new-meal]")?.addEventListener("click", () => {
+    const panel = root.querySelector("[data-new-meal-panel]");
+    if (panel) panel.open = true;
+  });
+  root.querySelectorAll("[data-delete-meal-type]").forEach((button) => {
+    button.addEventListener("click", () => handleMealCatalogDelete(button.dataset.deleteMealType));
   });
   root.querySelector("[data-edit-meal]")?.addEventListener("change", (event) => {
     const location = root.querySelector("#edit-request-location");
@@ -1149,6 +1255,7 @@ function bindEvents() {
   root.querySelectorAll("[data-export-finance]").forEach((button) => {
     button.addEventListener("click", () => handleFinanceExport(button.dataset.exportFinance));
   });
+  root.querySelector("[data-export-audit]")?.addEventListener("click", handleAuditExport);
   root.querySelectorAll("[data-week-nav]").forEach((button) => {
     button.addEventListener("click", () => {
       const direction = Number(button.dataset.weekNav);
@@ -1416,6 +1523,28 @@ async function handleMealCatalogSubmit(event) {
   }
 }
 
+async function handleMealCatalogDelete(id) {
+  const meal = state.mealCatalog.find((item) => item.id === id);
+  if (!meal) return;
+  const button = root.querySelector(`[data-delete-meal-type="${id}"]`);
+  if (button) button.disabled = true;
+  try {
+    await saveMealTypeCatalog({
+      id: meal.id,
+      name: meal.label,
+      description: meal.description,
+      active: false
+    });
+    await refreshData();
+    toast("Tipo removido dos novos pedidos.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel remover o tipo: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function handleAccessInviteSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
@@ -1526,7 +1655,7 @@ async function sendConsolidation() {
   try {
     await sendDailyConsolidation(date, supplierId);
     await refreshData();
-    toast("Fornecedor notificado com o pedido consolidado.");
+    toast("Fornecedor notificado com o pedido.");
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel enviar: ${error.message}`);
@@ -1603,12 +1732,21 @@ async function downloadSupplierDocument(documentId) {
 
 function handleExport(type) {
   const date = activeDate();
-  const rows = state.requests.filter((request) => !date || request.date === date);
+  const rows = state.activeView === "relatorios"
+    ? getReportRows()
+    : state.requests.filter((request) => {
+      const leader = document.querySelector("[data-filter-leader]")?.value ?? "";
+      const meal = document.querySelector("[data-filter-meal]")?.value ?? "";
+      return (!date || request.date === date) && (!leader || request.leaderId === leader) && (!meal || request.mealType === meal);
+    });
   const consolidation = getConsolidationForDate(state, date);
   if (type === "csv") exportCsv(state, rows);
   if (type === "xlsx") exportExcel(state, rows);
   if (type === "doc") exportWord(state, consolidation);
-  if (type === "pdf") exportPdf(state, consolidation);
+  if (type === "pdf" && !exportPdf(state, consolidation)) {
+    toast("Permita a abertura de janela para gerar o PDF.");
+    return;
+  }
   toast("Exportacao preparada.");
 }
 
@@ -1616,7 +1754,15 @@ function handleFinanceExport(mode) {
   const rows = mode === "fornecedor"
     ? supplierConsolidations().flatMap((consolidation) => getConsolidationSummary(state, consolidation).rows)
     : state.requests.filter((request) => request.status !== "cancelado");
-  exportFinancialPdf(state, rows, mode === "fornecedor" ? "Financeiro do fornecedor" : "Financeiro administrativo");
+  if (!exportFinancialPdf(state, rows, mode === "fornecedor" ? "Financeiro do fornecedor" : "Financeiro administrativo")) {
+    toast("Permita a abertura de janela para gerar o PDF.");
+  }
+}
+
+function handleAuditExport() {
+  if (!exportAuditPdf(state)) {
+    toast("Permita a abertura de janela para gerar o PDF de auditoria.");
+  }
 }
 
 function locationOptions(mealTypeId, selectedLocationId = "") {

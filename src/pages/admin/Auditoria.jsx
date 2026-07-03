@@ -1,5 +1,5 @@
 import React from "react";
-import { AdminBackButton, AdminReceiptHeader, getUserName } from "./shared.jsx";
+import { AdminBackButton, AdminReceiptHeader, Icon, getUserName } from "./shared.jsx";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -114,10 +114,24 @@ const auditoriaStyles = `
   .admin-page .timeline-dot { margin-top: .25rem; width: .75rem; height: .75rem; border-radius: 999px; background: #ea580c; }
 `;
 
+const auditEntityLabel = (entity) => ({
+  pedido: "Pedido de refeicao",
+  meal_request: "Pedido de refeicao",
+  tipo_alimentacao: "Tipo de alimentacao",
+  meal_type: "Tipo de alimentacao",
+  consolidacao: "Envio ao fornecedor",
+  consolidation: "Envio ao fornecedor",
+  fornecedor: "Fornecedor",
+  supplier: "Fornecedor",
+  usuario: "Usuario",
+  user: "Usuario",
+  seed: "Carga inicial"
+}[entity] ?? String(entity ?? "Registro").replaceAll("_", " "));
+
 export function Auditoria({ formatDateTime, icon, state }) {
   const auditRows = state.auditLog;
   const userCount = new Set(auditRows.map((item) => item.userId)).size;
-  const entityCount = new Set(auditRows.map((item) => item.entity)).size;
+  const entityCount = new Set(auditRows.map((item) => auditEntityLabel(item.entity))).size;
   const lastEvent = auditRows[0];
 
   return (
@@ -129,15 +143,15 @@ export function Auditoria({ formatDateTime, icon, state }) {
         totalValue={auditRows.length}
         totalLabel="eventos registrados"
         description="Registro de usuario, data e horario em todas as acoes."
-        actions={<AdminBackButton icon={icon} />}
+        actions={<><AdminBackButton icon={icon} /><button className="btn primary" data-export-audit><Icon icon={icon} name="chart" size={15} />Gerar PDF</button></>}
         metrics={[
           { icon, iconName: "history", value: auditRows.length, label: "Eventos" },
           { icon, iconName: "users", value: userCount, label: "Usuarios" },
-          { icon, iconName: "package", value: entityCount, label: "Entidades" },
+          { icon, iconName: "package", value: entityCount, label: "Areas" },
           { icon, iconName: "clock", value: lastEvent ? formatDateTime(lastEvent.at) : "-", label: "Ultimo registro" },
         ]}
       />
-      <div className="audit-panel"><h2 className="section-title">Eventos do sistema</h2><div className="timeline">{auditRows.map((item) => <div className="timeline-item" key={item.id}><div className="timeline-dot" /><div className="timeline-body"><strong>{item.action}</strong><br />{getUserName(state, item.userId)} - {formatDateTime(item.at)} - {item.entity}</div></div>)}</div></div>
+      <div className="audit-panel"><h2 className="section-title">Eventos do sistema</h2><div className="timeline">{auditRows.map((item) => <div className="timeline-item" key={item.id}><div className="timeline-dot" /><div className="timeline-body"><strong>{item.action}</strong><br />{getUserName(state, item.userId)} - {formatDateTime(item.at)} - {auditEntityLabel(item.entity)}</div></div>)}</div></div>
     </>
   );
 }

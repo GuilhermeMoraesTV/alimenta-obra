@@ -17,6 +17,8 @@ export const NAV_BY_ROLE = {
     ["fornecedor", "home", "Home"],
     ["fornecedor-pedidos", "clipboard", "Pedidos"],
     ["fornecedor-historico", "history", "Historico"],
+    ["fornecedor-documentos", "package", "Documentos"],
+    ["fornecedor-financeiro", "chart", "Financeiro"],
     ["fornecedor-mais", "settings", "Mais"]
   ]
 };

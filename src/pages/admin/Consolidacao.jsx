@@ -136,6 +136,8 @@ const consolidacaoStyles = `
   .admin-page .timeline-dot { margin-top: .25rem; width: .75rem; height: .75rem; border-radius: 999px; background: #ea580c; box-shadow: 0 0 0 4px #fff0e8; }
   .admin-page .timeline-body { color: #78716c; font-size: .82rem; font-weight: 700; }
   .admin-page .timeline-body strong { color: #1c1917; font-size: .88rem; }
+  .admin-page .admin-send-receipt-card .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .admin-page .admin-send-receipt-card .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: 1 / -1; }
   @media (max-width: 767px) {
     .admin-page .admin-send-summary { grid-template-columns: 1fr; padding-inline: .75rem; }
     .admin-page .admin-send-receipt-card .admin-receipt-actions {
