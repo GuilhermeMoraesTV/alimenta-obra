@@ -638,9 +638,11 @@ const adminDesignStyles = `
   }
 
   .admin-page .admin-more-tile {
-    min-height: 8rem;
     display: grid;
-    gap: .45rem;
+    min-height: 4.7rem;
+    grid-template-columns: 3rem minmax(0,1fr);
+    align-items: center;
+    gap: .9rem;
     padding: 1rem;
     text-align: left;
   }
@@ -998,30 +1000,25 @@ const adminDesignStyles = `
     }
 
     .admin-page .admin-more-tile {
-      min-height: 4.45rem;
-      gap: .18rem;
-      padding: .55rem;
+      min-height: 4.2rem;
+      grid-template-columns: 2.35rem minmax(0,1fr);
+      align-items: center;
+      gap: .75rem;
+      padding: .68rem .75rem;
       border-radius: .75rem;
     }
 
     .admin-page .admin-more-tile span:first-child {
-      width: 1.75rem;
-      height: 1.75rem;
+      width: 2.25rem;
+      height: 2.25rem;
       border-radius: .55rem;
     }
 
     .admin-page .admin-more-tile strong {
-      font-size: .82rem;
-      line-height: 1;
-    }
-
-    .admin-page .admin-more-tile b {
-      font-size: .72rem;
+      min-width: 0;
+      font-size: 1.04rem;
       line-height: 1.05;
-    }
-
-    .admin-page .admin-more-tile small {
-      display: none;
+      color: #78716c;
     }
 
     .admin-page .stat-card,

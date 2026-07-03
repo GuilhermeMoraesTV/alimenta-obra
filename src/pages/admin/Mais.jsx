@@ -110,19 +110,18 @@ const baseAdminScreenStyles = `
 const maisStyles = `
   .admin-page .admin-home-hero.compact { margin-bottom: .75rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; border-radius: 18px; border: 1px solid #e7e5e4; border-left: 5px solid #ea580c; background: rgba(255,255,255,.9); color: #1c1917; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
   .admin-page .admin-more-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: .5rem; }
-  .admin-page .admin-more-tile { display: grid; min-height: 8rem; gap: .5rem; border-radius: 1rem; border: 1px solid #e7e5e4; background: rgba(255,255,255,.9); padding: 1rem; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .admin-page .admin-more-tile { display: grid; min-height: 4.7rem; grid-template-columns: 3rem minmax(0,1fr); align-items: center; gap: .9rem; border-radius: 1rem; border: 1px solid #e7e5e4; background: rgba(255,255,255,.9); padding: .9rem 1rem; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
   .admin-page .admin-more-tile:hover { border-color: #fdba74; background: #fff7ed; }
+  .admin-page .admin-more-tile strong { min-width: 0; font-size: 1.12rem; line-height: 1.05; color: #78716c; }
 `;
 
 export function Mais(props) {
-  const { formatDateTime, icon, money, requestValue, state, sumQty } = props;
-  const rows = state.requests.filter((request) => request.status !== "cancelado");
-  const auditLast = state.auditLog[0];
-  const shortcuts = [["financeiro", "chart", "Financeiro", money(rows.reduce((sum, request) => sum + requestValue(request), 0)), "Custos previstos e realizados"], ["relatorios", "chart", "Relatorios", `${sumQty(rows)} refeicoes`, "Exportacoes e ranking por encarregado"], ["auditoria", "history", "Auditoria", auditLast ? formatDateTime(auditLast.at) : "Sem eventos", "Registro das acoes do sistema"], ["configuracoes", "settings", "Configuracoes", "Conta", "Dados do usuario e senha"]];
+  const { icon } = props;
+  const shortcuts = [["financeiro", "chart", "Financeiro"], ["relatorios", "chart", "Relatorios"], ["auditoria", "history", "Auditoria"], ["configuracoes", "settings", "Configuracoes"]];
   return (
     <>
       <style>{baseAdminScreenStyles + maisStyles}</style>
-      <section className="admin-more"><header className="admin-home-hero compact"><div><span className="compact-kicker">Administracao</span><h1>Mais ferramentas</h1><p>Acesse as areas de consulta e ajustes sem deixar o rodape principal carregado.</p></div></header><div className="admin-more-grid">{shortcuts.map(([view, iconName, title, value, text]) => <button className="admin-more-tile" data-view={view} key={view}><span><Icon icon={icon} name={iconName} size={20} /></span><strong>{title}</strong><b>{value}</b><small>{text}</small></button>)}</div></section>
+      <section className="admin-more"><header className="admin-home-hero compact"><div><span className="compact-kicker">Administracao</span><h1>Mais ferramentas</h1><p>Acesse as areas de consulta e ajustes sem deixar o rodape principal carregado.</p></div></header><div className="admin-more-grid">{shortcuts.map(([view, iconName, title]) => <button className="admin-more-tile" data-view={view} key={view}><span><Icon icon={icon} name={iconName} size={24} /></span><strong>{title}</strong></button>)}</div></section>
     </>
   );
 }

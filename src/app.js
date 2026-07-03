@@ -673,13 +673,11 @@ function renderAdminRequestCard(request) {
 }
 
 function renderAdminMore() {
-  const rows = state.requests.filter((request) => request.status !== "cancelado");
-  const auditLast = state.auditLog[0];
   const shortcuts = [
-    ["financeiro", "chart", "Financeiro", money(rows.reduce((sum, request) => sum + requestValue(request), 0)), "Custos previstos e realizados"],
-    ["relatorios", "chart", "Relatorios", `${sumQty(rows)} refeicoes`, "Exportacoes e ranking por encarregado"],
-    ["auditoria", "history", "Auditoria", auditLast ? formatDateTime(auditLast.at) : "Sem eventos", "Registro das acoes do sistema"],
-    ["configuracoes", "settings", "Configuracoes", "Conta", "Dados do usuario e senha"]
+    ["financeiro", "chart", "Financeiro"],
+    ["relatorios", "chart", "Relatorios"],
+    ["auditoria", "history", "Auditoria"],
+    ["configuracoes", "settings", "Configuracoes"]
   ];
   return `
     <section class="admin-more">
@@ -691,12 +689,10 @@ function renderAdminMore() {
         </div>
       </header>
       <div class="admin-more-grid">
-        ${shortcuts.map(([view, iconName, title, value, text]) => `
+        ${shortcuts.map(([view, iconName, title]) => `
           <button class="admin-more-tile" data-view="${view}">
-            <span>${icon(iconName, 20)}</span>
+            <span>${icon(iconName, 24)}</span>
             <strong>${title}</strong>
-            <b>${value}</b>
-            <small>${text}</small>
           </button>`).join("")}
       </div>
     </section>`;
