@@ -1,4 +1,4 @@
-const CACHE_NAME = "alimenta-obra-v11";
+const CACHE_NAME = "alimenta-obra-v12";
 const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const withScope = (path) => `${scopePath}${path.startsWith("/") ? path : `/${path}`}` || "/";
 const ASSETS = [
