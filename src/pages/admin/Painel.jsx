@@ -2,6 +2,17 @@ import React from "react";
 import { RequestCard } from "../encarregado/RequestCard.jsx";
 import { AdminReceiptHeader, Icon, getUserName, getWeekStart, requestsForDate } from "./shared.jsx";
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 10);
+}
+
+function requestsCreatedOn(requests, dateKey) {
+  return requests.filter((request) => localDateKey(request.createdAt) === dateKey);
+}
+
 
 // Componente de canhoto reutilizável (idêntico ao Inicio.jsx, adaptado para as métricas do admin)
 function WeeklyConsumptionChart({ adminConsumptionWeekOffset, countStatus, formatDate, icon, money, requestValue, state, sumQty }) {
@@ -169,8 +180,8 @@ function AdminLiveOrders(props) {
 
 export function Painel(props) {
   const { countStatus, formatDate, icon, money, requestValue, state, sumQty } = props;
-  const date = props.adminFilters.date;
-  const rows = requestsForDate(state, date);
+  const date = state.settings.defaultMealDate || localDateKey();
+  const rows = requestsCreatedOn(state.requests, date);
   const waitingCount = countStatus(rows, "enviado");
   const deliveredCount = countStatus(rows, "entregue");
   const totalCost = rows.reduce((sum, request) => sum + requestValue(request), 0);
@@ -179,11 +190,11 @@ export function Painel(props) {
     <div className="grid w-full gap-3 sm:gap-4">
       <AdminReceiptHeader
         className="admin-home-receipt"
-        kicker={`Resumo - ${formatDate(date)}`}
+        kicker={`Lancados hoje - ${formatDate(date)}`}
         title="Visao geral administrativa"
         totalValue={waitingCount}
         totalLabel="pedidos a enviar"
-        description="Aguardando envio ao fornecedor"
+        description="Pedidos registrados hoje, mesmo quando a refeicao esta agendada para outra data"
         actions={(
           <button className="btn primary" data-view="consolidacao">
             <Icon icon={icon} name="truck" size={16} />
@@ -191,7 +202,7 @@ export function Painel(props) {
           </button>
         )}
         metrics={[
-          { icon, iconName: "utensils", value: sumQty(rows), label: "Refeicoes hoje" },
+          { icon, iconName: "utensils", value: sumQty(rows), label: "Refeicoes lancadas" },
           { icon, iconName: "clock", value: waitingCount, label: "Aguardando" },
           { icon, iconName: "check", value: deliveredCount, label: "Entregas feitas" },
           { icon, iconName: "dollar-sign", value: money(totalCost), label: "Custo estimado" },

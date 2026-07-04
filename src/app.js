@@ -72,6 +72,23 @@ let reportFilter = {
   end: ""
 };
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 10);
+}
+
+function minimumMealDate() {
+  return state.settings.defaultMealDate || localDateKey();
+}
+
+function assertMealDateIsNotPast(date) {
+  if (!date || String(date) < minimumMealDate()) {
+    throw new Error("Nao e permitido criar ou alterar pedido para data passada.");
+  }
+}
+
 const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
 const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
@@ -1381,6 +1398,7 @@ async function handleRequestSubmit(event) {
   const user = getActiveUser(state);
   const status = submitter?.value ?? "enviado";
   try {
+    assertMealDateIsNotPast(form.get("date"));
     await createMealRequest({
       date: form.get("date"),
       mealTypeId: form.get("mealTypeId"),
@@ -1626,6 +1644,7 @@ async function handleEditRequestSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
+    assertMealDateIsNotPast(form.get("date"));
     await updateMealRequest(request.id, {
       date: form.get("date"),
       quantity: form.get("quantity"),

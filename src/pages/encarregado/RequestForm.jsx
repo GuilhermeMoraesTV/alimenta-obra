@@ -30,6 +30,7 @@ function AddressForm() {
 
 export function RequestForm({ getLeaderAddressFormOpen, icon, state, user }) {
   const [mealTypeId, setMealTypeId] = useState(state.mealTypes[0]?.id ?? "");
+  const minimumMealDate = state.settings.defaultMealDate || new Date().toISOString().slice(0, 10);
   const authenticatedUser = state.users.find((item) => item.id === state.authenticatedUserId);
   const canManageAddresses = user.id === state.authenticatedUserId || authenticatedUser?.role === "admin";
   const currentMeal = state.mealTypes.find((meal) => meal.id === mealTypeId) ?? state.mealTypes[0];
@@ -55,7 +56,7 @@ export function RequestForm({ getLeaderAddressFormOpen, icon, state, user }) {
               <input className="min-h-12 w-full border-0 px-3 text-lg font-black outline-none" id="request-quantity" name="quantity" type="number" min="1" defaultValue="10" inputMode="numeric" required />
             </div>
           </Field>
-          <Field id="request-date" label="Data da refeicao"><input className={inputClass} id="request-date" name="date" type="date" defaultValue={state.settings.defaultMealDate} required /></Field>
+          <Field id="request-date" label="Data da refeicao"><input className={inputClass} id="request-date" name="date" type="date" min={minimumMealDate} defaultValue={minimumMealDate} required /></Field>
         </div>
       </TicketPanel>
 
