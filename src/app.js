@@ -1487,10 +1487,15 @@ async function handlePasswordSettingsSubmit(event) {
     toast("As senhas nao conferem.");
     return;
   }
+  if (password.length < 8) {
+    toast("A senha precisa ter pelo menos 8 caracteres.");
+    return;
+  }
+  const targetUser = getActiveUser(state);
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
-    await updateUserPassword(password);
+    await updateUserPassword(password, targetUser?.id);
     formElement.reset();
     toast("Senha alterada com sucesso.");
   } catch (error) {

@@ -40,15 +40,16 @@ function deliveryAddressErrorMessage(error) {
 
 function passwordErrorMessage(error) {
   const message = String(error?.message ?? "");
+  const code = String(error?.code ?? error?.status ?? "");
   const lower = message.toLowerCase();
   if (lower.includes("jwt") || lower.includes("session") || lower.includes("not authenticated")) {
     return "Sessao expirada. Entre novamente antes de alterar a senha.";
   }
-  if (lower.includes("same password") || lower.includes("different from the old password")) {
+  if (code === "same_password" || lower.includes("same password") || lower.includes("different from the old password")) {
     return "A nova senha precisa ser diferente da senha atual.";
   }
-  if (lower.includes("password") && (lower.includes("weak") || lower.includes("short") || lower.includes("least"))) {
-    return "A senha precisa ter pelo menos 8 caracteres.";
+  if (code === "weak_password" || code === "422" || (lower.includes("password") && (lower.includes("weak") || lower.includes("short") || lower.includes("least")))) {
+    return "A senha precisa ter pelo menos 8 caracteres e atender a politica de seguranca do Supabase.";
   }
   if (lower.includes("rate limit") || lower.includes("too many")) {
     return "Muitas tentativas. Aguarde um pouco e tente novamente.";
@@ -138,9 +139,17 @@ export async function updateCurrentProfile({ name, team }) {
   return ensure(data, error);
 }
 
-export async function updateUserPassword(password) {
+export async function updateUserPassword(password, targetUserId = null) {
   const session = await getSession();
   if (!session) throw new Error("Sessao expirada. Entre novamente antes de alterar a senha.");
+  if (targetUserId && targetUserId !== session.user.id) {
+    const { error } = await requireSupabase().rpc("update_user_password_as_admin", {
+      p_user_id: targetUserId,
+      p_password: password
+    });
+    if (error) throw new Error(passwordErrorMessage(error));
+    return null;
+  }
   const { data, error } = await requireSupabase().auth.updateUser({ password });
   if (error) throw new Error(passwordErrorMessage(error));
   return data;
