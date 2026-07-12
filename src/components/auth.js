@@ -4,7 +4,7 @@ import { escapeHtml } from "../utils/formatters.js";
 const appIcon = `${import.meta.env.BASE_URL}assets/icone-alimentaobra.png`;
 const appLogo = `${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`;
 
-export function renderLoginScreen({ initialInviteToken, isSupabaseConfigured, loginMode }) {
+export function renderLoginScreen({ initialInviteToken, isSupabaseConfigured, loginMode, loginError = "" }) {
   return `
     <section class="grid min-h-screen bg-[#1b1c1a] p-4 md:p-8">
       <div class="m-auto grid min-h-[min(720px,calc(100vh-48px))] w-full max-w-6xl overflow-hidden rounded-[18px] border border-white/10 bg-[#262825] shadow-2xl lg:grid-cols-[minmax(0,1fr)_minmax(380px,.72fr)]">
@@ -13,9 +13,9 @@ export function renderLoginScreen({ initialInviteToken, isSupabaseConfigured, lo
             <img class="h-28 w-auto max-w-[460px] object-contain" src="${appLogo}" alt="AlimentaObra" />
           </div>
           <div>
-            <span class="text-[11px] font-black uppercase tracking-[.12em] text-orange-200">Gestao de alimentacao</span>
+            <span class="text-[11px] font-black uppercase tracking-[.12em] text-orange-200">Gestão de alimentação</span>
             <h1 class="mt-3 max-w-2xl text-[56px] font-black leading-[.94] tracking-normal">Organize os pedidos da obra com clareza.</h1>
-            <p class="mt-4 max-w-lg text-base leading-7 text-white/65">Uma area segura para registrar, acompanhar e manter a rotina de refeicoes organizada.</p>
+            <p class="mt-4 max-w-lg text-base leading-7 text-white/65">Uma área segura para registrar, acompanhar e manter a rotina de refeições organizada.</p>
           </div>
         </div>
         <div class="flex flex-col justify-center bg-[#fffefa] p-6 md:p-10">
@@ -24,7 +24,7 @@ export function renderLoginScreen({ initialInviteToken, isSupabaseConfigured, lo
             <button class="min-h-10 rounded-lg text-sm font-black ${loginMode === "cadastro" ? "bg-white text-stone-950 shadow-sm" : "text-stone-500"}" data-login-mode="cadastro">Cadastro</button>
           </div>
           ${loginMode === "login"
-            ? renderLoginForm({ isSupabaseConfigured })
+            ? renderLoginForm({ isSupabaseConfigured, loginError })
             : renderRegisterForm({ initialInviteToken, isSupabaseConfigured })}
         </div>
       </div>
@@ -32,7 +32,7 @@ export function renderLoginScreen({ initialInviteToken, isSupabaseConfigured, lo
   `;
 }
 
-function renderLoginForm({ isSupabaseConfigured }) {
+function renderLoginForm({ isSupabaseConfigured, loginError = "" }) {
   return `
     <div class="mb-6 flex items-start gap-3">
       <img class="h-10 w-10 rounded-xl object-cover shadow-sm" src="${appIcon}" alt="AlimentaObra" />
@@ -42,6 +42,7 @@ function renderLoginForm({ isSupabaseConfigured }) {
       </div>
     </div>
     ${!isSupabaseConfigured ? `<div class="mb-4 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4 text-center text-sm font-bold text-stone-500">Configure o arquivo .env.local antes de entrar.</div>` : ""}
+    ${loginError ? `<div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700" role="alert">${escapeHtml(loginError)}</div>` : ""}
     <form class="grid gap-4" data-form="login">
       <div class="grid gap-1.5">
         <label class="text-[10px] font-black uppercase tracking-[.08em] text-stone-500" for="login-email">E-mail</label>

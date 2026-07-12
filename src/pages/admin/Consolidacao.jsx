@@ -185,13 +185,13 @@ function ConsolidatedSummary({ requestMealDescription, state, summary }) {
           {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{meal === "Marmita Campo" ? getUserName(state, request.leaderId) : request.location}</span><strong>{request.quantity}</strong></div>)}
         </div>
       ))}
-      <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeicoes</span></div>
+      <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeições</span></div>
     </>
   );
 }
 
 function ConsolidationTimeline({ consolidation, formatDateTime, state }) {
-  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou producao"], ["saiu_entrega", "Saida para entrega registrada"], ["entregue", "Entrega concluida"]];
+  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou produção"], ["saiu_entrega", "Saída para entrega registrada"], ["entregue", "Entrega concluída"]];
   return (
     <div className="timeline">
       {steps.map(([step, label]) => {
@@ -221,7 +221,7 @@ export function Consolidacao(props) {
           kicker="Enviar pedido"
           title="Pedido ao fornecedor"
           totalValue={summary.total}
-          totalLabel={`refeicoes para ${formatDate(date)}`}
+          totalLabel={`refeições para ${formatDate(date)}`}
           description="Revise a comanda consolidada e envie para o fornecedor selecionado."
           actions={(
             <>
@@ -237,7 +237,7 @@ export function Consolidacao(props) {
             </>
           )}
           metrics={[
-            { icon, iconName: "utensils", value: summary.total, label: "Refeicoes" },
+            { icon, iconName: "utensils", value: summary.total, label: "Refeições" },
             { icon, iconName: "users", value: leadersCount, label: "Encarregados" },
             { icon, iconName: "package", value: mealGroupsCount, label: "Tipos no pedido" },
           ]}

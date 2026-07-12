@@ -25,7 +25,7 @@ export function renderAppShell({
         </button>
       </div>
       <div class="flex items-center gap-2">
-        <button class="grid h-9 w-9 place-items-center rounded-r-xl rounded-l-md border border-white/10 bg-white/10 text-white transition hover:border-orange-400/40 hover:bg-orange-500/15" data-view="configuracoes" aria-label="Abrir configuracoes">
+        <button class="grid h-9 w-9 place-items-center rounded-r-xl rounded-l-md border border-white/10 bg-white/10 text-white transition hover:border-orange-400/40 hover:bg-orange-500/15" data-view="configuracoes" aria-label="Abrir configurações">
           ${icon("settings", 17)}
         </button>
         <button class="grid h-9 w-9 place-items-center rounded-r-xl rounded-l-md border border-white/10 bg-white/10 text-white transition hover:border-red-300/40 hover:bg-red-500/15" data-action="logout" aria-label="Sair do sistema">
@@ -52,7 +52,7 @@ export function renderAppShell({
         </div>
         <nav class="flex flex-1 gap-1 overflow-hidden pb-0.5 md:mt-4 md:grid md:grid-cols-1 md:content-start md:gap-1.5 md:overflow-visible md:pb-0 nav">${renderNav(user)}</nav>
         <div class="hidden gap-2 border-t border-white/10 px-1 pt-4 md:grid">
-          <button class="inline-flex min-h-10 items-center gap-2 rounded-r-xl rounded-l-md border border-white/10 bg-white/[.04] px-3 text-sm font-bold text-white/70 transition hover:border-orange-400/35 hover:bg-orange-500/15 hover:text-white sidebar-settings ${activeView === "configuracoes" ? "active !border-orange-500/40 !bg-orange-500/15 !text-white" : ""}" data-view="configuracoes">${icon("settings", 16)}<span>Configuracoes</span></button>
+          <button class="inline-flex min-h-10 items-center gap-2 rounded-r-xl rounded-l-md border border-white/10 bg-white/[.04] px-3 text-sm font-bold text-white/70 transition hover:border-orange-400/35 hover:bg-orange-500/15 hover:text-white sidebar-settings ${activeView === "configuracoes" ? "active !border-orange-500/40 !bg-orange-500/15 !text-white" : ""}" data-view="configuracoes">${icon("settings", 16)}<span>Configurações</span></button>
           <button class="inline-flex min-h-10 items-center gap-2 rounded-r-xl rounded-l-md border border-red-300/15 bg-red-500/[.06] px-3 text-sm font-bold text-red-100/80 transition hover:border-red-300/35 hover:bg-red-500/15 hover:text-white sidebar-logout" data-action="logout">${icon("logout", 16)}<span>Sair do sistema</span></button>
         </div>
       </aside>

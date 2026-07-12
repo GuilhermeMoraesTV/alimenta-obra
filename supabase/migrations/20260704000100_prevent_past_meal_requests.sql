@@ -5,7 +5,7 @@ set search_path = ''
 as $$
 begin
   if new.meal_date < current_date then
-    raise exception 'Nao e permitido criar ou alterar pedido para data passada.';
+    raise exception 'Não é permitido criar ou alterar pedido para data passada.';
   end if;
   return new;
 end;
@@ -32,11 +32,11 @@ declare
   v_actor_role text := public.current_user_role();
 begin
   if v_actor_id is null then
-    raise exception 'Sessao expirada. Entre novamente.';
+    raise exception 'Sessão expirada. Entre novamente.';
   end if;
 
   if p_meal_date < current_date then
-    raise exception 'Nao e permitido criar ou alterar pedido para data passada.';
+    raise exception 'Não é permitido criar ou alterar pedido para data passada.';
   end if;
 
   if p_status not in ('rascunho', 'enviado') then
@@ -62,7 +62,7 @@ begin
   end if;
 
   if p_leader_id = v_actor_id and v_actor_role not in ('encarregado', 'admin') then
-    raise exception 'Seu perfil nao pode criar pedidos';
+    raise exception 'Seu perfil não pode criar pedidos';
   end if;
 
   insert into public.meal_requests (

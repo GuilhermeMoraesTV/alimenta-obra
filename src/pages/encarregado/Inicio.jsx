@@ -82,7 +82,7 @@ export function Inicio(props) {
           <div className="relative mt-2 flex items-end gap-2.5">
             <span className="text-[48px] font-black leading-[0.85] tracking-tight sm:text-[64px]">{todayQuantity}</span>
             <span className="mb-1 text-[10px] font-extrabold uppercase leading-tight tracking-[.1em] text-white/55 sm:text-xs">
-              refeicoes
+              refeições
               <br />
               hoje
             </span>

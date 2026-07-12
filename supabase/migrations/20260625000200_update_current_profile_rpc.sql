@@ -8,7 +8,7 @@ declare
   v_team text := nullif(trim(coalesce(p_team, '')), '');
 begin
   if v_user_id is null then
-    raise exception 'Sessao expirada. Entre novamente.';
+    raise exception 'Sessão expirada. Entre novamente.';
   end if;
 
   if char_length(v_name) < 2 or char_length(v_name) > 120 then
@@ -22,7 +22,7 @@ begin
   returning id into v_user_id;
 
   if v_user_id is null then
-    raise exception 'Perfil nao encontrado.';
+    raise exception 'Perfil não encontrado.';
   end if;
 
   return v_user_id;

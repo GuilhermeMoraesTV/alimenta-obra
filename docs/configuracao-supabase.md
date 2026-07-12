@@ -1,8 +1,8 @@
-# Configuracao do Supabase para o AlimentaObra
+# Configuração do Supabase para o AlimentaObra
 
-O codigo da integracao ja esta preparado. Para ligar o frontend ao seu projeto:
+O código da integração já está preparado. Para ligar o frontend ao seu projeto:
 
-> Use um projeto Supabase exclusivo para o AlimentaObra. Nao reutilize o
+> Use um projeto Supabase exclusivo para o AlimentaObra. Não reutilize o
 > projeto `ConsultPrimer` (`htahirvnziszdpbepskt`), pois ele ja possui tabelas
 > com nomes iguais e estruturas diferentes.
 
@@ -17,15 +17,15 @@ supabase/migrations/20260620000100_initial_schema.sql
 Ele cria:
 
 - perfis ligados ao Supabase Auth;
-- tipos e locais de refeicao;
+- tipos e locais de refeição;
 - pedidos;
-- consolidacoes;
-- confirmacoes do fornecedor;
-- configuracoes;
+- consolidações;
+- confirmações do fornecedor;
+- configurações;
 - auditoria;
 - indices;
 - RLS e politicas;
-- funcoes RPC atomicas;
+- funções RPC atômicas;
 - dados iniciais do catalogo;
 - Realtime para as tabelas operacionais.
 
@@ -52,7 +52,7 @@ VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=SUA_CHAVE_PUBLICAVEL
 ```
 
-Use a chave publicavel. Nunca use `service_role`.
+Use a chave publicável. Nunca use `service_role`.
 
 ## 3. Configurar Auth
 
@@ -63,11 +63,11 @@ Site URL: http://127.0.0.1:5190
 Redirect URL: http://127.0.0.1:5190/**
 ```
 
-Depois adicione tambem a URL de producao quando publicar.
+Depois adicione também a URL de produção quando publicar.
 
 Em **Authentication > Providers > Email**, mantenha e-mail e senha habilitados.
-Durante o desenvolvimento, a confirmacao de e-mail pode ser desabilitada. Em
-producao, use confirmacao e SMTP proprio.
+Durante o desenvolvimento, a confirmação de e-mail pode ser desabilitada. Em
+produção, use confirmação e SMTP próprio.
 
 ## 4. Criar os usuarios iniciais
 
@@ -100,7 +100,7 @@ npm run check
 npm run build
 ```
 
-Teste com as tres funcoes:
+Teste com as três funções:
 
 - encarregado cria, envia e cancela os proprios pedidos;
 - administrador ve todos, consolida e envia;
@@ -108,9 +108,9 @@ Teste com as tres funcoes:
 
 ## Arquivos principais
 
-- `src/services/supabase.js`: cliente e validacao das variaveis.
+- `src/services/supabase.js`: cliente e validação das variáveis.
 - `src/services/database.js`: Auth, consultas, RPC e Realtime.
 - `src/services/store-v2.js`: estado visual e regras locais.
 - `src/app.js`: interface conectada.
 - `supabase/migrations/20260620000100_initial_schema.sql`: banco completo.
-- `database/promover-usuario.sql`: promocao inicial dos perfis.
+- `database/promover-usuario.sql`: promoção inicial dos perfis.

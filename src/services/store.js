@@ -41,7 +41,7 @@ export function getActiveUser(state) {
 }
 
 export function getUserName(state, userId) {
-  return state.users.find((user) => user.id === userId)?.name ?? "Usuario removido";
+  return state.users.find((user) => user.id === userId)?.name ?? "Usuário removido";
 }
 
 export function getLeaders(state) {

@@ -7,7 +7,6 @@ export const NAV_BY_ROLE = {
   admin: [
     ["painel", "home", "Home"],
     ["pedidos", "clipboard", "Pedidos"],
-    ["consolidacao", "truck", "Enviar"],
     ["financeiro", "chart", "Financeiro"],
     ["relatorios", "chart", "Relatorios"],
     ["auditoria", "history", "Auditoria"],
@@ -16,7 +15,6 @@ export const NAV_BY_ROLE = {
   fornecedor: [
     ["fornecedor", "home", "Home"],
     ["fornecedor-pedidos", "clipboard", "Pedidos"],
-    ["fornecedor-historico", "history", "Historico"],
     ["fornecedor-documentos", "package", "Documentos"],
     ["fornecedor-financeiro", "chart", "Financeiro"],
     ["fornecedor-mais", "settings", "Mais"]

@@ -37,7 +37,7 @@ export function Historico(props) {
           />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-200">Historico do lider</p>
+              <p className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-200">Histórico do líder</p>
               <div className="mt-2 flex items-end gap-2.5">
                 <span className="text-[46px] font-black leading-[0.85] tracking-tight sm:text-[60px]">{rows.length}</span>
                 <span className="mb-1 text-[10px] font-extrabold uppercase leading-tight tracking-[.1em] text-white/55 sm:text-xs">
@@ -63,12 +63,12 @@ export function Historico(props) {
         </div>
         <div className="grid grid-cols-3 gap-2 bg-stone-50 px-4 pb-3 pt-5 sm:px-6">
           <HistoryChip icon={icon} iconName="clipboard" value={rows.length} label="Pedidos registrados" />
-          <HistoryChip icon={icon} iconName="utensils" value={totalQty} label="Refeicoes" />
+          <HistoryChip icon={icon} iconName="utensils" value={totalQty} label="Refeições" />
           <HistoryChip icon={icon} iconName="clock" value={draftCount} label="Rascunhos" />
         </div>
       </section>
       {!rows.length ? (
-        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-white px-6 py-8 text-center shadow-sm"><span className="grid h-12 w-12 place-items-center rounded-xl bg-orange-50 text-orange-700"><Icon icon={icon} name="clipboard" size={22} /></span><strong>Historico vazio</strong><p className="m-0 text-sm text-stone-500">Os pedidos enviados ou salvos como rascunho aparecerao aqui.</p><button className={primaryButtonClass} data-view="pedido"><Icon icon={icon} name="plus" size={15} />Novo pedido</button></div>
+        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-white px-6 py-8 text-center shadow-sm"><span className="grid h-12 w-12 place-items-center rounded-xl bg-orange-50 text-orange-700"><Icon icon={icon} name="clipboard" size={22} /></span><strong>Histórico vazio</strong><p className="m-0 text-sm text-stone-500">Os pedidos enviados ou salvos como rascunho aparecerão aqui.</p><button className={primaryButtonClass} data-view="pedido"><Icon icon={icon} name="plus" size={15} />Novo pedido</button></div>
       ) : (
         <section className="grid gap-3">
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">{rows.map((request) => <RequestCard {...props} request={request} compact key={request.id} />)}</div>

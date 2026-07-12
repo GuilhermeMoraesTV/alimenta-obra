@@ -13,7 +13,7 @@ declare
   v_reference text := trim(coalesce(p_reference, ''));
 begin
   if v_actor_id is null then
-    raise exception 'Sessao expirada. Entre novamente.';
+    raise exception 'Sessão expirada. Entre novamente.';
   end if;
 
   if char_length(v_label) < 2 or char_length(v_label) > 80 then
@@ -39,7 +39,7 @@ begin
   end if;
 
   if p_leader_id = v_actor_id and v_actor_role not in ('encarregado', 'admin') then
-    raise exception 'Seu perfil nao pode cadastrar enderecos.';
+    raise exception 'Seu perfil não pode cadastrar endereços.';
   end if;
 
   insert into public.delivery_addresses (

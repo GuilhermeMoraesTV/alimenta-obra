@@ -2,6 +2,7 @@ import React from "react";
 import { RequestCard } from "../encarregado/RequestCard.jsx";
 import { Icon, primaryButtonClass } from "../encarregado/shared.jsx";
 import { AdminFilterMenu, AdminReceiptHeader, ExportButtons, getUserName } from "./shared.jsx";
+import { DailyBlockCard, dailyBlockStyles, groupRequestsByDate } from "./DailyBlock.jsx";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -158,10 +159,11 @@ export function Pedidos(props) {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const activeRows = rows.filter((request) => request.status !== "cancelado");
   const waitingCount = countStatus(rows, "enviado");
+  const dailyBlocks = groupRequestsByDate(rows);
 
   return (
     <>
-      <style>{baseAdminScreenStyles + pedidosStyles}</style>
+      <style>{baseAdminScreenStyles + pedidosStyles + dailyBlockStyles}</style>
       <div className="grid w-full gap-3 sm:gap-4 admin-history-shell">
         <AdminReceiptHeader
           className="admin-pedidos-receipt"
@@ -175,15 +177,15 @@ export function Pedidos(props) {
               <AdminFilterMenu icon={icon}>
                 <input type="date" defaultValue={date} data-filter-date aria-label="Filtrar por data" />
                 <select defaultValue={leader} data-filter-leader aria-label="Filtrar encarregado"><option value="">Todos</option>{state.users.map((user) => <option value={user.id} key={user.id}>{user.name}</option>)}</select>
-                <select defaultValue={meal} data-filter-meal aria-label="Filtrar refeicao"><option value="">Tipos</option>{state.mealTypes.map((item) => <option value={item.label} key={item.id}>{item.label}</option>)}</select>
+                <select defaultValue={meal} data-filter-meal aria-label="Filtrar refeição"><option value="">Tipos</option>{state.mealTypes.map((item) => <option value={item.label} key={item.id}>{item.label}</option>)}</select>
                 <button className="btn outline small" type="button" data-clear-admin-request-filters>Todos os dias</button>
               </AdminFilterMenu>
-              <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="pedidos" items={[["csv", "CSV", "clipboard"], ["xlsx", "Excel", "chart"]]} />
+              <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="pedidos" items={[["xlsx", "Excel", "chart"], ["pdf", "PDF", "clipboard"]]} />
             </>
           )}
           metrics={[
             { icon, iconName: "clipboard", value: rows.length, label: "Pedidos" },
-            { icon, iconName: "utensils", value: sumQty(activeRows), label: "Refeicoes" },
+            { icon, iconName: "utensils", value: sumQty(activeRows), label: "Refeições" },
             { icon, iconName: "clock", value: waitingCount, label: "A enviar" },
           ]}
         />
@@ -193,11 +195,11 @@ export function Pedidos(props) {
             <span className="grid h-12 w-12 place-items-center rounded-xl bg-orange-50 text-orange-700"><Icon icon={icon} name="clipboard" size={22} /></span>
             <strong>Nenhum pedido encontrado</strong>
             <p className="m-0 text-sm text-stone-500">Ajuste os filtros ou aguarde o envio dos encarregados.</p>
-            <button className={primaryButtonClass} data-view="consolidacao"><Icon icon={icon} name="truck" size={15} />Enviar ao fornecedor</button>
+            <button className={primaryButtonClass} data-view="pedidos"><Icon icon={icon} name="clipboard" size={15} />Ver pedidos</button>
           </div>
         ) : (
           <section className="grid gap-3">
-            <div className="admin-request-list">{rows.map((request) => <AdminRequestCard {...props} request={request} key={request.id} />)}</div>
+            <div className="daily-block-list">{dailyBlocks.map(([blockDate, blockRows]) => <DailyBlockCard {...props} date={blockDate} requests={blockRows} key={blockDate} />)}</div>
           </section>
         )}
       </div>

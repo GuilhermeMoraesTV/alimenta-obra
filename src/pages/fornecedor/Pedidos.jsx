@@ -1,5 +1,6 @@
 import React from "react";
-import { Icon, SupplierFilterMenu, SupplierReceiptHeader, foodSummary, statusLabel, supplierConsolidations, supplierStatusCount } from "./shared.jsx";
+import { SupplierDailyBlockCard, supplierDailyBlockStyles } from "./DailyBlock.jsx";
+import { ConsolidatedSummary, ConsolidationTimeline, Icon, OriginRequestCards, SupplierFilterMenu, SupplierReceiptHeader, foodSummary, statusLabel, supplierConsolidations, supplierStatusCount } from "./shared.jsx";
 
 function OrderItemsSummary({ requestMealDescription, summary }) {
   if (!summary.rows.length) return <div className="empty">Sem itens neste pedido.</div>;
@@ -24,6 +25,10 @@ export function OrderCard(props) {
   const summary = getConsolidationSummary(props.state, consolidation);
   const next = nextSupplierStep(consolidation.status);
   const compositions = Object.entries(summary.byMeal).map(([meal, data]) => [meal, requestMealDescription(data.rows[0])]).filter(([, description]) => description);
+  const updatedRows = consolidation.sentAt
+    ? summary.rows.filter((request) => request.updatedAt && new Date(request.updatedAt) > new Date(consolidation.sentAt))
+    : [];
+  const hasAdminUpdate = consolidation.status === "enviado" && (updatedRows.length > 0 || (consolidation.revisions?.length ?? 0) > 0);
 
   return (
     <article className="supplier-order-card">
@@ -47,6 +52,7 @@ export function OrderCard(props) {
         <span>Origem<strong>{summary.rows.length}</strong></span>
         <span>Status<strong>{statusLabel(STATUS_LABEL, consolidation.status)}</strong></span>
       </div>
+      {hasAdminUpdate ? <div className="supplier-daily-update-alert"><Icon icon={icon} name="edit" size={15} /><div><strong>Pedido atualizado pelo Admin</strong><span>Revise o pedido antes de confirmar.</span></div></div> : null}
       <details className="supplier-order-details">
         <summary>Ver itens, composicao e origem</summary>
         <div className="supplier-order-details-body">
@@ -67,45 +73,89 @@ export function OrderCard(props) {
 }
 
 export function Orders(props) {
-  const { getConsolidationSummary, icon, state, supplierOrderDate, supplierOrderStatus, user } = props;
+  const { formatDate, formatDateTime, getConsolidationSummary, icon, requestMealDescription, selectedSupplierConsolidationId, state, supplierOrderDate, supplierOrderStatus, STATUS_LABEL, user } = props;
   const rows = supplierConsolidations(state, user).filter((item) => {
-    const matchesStatus = supplierOrderStatus === "todos" || (supplierOrderStatus === "ativos" ? !["entregue", "rascunho"].includes(item.status) : item.status === supplierOrderStatus);
+    const matchesStatus = supplierOrderStatus === "todos" || (supplierOrderStatus === "ativos" ? !["saiu_entrega", "entregue", "rascunho"].includes(item.status) : item.status === supplierOrderStatus);
     return matchesStatus && (!supplierOrderDate || item.date === supplierOrderDate);
   });
-  const activeRows = rows.filter((item) => !["entregue", "rascunho"].includes(item.status));
+  const activeRows = rows.filter((item) => !["saiu_entrega", "entregue", "rascunho"].includes(item.status));
   const totalMeals = rows.reduce((sum, item) => sum + getConsolidationSummary(state, item).total, 0);
   const waitingCount = supplierStatusCount(rows, "enviado");
+  const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? null;
+  const selectedSummary = selected ? getConsolidationSummary(state, selected) : null;
 
   return (
-    <section className="supplier-workspace">
-      <SupplierReceiptHeader
-        kicker="Pedidos do fornecedor"
-        title="Pedidos recebidos"
-        totalValue={rows.length}
-        totalLabel="pedidos na fila"
-        description="Fila de producao, entrega e acompanhamento."
-        actions={(
-          <SupplierFilterMenu icon={icon}>
-            <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">Em producao</option><option value="saiu_entrega">Em rota</option><option value="entregue">Entregues</option></select>
-            <input type="date" defaultValue={supplierOrderDate} data-supplier-date />
-            <button className="btn outline small" data-supplier-clear-filter>Limpar filtros</button>
-          </SupplierFilterMenu>
-        )}
-        metrics={[
-          { icon, iconName: "clipboard", label: "Pedidos", value: rows.length },
-          { icon, iconName: "utensils", label: "Refeicoes", value: totalMeals },
-          { icon, iconName: "clock", label: "A confirmar", value: waitingCount },
-          { icon, iconName: "truck", label: "Ativos", value: activeRows.length },
-        ]}
-      />
-      <div className="supplier-simple-orders">
-        {rows.length ? rows.map((item) => (
-          <div className="supplier-request-shell" key={item.id}>
-            <div className="supplier-request-owner">Fornecedor <strong>{user?.name ?? "Fornecedor"}</strong></div>
-            <OrderCard {...props} consolidation={item} />
+    <>
+      <style>{`
+        ${supplierDailyBlockStyles}
+        .supplier-page .supplier-simple-orders {
+          grid-template-columns: repeat(3,minmax(0,1fr));
+          align-items: start;
+          gap: .75rem;
+        }
+        .supplier-page .supplier-request-shell { gap: 0; }
+        .supplier-page .supplier-request-owner { display: none; }
+        @media (max-width: 767px) {
+          .supplier-page .supplier-simple-orders { grid-template-columns: 1fr; }
+        }
+        @media (min-width: 768px) and (max-width: 1180px) {
+          .supplier-page .supplier-simple-orders { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
+      `}</style>
+      <section className="supplier-workspace">
+        <SupplierReceiptHeader
+          kicker="Pedidos do fornecedor"
+          title="Pedidos recebidos"
+          totalValue={rows.length}
+          totalLabel="pedidos na fila"
+          description="Blocos diarios recebidos, consumo real e saida."
+          actions={(
+            <SupplierFilterMenu icon={icon}>
+              <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">A registrar saida</option><option value="saiu_entrega">Saida registrada</option><option value="entregue">Entregues</option></select>
+              <input type="date" defaultValue={supplierOrderDate} data-supplier-date />
+              <button className="btn outline small" data-supplier-clear-filter>Limpar filtros</button>
+            </SupplierFilterMenu>
+          )}
+          metrics={[
+            { icon, iconName: "clipboard", label: "Pedidos", value: rows.length },
+            { icon, iconName: "utensils", label: "Refeicoes", value: totalMeals },
+            { icon, iconName: "clock", label: "A confirmar", value: waitingCount },
+            { icon, iconName: "truck", label: "Ativos", value: activeRows.length },
+          ]}
+        />
+        <div className="supplier-daily-block-list">
+          {rows.length ? rows.map((item) => (
+            <div className="supplier-request-shell" key={item.id}>
+              <SupplierDailyBlockCard {...props} consolidation={item} />
+            </div>
+          )) : <div className="empty">Nenhum pedido encontrado.</div>}
+        </div>
+        {selected && selectedSummary ? (
+          <div className="supplier-detail-modal-backdrop" data-supplier-close-detail>
+            <section className="supplier-detail-modal" role="dialog" aria-modal="true" aria-labelledby="supplier-detail-title" onClick={(event) => event.stopPropagation()}>
+              <header>
+                <div>
+                  <span className="compact-kicker">Pedido {selected.id.slice(0, 8).toUpperCase()}</span>
+                  <h2 id="supplier-detail-title">{selectedSummary.total} refeicoes para {formatDate(selected.date)}</h2>
+                  <p>Status: {statusLabel(STATUS_LABEL, selected.status)}</p>
+                </div>
+                <button className="modal-close" type="button" data-supplier-close-detail aria-label="Fechar">x</button>
+              </header>
+              <div className="supplier-order-highlights">
+                <div><span>Quantidade</span><strong>{selectedSummary.total}</strong></div>
+                <div><span>Origem</span><strong>{selectedSummary.rows.length}</strong></div>
+                <div><span>Entrega</span><strong>{formatDate(selected.date)}</strong></div>
+                <div><span>Status</span><strong>{statusLabel(STATUS_LABEL, selected.status)}</strong></div>
+              </div>
+              <div className="supplier-detail-grid">
+                <section><h3>Itens do pedido</h3><ConsolidatedSummary requestMealDescription={requestMealDescription} state={state} summary={selectedSummary} /></section>
+                <section><h3>Rastreabilidade</h3><ConsolidationTimeline consolidation={selected} formatDateTime={formatDateTime} state={state} /></section>
+              </div>
+              <section><h3>Pedidos de origem</h3><OriginRequestCards formatDate={formatDate} formatDateTime={formatDateTime} rows={selectedSummary.rows} state={state} STATUS_LABEL={STATUS_LABEL} /></section>
+            </section>
           </div>
-        )) : <div className="empty">Nenhum pedido encontrado.</div>}
-      </div>
-    </section>
+        ) : null}
+      </section>
+    </>
   );
 }

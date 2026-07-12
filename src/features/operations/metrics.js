@@ -16,9 +16,8 @@ export function countStatus(rows, status) {
 
 export function nextSupplierStep(status) {
   if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento" };
-  if (status === "confirmado") return { step: "producao", label: "Confirmar producao" };
+  if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar saida" };
   if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida" };
-  if (status === "saiu_entrega") return { step: "entregue", label: "Confirmar entrega" };
   return null;
 }
 

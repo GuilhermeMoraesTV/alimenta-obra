@@ -1,6 +1,7 @@
 import React from "react";
 import { RequestCard } from "../encarregado/RequestCard.jsx";
 import { AdminReceiptHeader, Icon, getUserName, getWeekStart, requestsForDate } from "./shared.jsx";
+import { DailyBlockCard, dailyBlockStyles, groupRequestsByDate } from "./DailyBlock.jsx";
 
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
@@ -181,28 +182,33 @@ function AdminLiveOrders(props) {
 export function Painel(props) {
   const { countStatus, formatDate, icon, money, requestValue, state, sumQty } = props;
   const date = state.settings.defaultMealDate || localDateKey();
-  const rows = requestsCreatedOn(state.requests, date);
+  const createdTodayRows = requestsCreatedOn(state.requests, date);
+  const rows = createdTodayRows
+    .filter((request) => !["cancelado", "entregue"].includes(request.status))
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt) - new Date(a.createdAt));
   const waitingCount = countStatus(rows, "enviado");
-  const deliveredCount = countStatus(rows, "entregue");
+  const deliveredCount = countStatus(createdTodayRows, "entregue");
   const totalCost = rows.reduce((sum, request) => sum + requestValue(request), 0);
+  const dailyBlocks = groupRequestsByDate(rows);
 
   return (
     <div className="grid w-full gap-3 sm:gap-4">
+      <style>{dailyBlockStyles}</style>
       <AdminReceiptHeader
         className="admin-home-receipt"
         kicker={`Lancados hoje - ${formatDate(date)}`}
-        title="Visao geral administrativa"
+        title="Visão geral administrativa"
         totalValue={waitingCount}
         totalLabel="pedidos a enviar"
-        description="Pedidos registrados hoje, mesmo quando a refeicao esta agendada para outra data"
+        description="Pedidos registrados hoje, mesmo quando a refeição está agendada para outra data"
         actions={(
-          <button className="btn primary" data-view="consolidacao">
-            <Icon icon={icon} name="truck" size={16} />
-            Enviar ao fornecedor
+          <button className="btn primary" data-view="pedidos">
+            <Icon icon={icon} name="clipboard" size={16} />
+            Ver pedidos
           </button>
         )}
         metrics={[
-          { icon, iconName: "utensils", value: sumQty(rows), label: "Refeicoes lancadas" },
+          { icon, iconName: "utensils", value: sumQty(rows), label: "Refeições lançadas" },
           { icon, iconName: "clock", value: waitingCount, label: "Aguardando" },
           { icon, iconName: "check", value: deliveredCount, label: "Entregas feitas" },
           { icon, iconName: "dollar-sign", value: money(totalCost), label: "Custo estimado" },
@@ -210,7 +216,21 @@ export function Painel(props) {
       />
 
       <section className="admin-live-panel">
-        <AdminLiveOrders {...props} rows={rows} />
+        {dailyBlocks.length ? (
+          <div className="daily-block-list">
+            {dailyBlocks.map(([blockDate, blockRows]) => <DailyBlockCard {...props} date={blockDate} requests={blockRows} key={blockDate} />)}
+          </div>
+        ) : (
+          <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-center">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-50 text-orange-700">
+              <Icon icon={icon} name="inbox" size={20} />
+            </span>
+            <strong className="text-stone-900">Fila vazia</strong>
+            <p className="m-0 max-w-md text-xs font-semibold text-stone-500">
+              Nenhum pedido foi enviado hoje. Assim que um encarregado enviar, o bloco aparece aqui automaticamente.
+            </p>
+          </div>
+        )}
       </section>
 
       <WeeklyConsumptionChart {...props} />

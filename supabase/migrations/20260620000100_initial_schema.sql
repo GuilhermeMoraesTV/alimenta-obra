@@ -318,7 +318,7 @@ begin
   returning id into v_id;
 
   if v_id is null then
-    raise exception 'Uma consolidacao enviada nao pode ser recriada';
+    raise exception 'Uma consolidação enviada não pode ser recriada';
   end if;
 
   delete from public.consolidation_items where consolidation_id = v_id;
@@ -344,7 +344,7 @@ begin
   if not exists (
     select 1 from public.consolidation_items where consolidation_id = v_id
   ) then
-    raise exception 'Nao ha pedidos enviados para consolidar';
+    raise exception 'Não há pedidos enviados para consolidar';
   end if;
   update public.consolidations set status = 'enviado', sent_at = now() where id = v_id;
   insert into public.audit_log (actor_id, action, entity, entity_id)
@@ -360,9 +360,9 @@ declare v_status text; v_supplier uuid;
 begin
   select status, supplier_id into v_status, v_supplier
   from public.consolidations where id = p_consolidation_id for update;
-  if not found then raise exception 'Consolidacao nao encontrada'; end if;
+  if not found then raise exception 'Consolidação não encontrada'; end if;
   if v_supplier <> (select auth.uid()) and not public.is_admin() then
-    raise exception 'Usuario nao autorizado';
+    raise exception 'Usuário não autorizado';
   end if;
   if not (
     (v_status = 'enviado' and p_step = 'confirmado')
@@ -402,13 +402,13 @@ create or replace function public.change_request_status(
 declare v_request public.meal_requests; v_cutoff time; v_limit timestamptz;
 begin
   if p_status not in ('rascunho', 'cancelado') then
-    raise exception 'Status nao permitido';
+    raise exception 'Status não permitido';
   end if;
   select * into v_request from public.meal_requests
   where id = p_request_id for update;
-  if not found then raise exception 'Pedido nao encontrado'; end if;
+  if not found then raise exception 'Pedido não encontrado'; end if;
   if v_request.leader_id <> (select auth.uid()) and not public.is_admin() then
-    raise exception 'Usuario nao autorizado';
+    raise exception 'Usuário não autorizado';
   end if;
   if v_request.status in ('cancelado', 'entregue') then
     raise exception 'Pedido bloqueado';

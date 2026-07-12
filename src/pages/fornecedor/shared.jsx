@@ -68,7 +68,7 @@ export function getUserName(state, userId) {
 export function supplierConsolidations(state, user) {
   return state.consolidations
     .filter((item) => item.supplierId === user?.id)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
 }
 
 export function supplierDocuments(state, consolidationId) {
@@ -89,7 +89,8 @@ export function statusLabel(STATUS_LABEL, status) {
 }
 
 export function supplierHomeAction(status) {
-  if (status === "enviado" || status === "confirmado") return { step: "producao", label: "Confirmar producao", iconName: "check" };
+  if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento", iconName: "check" };
+  if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar saida", iconName: "truck" };
   if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida", iconName: "truck" };
   return null;
 }
@@ -106,7 +107,7 @@ export function ConsolidatedSummary({ requestMealDescription, state, summary }) 
         <div className="consolidated-block" key={meal}>
           <div className="consolidated-row total-line"><span>{meal}</span><span>{data.total}</span></div>
           {requestMealDescription(data.rows[0]) ? <div className="consolidated-description">{requestMealDescription(data.rows[0])}</div> : null}
-          {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{meal === "Marmita Campo" ? getUserName(state, request.leaderId) : request.location}</span><strong>{request.quantity}</strong></div>)}
+          {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{request.sectionName || request.location || getUserName(state, request.leaderId)}</span><strong>{request.quantity}</strong></div>)}
         </div>
       ))}
       <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeicoes</span></div>
@@ -115,7 +116,13 @@ export function ConsolidatedSummary({ requestMealDescription, state, summary }) 
 }
 
 export function ConsolidationTimeline({ consolidation, formatDateTime, state }) {
-  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou producao"], ["saiu_entrega", "Saida para entrega registrada"], ["entregue", "Entrega concluida"]];
+  const hasLegacyProduction = consolidation.confirmations.some((item) => item.step === "producao") || consolidation.status === "producao";
+  const steps = [
+    ["enviado", "Enviado ao fornecedor"],
+    ["confirmado", "Fornecedor confirmou recebimento"],
+    ...(hasLegacyProduction ? [["producao", "Fornecedor confirmou producao"]] : []),
+    ["saiu_entrega", "Saida registrada"]
+  ];
   return (
     <div className="timeline">
       {steps.map(([step, label]) => {
@@ -133,7 +140,7 @@ export function OriginRequestCards({ formatDate, formatDateTime, rows, state, ST
       {rows.map((request) => (
         <article className="supplier-origin-card" key={request.id}>
           <div><strong>{request.mealType}</strong><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></div>
-          <p>{getUserName(state, request.leaderId)} - {request.location}</p>
+          <p>{getUserName(state, request.leaderId)} - {request.sectionName || request.location}</p>
           <footer><span>{formatDate(request.date)}</span><b>{request.quantity} ref.</b><small>{formatDateTime(request.updatedAt)}</small></footer>
         </article>
       ))}

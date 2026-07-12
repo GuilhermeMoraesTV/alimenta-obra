@@ -4,12 +4,12 @@ function ensure(data, error) {
   if (error) {
     if (error.code === "42703" && String(error.message).includes("profiles.name")) {
       throw new Error(
-        "O Supabase configurado nao possui o banco do AlimentaObra. Verifique se o .env.local aponta para o projeto correto e execute a migracao inicial."
+        "O Supabase configurado não possui o banco do AlimentaObra. Verifique se o .env.local aponta para o projeto correto e execute a migração inicial."
       );
     }
     if (error.code === "42P01" || error.code === "PGRST205") {
       throw new Error(
-        "As tabelas do AlimentaObra ainda nao existem neste Supabase. Execute a migracao inicial no SQL Editor."
+        "As tabelas do AlimentaObra ainda não existem neste Supabase. Execute a migração inicial no SQL Editor."
       );
     }
     throw error;
@@ -22,19 +22,28 @@ function isMissingDeliveryAddressSchema(error) {
     || String(error?.message ?? "").includes("delivery_addresses");
 }
 
+function isMissingOperationSchema(error) {
+  return ["42703", "42P01", "PGRST200", "PGRST202", "PGRST205"].includes(error?.code)
+    || String(error?.message ?? "").includes("work_sections")
+    || String(error?.message ?? "").includes("consolidation_actuals")
+    || String(error?.message ?? "").includes("daily_reports")
+    || String(error?.message ?? "").includes("team_id")
+    || String(error?.message ?? "").includes("unit_price");
+}
+
 function deliveryAddressErrorMessage(error) {
   const message = String(error?.message ?? "");
   if (error?.code === "23505" || message.includes("delivery_addresses_leader_id_label_key")) {
     return "Ja existe um endereco com esse nome para este encarregado.";
   }
   if (["PGRST202", "42883"].includes(error?.code) || message.includes("create_delivery_address_as_user")) {
-    return "A funcao de cadastro de endereco ainda nao foi aplicada no Supabase. Execute as migracoes.";
+    return "A função de cadastro de endereço ainda não foi aplicada no Supabase. Execute as migrações.";
   }
-  if (message.includes("Sessao expirada")) return "Sessao expirada. Entre novamente.";
+  if (message.includes("Sessao expirada")) return "Sessão expirada. Entre novamente.";
   if (message.includes("Apenas administradores")) return "Apenas administradores podem cadastrar endereco para outro usuario.";
   if (message.includes("Encarregado invalido")) return "Encarregado invalido ou inativo.";
-  if (message.includes("perfil nao pode")) return "Seu perfil nao pode cadastrar enderecos.";
-  if (message.includes("row-level security")) return "Seu usuario nao tem permissao para salvar este endereco.";
+  if (message.includes("perfil nao pode")) return "Seu perfil não pode cadastrar endereços.";
+  if (message.includes("row-level security")) return "Seu usuário não tem permissão para salvar este endereço.";
   return message || "Falha ao salvar endereco.";
 }
 
@@ -43,7 +52,7 @@ function passwordErrorMessage(error) {
   const code = String(error?.code ?? error?.status ?? "");
   const lower = message.toLowerCase();
   if (lower.includes("jwt") || lower.includes("session") || lower.includes("not authenticated")) {
-    return "Sessao expirada. Entre novamente antes de alterar a senha.";
+    return "Sessão expirada. Entre novamente antes de alterar a senha.";
   }
   if (code === "same_password" || lower.includes("same password") || lower.includes("different from the old password")) {
     return "A nova senha precisa ser diferente da senha atual.";
@@ -61,6 +70,21 @@ function mealRequestsQuery(client, includeDeliveryAddress = true) {
   return client
     .from("meal_requests")
     .select(`
+      id, meal_date, meal_type_id, location_id, team_id, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
+      status, notes, created_at, updated_at,
+      meal_types(id, name, description, unit_price),
+      meal_locations!meal_requests_location_id_fkey(id, name),
+      work_sections(id, name, headcount)
+      ${includeDeliveryAddress ? ", delivery_addresses(id, label, address_line)" : ""}
+    `)
+    .order("meal_date", { ascending: false })
+    .order("created_at", { ascending: false });
+}
+
+function legacyMealRequestsQuery(client, includeDeliveryAddress = true) {
+  return client
+    .from("meal_requests")
+    .select(`
       id, meal_date, meal_type_id, location_id, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
       status, notes, created_at, updated_at,
       meal_types(id, name, description),
@@ -73,8 +97,16 @@ function mealRequestsQuery(client, includeDeliveryAddress = true) {
 
 async function fetchMealRequestsWithCompatibility(client) {
   const response = await mealRequestsQuery(client, true);
-  if (!response.error || !isMissingDeliveryAddressSchema(response.error)) return response;
-  return mealRequestsQuery(client, false);
+  if (!response.error) return response;
+  if (isMissingOperationSchema(response.error)) {
+    const legacy = await legacyMealRequestsQuery(client, true);
+    if (!legacy.error || !isMissingDeliveryAddressSchema(legacy.error)) return legacy;
+    return legacyMealRequestsQuery(client, false);
+  }
+  if (!isMissingDeliveryAddressSchema(response.error)) return response;
+  const retry = await mealRequestsQuery(client, false);
+  if (!retry.error || !isMissingOperationSchema(retry.error)) return retry;
+  return legacyMealRequestsQuery(client, false);
 }
 
 export async function validateAlimentaObraSchema() {
@@ -86,7 +118,7 @@ export async function validateAlimentaObraSchema() {
   if (error) {
     if (error.code === "42P01" || error.code === "PGRST205") {
       throw new Error(
-        "Este Supabase nao possui o banco do AlimentaObra. Use um projeto separado e execute a migracao inicial."
+        "Este Supabase não possui o banco do AlimentaObra. Use um projeto separado e execute a migração inicial."
       );
     }
     throw error;
@@ -141,10 +173,10 @@ export async function updateCurrentProfile({ name, team }) {
 
 export async function updateUserPassword(password, targetUserId = null) {
   const session = await getSession();
-  if (!session) throw new Error("Sessao expirada. Entre novamente antes de alterar a senha.");
+  if (!session) throw new Error("Sessão expirada. Entre novamente antes de alterar a senha.");
   if (targetUserId && targetUserId !== session.user.id) {
-    const { error } = await requireSupabase().rpc("update_user_password_as_admin", {
-      p_user_id: targetUserId,
+    const { error } = await requireSupabase().rpc("admin_update_user_password_v2", {
+      p_user_id: String(targetUserId),
       p_password: password
     });
     if (error) throw new Error(passwordErrorMessage(error));
@@ -174,11 +206,24 @@ export async function fetchApplicationData() {
     .from("consolidation_documents")
     .select("id, consolidation_id, document_type, storage_path, original_name, mime_type, size_bytes, uploaded_by, created_at")
     .order("created_at", { ascending: false });
+  const workSectionsPromise = client
+    .from("work_sections")
+    .select("id, name, headcount, leader_id, active, created_at, updated_at")
+    .order("name");
+  const actualsPromise = client
+    .from("consolidation_actuals")
+    .select("id, consolidation_id, meal_date, team_id, meal_type_id, quantity, notes, recorded_by, recorded_at")
+    .order("meal_date", { ascending: false });
+  const reportsPromise = client
+    .from("daily_reports")
+    .select("id, report_date, status, totals, snapshot, generated_at, generated_by")
+    .order("report_date", { ascending: false })
+    .limit(90);
   const results = await Promise.all([
     client.from("profiles").select("id, name, email, role, team, active").order("name"),
     client
       .from("meal_types")
-      .select("id, name, description, active, sort_order, meal_locations(id, name, active, sort_order)")
+      .select("id, name, description, unit_price, active, sort_order, meal_locations(id, name, active, sort_order)")
       .order("sort_order"),
     client.from("app_settings").select("*").eq("id", true).single(),
     fetchMealRequestsWithCompatibility(client),
@@ -187,7 +232,8 @@ export async function fetchApplicationData() {
       .select(`
         id, meal_date, supplier_id, status, sent_at, created_by, created_at, updated_at,
         consolidation_items(meal_request_id),
-        supplier_confirmations(step, confirmed_by, confirmed_at, metadata)
+        supplier_confirmations(step, confirmed_by, confirmed_at, metadata),
+        consolidation_revisions(id, edited_by, edited_at, reason, snapshot)
       `)
       .order("meal_date", { ascending: false }),
     client
@@ -196,9 +242,12 @@ export async function fetchApplicationData() {
       .order("created_at", { ascending: false })
       .limit(200),
     documentsPromise,
-    addressesPromise
+    addressesPromise,
+    workSectionsPromise,
+    actualsPromise,
+    reportsPromise
   ]);
-  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses] = results;
+  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports] = results;
   const documentRows = documents.error && ["42P01", "PGRST205"].includes(documents.error.code)
     ? []
     : ensure(documents.data, documents.error);
@@ -206,6 +255,15 @@ export async function fetchApplicationData() {
   const addressRows = addresses.error && isMissingDeliveryAddressSchema(addresses.error)
     ? []
     : ensure(addresses.data, addresses.error);
+  const workSectionRows = workSections.error && isMissingOperationSchema(workSections.error)
+    ? []
+    : ensure(workSections.data, workSections.error);
+  const actualRows = actuals.error && isMissingOperationSchema(actuals.error)
+    ? []
+    : ensure(actuals.data, actuals.error);
+  const reportRows = reports.error && isMissingOperationSchema(reports.error)
+    ? []
+    : ensure(reports.data, reports.error);
   return {
     profiles: ensure(profiles.data, profiles.error),
     catalog: ensure(catalog.data, catalog.error),
@@ -215,7 +273,10 @@ export async function fetchApplicationData() {
     audit: ensure(audit.data, audit.error),
     documents: documentRows,
     addresses: addressRows,
-    addressFeatureAvailable
+    addressFeatureAvailable,
+    workSections: workSectionRows,
+    actuals: actualRows,
+    reports: reportRows
   };
 }
 
@@ -224,14 +285,21 @@ export async function createMealRequest(input, userId) {
     p_leader_id: userId,
     p_meal_date: input.date,
     p_meal_type_id: input.mealTypeId,
-    p_location_id: input.locationId,
+    p_location_id: input.locationId || null,
+    p_team_id: input.teamId || null,
     p_quantity: Number(input.quantity),
     p_status: input.status,
     p_notes: input.notes
   };
-  if (input.deliveryAddressId) params.p_delivery_address_id = input.deliveryAddressId;
   const { data, error } = await requireSupabase().rpc("create_meal_request_as_user", params);
-  return ensure(data, error);
+  if (!error) return data;
+  if (!isMissingOperationSchema(error) && !String(error?.message ?? "").includes("p_team_id")) {
+    return ensure(data, error);
+  }
+  const legacyParams = { ...params };
+  delete legacyParams.p_team_id;
+  const retry = await requireSupabase().rpc("create_meal_request_as_user", legacyParams);
+  return ensure(retry.data, retry.error);
 }
 
 export async function createDeliveryAddress({ leaderId, label, addressLine, reference = "" }) {
@@ -245,11 +313,33 @@ export async function createDeliveryAddress({ leaderId, label, addressLine, refe
   return data;
 }
 
-export async function saveMealTypeCatalog({ id = null, name, description = "", active = true }) {
+export async function saveMealTypeCatalog({ id = null, name, description = "", unitPrice = 0, active = true }) {
   const { data, error } = await requireSupabase().rpc("upsert_meal_type_catalog", {
     p_id: id,
     p_name: String(name).trim(),
     p_description: String(description ?? "").trim(),
+    p_unit_price: Number(unitPrice ?? 0),
+    p_active: Boolean(active)
+  });
+  if (!error) return data;
+  if (!isMissingOperationSchema(error) && !String(error?.message ?? "").includes("p_unit_price")) {
+    return ensure(data, error);
+  }
+  const retry = await requireSupabase().rpc("upsert_meal_type_catalog", {
+    p_id: id,
+    p_name: String(name).trim(),
+    p_description: String(description ?? "").trim(),
+    p_active: Boolean(active)
+  });
+  return ensure(retry.data, retry.error);
+}
+
+export async function saveWorkSection({ id = null, name, headcount = 0, leaderId = null, active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_work_section", {
+    p_id: id,
+    p_name: String(name).trim(),
+    p_headcount: Number(headcount ?? 0),
+    p_leader_id: leaderId || null,
     p_active: Boolean(active)
   });
   return ensure(data, error);
@@ -285,18 +375,28 @@ export async function updateMealRequest(requestId, input) {
   const payload = {
     meal_date: input.date,
     meal_type_id: input.mealTypeId,
-    location_id: input.locationId,
+    location_id: input.locationId || null,
+    team_id: input.teamId || null,
     quantity: Number(input.quantity),
     notes: String(input.notes ?? "")
   };
-  if (input.deliveryAddressId) payload.delivery_address_id = input.deliveryAddressId;
-  const { data, error } = await requireSupabase()
+  const response = await requireSupabase()
     .from("meal_requests")
     .update(payload)
     .eq("id", requestId)
     .select("id")
     .single();
-  return ensure(data, error);
+  if (!response.error) return response.data;
+  if (!isMissingOperationSchema(response.error)) return ensure(response.data, response.error);
+  const legacyPayload = { ...payload };
+  delete legacyPayload.team_id;
+  const retry = await requireSupabase()
+    .from("meal_requests")
+    .update(legacyPayload)
+    .eq("id", requestId)
+    .select("id")
+    .single();
+  return ensure(retry.data, retry.error);
 }
 
 export async function sendDailyConsolidation(mealDate, supplierId) {
@@ -316,6 +416,21 @@ export async function confirmSupplierStep(consolidationId, step) {
   ensure(null, error);
 }
 
+export async function saveConsolidationActuals(consolidationId, actuals) {
+  const { data, error } = await requireSupabase().rpc("save_consolidation_actuals", {
+    p_consolidation_id: consolidationId,
+    p_actuals: actuals
+  });
+  return ensure(data, error);
+}
+
+export async function generateDailyReport(reportDate) {
+  const { data, error } = await requireSupabase().rpc("generate_daily_report", {
+    p_report_date: reportDate
+  });
+  return ensure(data, error);
+}
+
 export async function uploadSupplierInvoice(consolidationId, file) {
   if (!file || file.type !== "application/pdf") {
     throw new Error("Envie uma nota fiscal em formato PDF.");
@@ -326,7 +441,7 @@ export async function uploadSupplierInvoice(consolidationId, file) {
 
   const client = requireSupabase();
   const user = await getAuthenticatedUser();
-  if (!user) throw new Error("Sessao expirada. Entre novamente.");
+  if (!user) throw new Error("Sessão expirada. Entre novamente.");
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
   const storagePath = `${user.id}/${consolidationId}/${crypto.randomUUID()}-${safeName}`;
   const { error: uploadError } = await client.storage
@@ -376,6 +491,9 @@ export function subscribeToChanges(onChange) {
     .on("postgres_changes", { event: "*", schema: "public", table: "consolidations" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_confirmations" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "consolidation_documents" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "consolidation_actuals" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "work_sections" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "daily_reports" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "meal_types" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onChange)
     .subscribe();

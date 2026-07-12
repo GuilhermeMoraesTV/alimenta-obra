@@ -35,11 +35,11 @@ export function createSharedUi({ getActiveView, getExportMenuOpen, viewLabel }) 
       </div>`;
   }
 
-  function renderExportMenu(id, options) {
+  function renderExportMenu(id, options, label = "Exportar") {
     const exportMenuOpen = getExportMenuOpen();
     return `
       <div class="export-menu ${exportMenuOpen === id ? "open" : ""}">
-        <button class="btn outline small" type="button" data-export-toggle="${id}">${icon("clipboard", 14)}Exportar</button>
+        <button class="btn outline small" type="button" data-export-toggle="${id}">${icon("clipboard", 14)}${label}</button>
         ${exportMenuOpen === id ? `<div class="export-options">${options.map(([type, label, iconName]) => `<button type="button" data-export="${type}">${icon(iconName, 14)}${label}</button>`).join("")}</div>` : ""}
       </div>`;
   }

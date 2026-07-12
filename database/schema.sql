@@ -1,9 +1,9 @@
 -- ESQUEMA LEGADO DO PROTOTIPO.
--- Nao execute este arquivo no Supabase.
+-- Não execute este arquivo no Supabase.
 -- Use supabase/migrations/20260620000100_initial_schema.sql.
 
 -- ESQUEMA LEGADO DO PROTOTIPO.
--- Nao execute este arquivo no Supabase.
+-- Não execute este arquivo no Supabase.
 -- Use supabase/migrations/20260620000100_initial_schema.sql.
 
 create table users (
@@ -90,5 +90,5 @@ create index audit_log_created_at_idx on audit_log(created_at desc);
 
 insert into meal_types (name) values
   ('Marmita Campo'),
-  ('Buffer Almoco'),
+  ('Buffer Almoço'),
   ('Jantar');

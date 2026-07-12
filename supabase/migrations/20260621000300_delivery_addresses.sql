@@ -26,7 +26,7 @@ begin
       and leader_id = new.leader_id
       and active
   ) then
-    raise exception 'Endereco de entrega invalido para este encarregado';
+    raise exception 'Endereço de entrega inválido para este encarregado';
   end if;
   return new;
 end;

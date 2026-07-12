@@ -19,7 +19,7 @@ export function Pedido({ formatDate, icon, state, ...props }) {
               <p className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-200">Comanda da obra</p>
               <h1 className="m-0 mt-1 text-[24px] font-black leading-none tracking-normal sm:text-[30px]">Novo pedido</h1>
               <p className="m-0 mt-1.5 text-xs font-bold text-white/55 sm:text-sm">
-                Refeicao para {formatDate(state.settings.defaultMealDate)}
+                Refeição para {formatDate(state.settings.defaultMealDate)}
               </p>
             </div>
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-r-xl rounded-l-md border border-white/10 bg-white/8 text-orange-200">

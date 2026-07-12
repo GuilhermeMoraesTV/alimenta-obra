@@ -89,7 +89,7 @@ export function statusLabel(labels, status) {
 }
 
 export function getUserName(state, userId) {
-  return state.users.find((user) => user.id === userId)?.name ?? "Usuario";
+  return state.users.find((user) => user.id === userId)?.name ?? "Usuário";
 }
 
 export function getLeaders(state) {
@@ -155,8 +155,8 @@ export function RequestTable({ canEditRequest, formatDate, formatDateTime, rows,
               <th>Local</th>
               <th>Qtd</th>
               <th>Status</th>
-              <th>Atualizacao</th>
-              {editable ? <th>Acoes</th> : null}
+              <th>Atualização</th>
+              {editable ? <th>Ações</th> : null}
             </tr>
           </thead>
           <tbody>

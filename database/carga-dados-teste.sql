@@ -1,10 +1,10 @@
--- Carga de demonstracao idempotente para o AlimentaObra.
--- Execute depois das migracoes, em um ambiente de teste.
+-- Carga de demonstração idempotente para o AlimentaObra.
+-- Execute depois das migrações, em um ambiente de teste.
 -- Preserva dados reais: remove apenas registros com a marca [DEMO].
 
 begin;
 
--- Garante que a conta criada para testes do fornecedor seja utilizavel, se existir.
+-- Garante que a conta criada para testes do fornecedor seja utilizável, se existir.
 update public.profiles
 set role = 'fornecedor', team = null
 where email = 'marmitas@gmail.com';
@@ -41,7 +41,7 @@ select
     when 2 then 'Avenida da Obra, ' || (480 + position) || ' - Industrial, Salvador - BA'
     else 'Estrada do Campo, km ' || (4 + position) || ' - Area Rural, Salvador - BA'
   end,
-  'Endereco de demonstracao'
+  'Endereço de demonstração'
 from leaders;
 
 with leaders as (
@@ -82,7 +82,7 @@ cross join template
 join catalog on catalog.position = ((leaders.position + template.day_offset + 30) % (select count(*) from catalog)) + 1
 left join addresses on addresses.leader_id = leaders.id;
 
--- Cria consolidacoes e etapas em estados variados quando houver fornecedor cadastrado.
+-- Cria consolidações e etapas em estados variados quando houver fornecedor cadastrado.
 with supplier as (
   select id from public.profiles where active and role = 'fornecedor' order by created_at limit 1
 ), dates as (

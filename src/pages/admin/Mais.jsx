@@ -117,11 +117,11 @@ const maisStyles = `
 
 export function Mais(props) {
   const { icon } = props;
-  const shortcuts = [["financeiro", "chart", "Financeiro"], ["relatorios", "chart", "Relatorios"], ["auditoria", "history", "Auditoria"], ["configuracoes", "settings", "Configuracoes"]];
+  const shortcuts = [["financeiro", "chart", "Financeiro"], ["relatorios", "chart", "Relatórios"], ["auditoria", "history", "Auditoria"], ["configuracoes", "settings", "Configurações"]];
   return (
     <>
       <style>{baseAdminScreenStyles + maisStyles}</style>
-      <section className="admin-more"><header className="admin-home-hero compact"><div><span className="compact-kicker">Administracao</span><h1>Mais ferramentas</h1><p>Acesse as areas de consulta e ajustes sem deixar o rodape principal carregado.</p></div></header><div className="admin-more-grid">{shortcuts.map(([view, iconName, title]) => <button className="admin-more-tile" data-view={view} key={view}><span><Icon icon={icon} name={iconName} size={24} /></span><strong>{title}</strong></button>)}</div></section>
+      <section className="admin-more"><header className="admin-home-hero compact"><div><span className="compact-kicker">Administração</span><h1>Mais ferramentas</h1><p>Acesse as áreas de consulta e ajustes sem deixar o rodapé principal carregado.</p></div></header><div className="admin-more-grid">{shortcuts.map(([view, iconName, title]) => <button className="admin-more-tile" data-view={view} key={view}><span><Icon icon={icon} name={iconName} size={24} /></span><strong>{title}</strong></button>)}</div></section>
     </>
   );
 }

@@ -13,7 +13,7 @@ limit 1;
 do $$
 begin
   if not exists (select 1 from _keep_leader_id) then
-    raise exception 'Encarregado Anderson Silva nao encontrado. Nenhum usuario foi removido.';
+    raise exception 'Encarregado Anderson Silva não encontrado. Nenhum usuário foi removido.';
   end if;
 end $$;
 

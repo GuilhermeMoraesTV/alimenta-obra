@@ -77,7 +77,7 @@ create or replace function public.log_supplier_romaneio(
 ) returns void language plpgsql security definer set search_path = '' as $$
 begin
   if not public.can_access_consolidation(p_consolidation_id) then
-    raise exception 'Usuario nao autorizado';
+    raise exception 'Usuário não autorizado';
   end if;
 
   insert into public.audit_log (actor_id, action, entity, entity_id, payload)
@@ -117,9 +117,9 @@ declare v_status text; v_supplier uuid;
 begin
   select status, supplier_id into v_status, v_supplier
   from public.consolidations where id = p_consolidation_id for update;
-  if not found then raise exception 'Consolidacao nao encontrada'; end if;
+  if not found then raise exception 'Consolidação não encontrada'; end if;
   if v_supplier <> (select auth.uid()) and not public.is_admin() then
-    raise exception 'Usuario nao autorizado';
+    raise exception 'Usuário não autorizado';
   end if;
   if not (
     (v_status = 'enviado' and p_step = 'confirmado')

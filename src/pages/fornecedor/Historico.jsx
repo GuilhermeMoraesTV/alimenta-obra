@@ -10,14 +10,14 @@ export function History(props) {
     <section className="supplier-workspace">
       <SupplierReceiptHeader
         className="supplier-history-receipt"
-        kicker="Historico"
-        title="Historico de entregas"
+        kicker="Histórico"
+        title="Histórico de entregas"
         totalValue={rows.length}
         totalLabel="entregas concluidas"
         description="Pedidos concluidos pelo fornecedor."
         metrics={[
           { icon, iconName: "check", label: "Entregas", value: rows.length },
-          { icon, iconName: "utensils", label: "Refeicoes", value: totalMeals },
+          { icon, iconName: "utensils", label: "Refeições", value: totalMeals },
           { icon, iconName: "history", label: "Ultima entrega", value: latest ? formatDate(latest.date) : "-" },
         ]}
       />
@@ -27,7 +27,7 @@ export function History(props) {
             <span className="supplier-order-card-icon"><Icon icon={icon} name="check" size={19} /></span>
             <div className="supplier-order-card-title">
               <div className="supplier-order-title-row">
-                <h2>{foodSummary(summary) || `${summary.total} refeicoes`}</h2>
+                <h2>{foodSummary(summary) || `${summary.total} refeições`}</h2>
                 <span className="badge entregue">Entregue</span>
               </div>
               <p>Entrega {formatDate(item.date)} - concluido em {formatDateTime(delivered?.at)}</p>

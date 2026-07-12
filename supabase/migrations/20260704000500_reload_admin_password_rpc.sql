@@ -14,7 +14,7 @@ declare
   v_updated integer;
 begin
   if v_actor_id is null then
-    raise exception 'Sessao expirada. Entre novamente antes de alterar a senha.';
+    raise exception 'Sessão expirada. Entre novamente antes de alterar a senha.';
   end if;
 
   if v_actor_role <> 'admin' then
@@ -31,7 +31,7 @@ begin
     where id = p_user_id
       and active
   ) then
-    raise exception 'Usuario invalido ou inativo.';
+    raise exception 'Usuário inválido ou inativo.';
   end if;
 
   update auth.users
@@ -41,7 +41,7 @@ begin
 
   get diagnostics v_updated = row_count;
   if v_updated <> 1 then
-    raise exception 'Usuario invalido ou inativo.';
+    raise exception 'Usuário inválido ou inativo.';
   end if;
 
   return jsonb_build_object('ok', true);

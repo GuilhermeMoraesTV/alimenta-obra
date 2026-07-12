@@ -18,7 +18,7 @@ export const supabase = isSupabaseConfigured
 export function requireSupabase() {
   if (!supabase) {
     throw new Error(
-      "Supabase nao configurado. Copie .env.example para .env.local e informe a URL e a chave publicavel."
+      "Supabase não configurado. Copie .env.example para .env.local e informe a URL e a chave publicável."
     );
   }
   return supabase;

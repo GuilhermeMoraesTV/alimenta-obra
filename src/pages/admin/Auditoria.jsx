@@ -115,16 +115,16 @@ const auditoriaStyles = `
 `;
 
 const auditEntityLabel = (entity) => ({
-  pedido: "Pedido de refeicao",
-  meal_request: "Pedido de refeicao",
-  tipo_alimentacao: "Tipo de alimentacao",
-  meal_type: "Tipo de alimentacao",
+  pedido: "Pedido de refeição",
+  meal_request: "Pedido de refeição",
+  tipo_alimentacao: "Tipo de alimentação",
+  meal_type: "Tipo de alimentação",
   consolidacao: "Envio ao fornecedor",
   consolidation: "Envio ao fornecedor",
   fornecedor: "Fornecedor",
   supplier: "Fornecedor",
-  usuario: "Usuario",
-  user: "Usuario",
+  usuario: "Usuário",
+  user: "Usuário",
   seed: "Carga inicial"
 }[entity] ?? String(entity ?? "Registro").replaceAll("_", " "));
 
@@ -142,11 +142,11 @@ export function Auditoria({ formatDateTime, icon, state }) {
         title="Eventos do sistema"
         totalValue={auditRows.length}
         totalLabel="eventos registrados"
-        description="Registro de usuario, data e horario em todas as acoes."
-        actions={<><AdminBackButton icon={icon} /><button className="btn primary" data-export-audit><Icon icon={icon} name="chart" size={15} />Gerar PDF</button></>}
+        description="Registro de usuário, data e horário em todas as ações."
+        actions={<><AdminBackButton icon={icon} /><button className="btn primary" data-export-audit="pdf"><Icon icon={icon} name="chart" size={15} />PDF</button><button className="btn outline" data-export-audit="xlsx"><Icon icon={icon} name="clipboard" size={15} />Excel</button></>}
         metrics={[
           { icon, iconName: "history", value: auditRows.length, label: "Eventos" },
-          { icon, iconName: "users", value: userCount, label: "Usuarios" },
+          { icon, iconName: "users", value: userCount, label: "Usuários" },
           { icon, iconName: "package", value: entityCount, label: "Areas" },
           { icon, iconName: "clock", value: lastEvent ? formatDateTime(lastEvent.at) : "-", label: "Ultimo registro" },
         ]}

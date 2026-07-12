@@ -6,7 +6,7 @@ export function More(props) {
   const tools = [
     ["fornecedor-documentos", "package", "Documentos"],
     ["fornecedor-financeiro", "chart", "Financeiro"],
-    ["configuracoes", "settings", "Configuracoes"]
+    ["configuracoes", "settings", "Configurações"]
   ];
 
   return (
@@ -15,7 +15,7 @@ export function More(props) {
         <div>
           <span className="compact-kicker">Fornecedor</span>
           <h1>Mais ferramentas</h1>
-          <p>Acesse documentos, financeiro e configuracoes sem deixar o rodape principal carregado.</p>
+          <p>Acesse documentos, financeiro e configurações sem deixar o rodapé principal carregado.</p>
         </div>
       </header>
       <div className="supplier-more-grid">

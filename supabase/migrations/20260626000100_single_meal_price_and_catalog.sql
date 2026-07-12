@@ -18,8 +18,8 @@ where id = true;
 update public.meal_types
 set description = case name
   when 'Marmita Campo' then 'Marmita individual para entrega em campo.'
-  when 'Buffer Almoco' then 'Refeicao servida em ponto de apoio ou restaurante.'
-  when 'Jantar' then 'Refeicao noturna para equipes programadas.'
+  when 'Buffer Almoco' then 'Refeição servida em ponto de apoio ou restaurante.'
+  when 'Jantar' then 'Refeição noturna para equipes programadas.'
   else description
 end
 where description = '';
@@ -52,7 +52,7 @@ declare
   v_sort_order integer;
 begin
   if not public.can_manage_meal_catalog() then
-    raise exception 'Usuario nao autorizado a gerenciar tipos de alimentacao';
+    raise exception 'Usuário não autorizado a gerenciar tipos de alimentação';
   end if;
 
   if length(trim(coalesce(p_name, ''))) < 2 then
@@ -73,7 +73,7 @@ begin
     returning id into v_id;
 
     if v_id is null then
-      raise exception 'Tipo de alimentacao nao encontrado';
+      raise exception 'Tipo de alimentação não encontrado';
     end if;
   end if;
 

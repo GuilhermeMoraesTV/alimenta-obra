@@ -1,8 +1,8 @@
 # AlimentaObra
 
-## Configuracao atual com Supabase
+## Configuração atual com Supabase
 
-O frontend agora usa Supabase Auth e PostgreSQL. Para concluir a conexao:
+O frontend agora usa Supabase Auth e PostgreSQL. Para concluir a conexão:
 
 1. No SQL Editor do projeto Supabase, execute
    `supabase/migrations/20260620000100_initial_schema.sql`.
@@ -13,10 +13,10 @@ O frontend agora usa Supabase Auth e PostgreSQL. Para concluir a conexao:
    e o fornecedor.
 6. Rode `npm install` e `npm run dev`.
 
-Nunca coloque a chave `service_role` no frontend, no Git ou em variaveis
+Nunca coloque a chave `service_role` no frontend, no Git ou em variáveis
 iniciadas com `VITE_`.
 
-Validacao local:
+Validação local:
 
 ```powershell
 npm run check

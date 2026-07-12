@@ -5,9 +5,9 @@ declare v_status text; v_supplier uuid;
 begin
   select status, supplier_id into v_status, v_supplier
   from public.consolidations where id = p_consolidation_id for update;
-  if not found then raise exception 'Consolidacao nao encontrada'; end if;
+  if not found then raise exception 'Consolidação não encontrada'; end if;
   if v_supplier <> (select auth.uid()) and not public.is_admin() then
-    raise exception 'Usuario nao autorizado';
+    raise exception 'Usuário não autorizado';
   end if;
   if not (
     (v_status = 'enviado' and p_step in ('confirmado', 'producao'))
