@@ -525,33 +525,141 @@ function renderConsolidationPdfHtml(state, consolidation, summary) {
 function renderSupplierRomaneioHtml(state, consolidation, summary) {
   const supplier = state.users.find((user) => user.id === consolidation.supplierId);
   const supplierDocument = supplier?.cnpj || supplier?.document || "-";
+  const issueDate = formatDate(consolidation.updatedAt?.slice?.(0, 10) || consolidation.date);
+  const operationDate = formatDate(consolidation.date);
   const statusLabel = consolidation.status === "confirmado"
-    ? "Confirmado (mas nao entregue)"
+    ? "Confirmados (mas nao saiu para entrega)"
     : STATUS_LABEL[consolidation.status] ?? consolidation.status ?? "-";
   let documentTotal = 0;
+  let itemIndex = 0;
   const rows = Object.entries(summary.byMeal).flatMap(([meal, data]) => Object.entries(data.byLocation).map(([location, total]) => {
     const matchingRows = data.rows.filter((row) => row.location === location);
     const unitPrice = requestUnitPrice(state, matchingRows[0] ?? {});
     const description = mealDescription(state, matchingRows[0]?.mealTypeId) || matchingRows[0]?.mealDescription || location;
     const lineTotal = Number(total) * unitPrice;
     documentTotal += lineTotal;
-    return `<tr><td><strong>${escapeHtml(meal)}</strong></td><td>${escapeHtml(description)}<div class="small-note">Frente: ${escapeHtml(location)}</div></td><td>UN</td><td class="number">${total}</td><td class="number">${money(unitPrice)}</td><td class="number">${money(lineTotal)}</td></tr>`;
+    itemIndex += 1;
+    return `<tr><td class="invoice-center">${String(itemIndex).padStart(2, "0")}</td><td><strong>${escapeHtml(meal)}</strong><div class="invoice-desc">${escapeHtml(description)}</div><div class="invoice-note">Frente: ${escapeHtml(location)}</div></td><td class="invoice-center">UN</td><td class="number">${total}</td><td class="number">${money(unitPrice)}</td><td class="number">${money(lineTotal)}</td></tr>`;
   })).join("");
 
   return renderPrintablePage({
     title: "Nota fiscal de fornecimento",
-    subtitle: `Espelho operacional do pedido ${consolidation.id.slice(0, 8).toUpperCase()} para ${formatDate(consolidation.date)}.`,
+    orientation: "portrait",
+    showHeader: false,
     children: `
-      <section class="two-columns">
-        <div class="info-box"><span>Emitente</span><strong>${escapeHtml(supplier?.name ?? "Fornecedor")}</strong><p class="small-note">CNPJ/CPF: ${escapeHtml(supplierDocument)}<br>Responsavel pelo preparo e entrega das refeicoes.</p></div>
-        <div class="info-box"><span>Destinatario</span><strong>CONSAG / AlimentaObra</strong><p class="small-note">Operacao registrada para atendimento das frentes de trabalho.</p></div>
-      </section>
-      <section class="metrics"><div class="metric"><span>Status</span><strong>${escapeHtml(statusLabel)}</strong></div><div class="metric"><span>Quantidade total</span><strong>${summary.total}</strong></div><div class="metric"><span>Valor total</span><strong>${money(documentTotal)}</strong></div></section>
-      <h2 class="section-title">Dados dos produtos / servicos</h2>
-      <table><colgroup><col class="meal" /><col /><col class="unit" /><col class="qty" /><col class="money" /><col class="money" /></colgroup><thead><tr><th>Refeicao</th><th>Descricao</th><th>Un.</th><th class="number">Qtd.</th><th class="number">V. unit.</th><th class="number">V. total</th></tr></thead><tbody>${rows}</tbody></table>
-      <section class="two-columns">
-        <div class="info-box"><span>Informacoes complementares</span><p class="small-note">Documento gerado pelo AlimentaObra para conferencia operacional do fornecedor e do recebimento em campo. A apuracao fiscal, impostos e autorizacao SEFAZ devem constar na NF-e/DANFE oficial anexada pelo fornecedor.</p></div>
-        <div class="info-box"><span>Recebimento</span><p class="small-note">Declaro que recebi os itens descritos nesta nota de fornecimento.</p><br><br>________________________________</div>
+      <style>
+        .document { padding: 8mm; color: #111827; }
+        .document > .footer { display: none; }
+        .invoice-sheet { display: grid; gap: 5px; font-family: Arial, sans-serif; }
+        .invoice-top { display: grid; grid-template-columns: 54mm minmax(0,1fr) 30mm; border: 2px solid #002060; min-height: 26mm; }
+        .invoice-logo, .invoice-system-logo { display: grid; place-items: center; padding: 3mm; }
+        .invoice-logo { border-right: 1px solid #002060; }
+        .invoice-system-logo { border-left: 1px solid #002060; }
+        .invoice-logo img { width: 100%; max-height: 23mm; object-fit: contain; }
+        .invoice-system-logo img { width: 100%; max-height: 15mm; object-fit: contain; }
+        .invoice-title { display: grid; align-content: center; justify-items: center; padding: 2mm; text-align: center; }
+        .invoice-title span { color: #e8520a; font-size: 8px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+        .invoice-title h1 { margin: 2px 0 0; color: #002060; font-size: 16px; line-height: 1; text-transform: uppercase; }
+        .invoice-title p { margin: 3px 0 0; color: #374151; font-size: 8px; font-weight: 700; }
+        .invoice-meta { display: grid; grid-template-columns: 1fr 1fr; border-right: 1px solid #002060; border-bottom: 1px solid #002060; }
+        .invoice-box { min-height: 13mm; border-left: 1px solid #002060; border-top: 1px solid #002060; padding: 5px 7px; }
+        .invoice-box span, .invoice-section-title { display: block; color: #002060; font-size: 7px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .invoice-box strong { display: block; margin-top: 3px; color: #111827; font-size: 12px; line-height: 1.1; }
+        .invoice-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .invoice-party { border: 1px solid #002060; }
+        .invoice-party-head { background: #002060; color: #fff; padding: 5px 7px; font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .invoice-party-body { display: grid; gap: 4px; padding: 7px; min-height: 30mm; }
+        .invoice-party-body strong { font-size: 13px; text-transform: uppercase; }
+        .invoice-party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px; }
+        .invoice-party-grid span { color: #4b5563; font-weight: 800; text-transform: uppercase; }
+        .invoice-table { margin: 0; border: 1px solid #002060; border-collapse: collapse; border-radius: 0; table-layout: fixed; font-size: 10px; }
+        .invoice-table col.item { width: 9mm; }
+        .invoice-table col.unit { width: 14mm; }
+        .invoice-table col.qty { width: 16mm; }
+        .invoice-table col.value { width: 25mm; }
+        .invoice-table th { border: 1px solid #002060; background: #002060; color: #fff; padding: 5px 6px; text-align: left; font-size: 7px; letter-spacing: .06em; }
+        .invoice-table td { border: 1px solid #9db4d7; padding: 6px; vertical-align: top; }
+        .invoice-table tbody tr:nth-child(even) td { background: #f7f9fc; }
+        .invoice-center { text-align: center; }
+        .invoice-desc { margin-top: 3px; color: #374151; line-height: 1.3; }
+        .invoice-note { margin-top: 3px; color: #6b7280; font-size: 9px; }
+        .invoice-totals { display: grid; grid-template-columns: 1fr; border-right: 1px solid #002060; border-bottom: 1px solid #002060; }
+        .invoice-totals .invoice-box { min-height: 15mm; background: #fff; }
+        .invoice-totals .invoice-grand { background: #fff7ed; }
+        .invoice-totals .invoice-grand strong { color: #e8520a; font-size: 17px; }
+        .invoice-footer-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 5px; }
+        .invoice-complement, .invoice-receipt { min-height: 28mm; border: 1px solid #002060; padding: 7px; }
+        .invoice-complement p, .invoice-receipt p { margin: 5px 0 0; color: #374151; font-size: 10px; line-height: 1.35; }
+        .invoice-signature { margin: 14mm 10mm 0; border-top: 1px solid #111827; padding-top: 4px; text-align: center; font-size: 9px; font-weight: 800; }
+        @media print {
+          .document { min-height: 297mm; padding: 8mm; }
+          .invoice-sheet { break-inside: avoid; }
+        }
+      </style>
+      <section class="invoice-sheet">
+        <header class="invoice-top">
+          <div class="invoice-logo"><img src="${CONSAG_LOGO_URL}" alt="CONSAG" /></div>
+          <div class="invoice-title">
+            <span>Documento auxiliar de fornecimento</span>
+            <h1>Nota fiscal de fornecimento</h1>
+            <p>Espelho operacional da refeicao em ${operationDate}</p>
+          </div>
+          <div class="invoice-system-logo"><img src="${SYSTEM_LOGO_URL}" alt="AlimentaObra" /></div>
+        </header>
+
+        <section class="invoice-meta">
+          <div class="invoice-box"><span>Emissao</span><strong>${issueDate}</strong></div>
+          <div class="invoice-box"><span>Status operacional</span><strong>${escapeHtml(statusLabel)}</strong></div>
+        </section>
+
+        <section class="invoice-parties">
+          <article class="invoice-party">
+            <div class="invoice-party-head">Emitente</div>
+            <div class="invoice-party-body">
+              <strong>${escapeHtml(supplier?.name ?? "Fornecedor")}</strong>
+              <div class="invoice-party-grid">
+                <div><span>CNPJ/CPF</span><br>${escapeHtml(supplierDocument)}</div>
+                <div><span>Responsavel</span><br>Preparo e entrega</div>
+                <div><span>Natureza</span><br>Fornecimento de refeicoes</div>
+                <div><span>Sistema</span><br>AlimentaObra</div>
+              </div>
+            </div>
+          </article>
+          <article class="invoice-party">
+            <div class="invoice-party-head">Destinatario / recebimento</div>
+            <div class="invoice-party-body">
+              <strong>CONSAG / AlimentaObra</strong>
+              <div class="invoice-party-grid">
+                <div><span>Operacao</span><br>Frentes de trabalho</div>
+                <div><span>Data da refeicao</span><br>${operationDate}</div>
+                <div><span>Quantidade</span><br>${summary.total} refeicoes</div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div class="invoice-section-title">Dados dos produtos / servicos</div>
+        <table class="invoice-table">
+          <colgroup><col class="item" /><col /><col class="unit" /><col class="qty" /><col class="value" /><col class="value" /></colgroup>
+          <thead><tr><th>Item</th><th>Descricao dos produtos / servicos</th><th>Un.</th><th class="number">Qtd.</th><th class="number">Valor unit.</th><th class="number">Valor total</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="6">Sem itens para esta nota.</td></tr>`}</tbody>
+        </table>
+
+        <section class="invoice-totals">
+          <div class="invoice-box invoice-grand"><span>Valor total</span><strong>${money(documentTotal)}</strong></div>
+        </section>
+
+        <section class="invoice-footer-grid">
+          <div class="invoice-complement">
+            <span class="invoice-section-title">Informacoes complementares</span>
+            <p>Documento gerado pelo AlimentaObra para conferencia operacional do fornecedor e do recebimento em campo. A apuracao fiscal, impostos, autorizacao SEFAZ e demais dados tributarios devem constar na NF-e/DANFE oficial anexada pelo fornecedor.</p>
+          </div>
+          <div class="invoice-receipt">
+            <span class="invoice-section-title">Recebimento</span>
+            <p>Declaro que recebi os itens descritos nesta nota de fornecimento.</p>
+            <div class="invoice-signature">Assinatura / carimbo</div>
+          </div>
+        </section>
       </section>`
     ,
     footer: "Este documento acompanha a operacao e nao substitui NF-e, DANFE ou documento fiscal."
