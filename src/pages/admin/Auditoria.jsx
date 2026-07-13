@@ -1,5 +1,5 @@
 import React from "react";
-import { AdminBackButton, AdminReceiptHeader, Icon, getUserName } from "./shared.jsx";
+import { AdminBackButton, AdminReceiptHeader, ExportButtons, getUserName } from "./shared.jsx";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -128,7 +128,7 @@ const auditEntityLabel = (entity) => ({
   seed: "Carga inicial"
 }[entity] ?? String(entity ?? "Registro").replaceAll("_", " "));
 
-export function Auditoria({ formatDateTime, icon, state }) {
+export function Auditoria({ exportMenuOpen, formatDateTime, icon, state }) {
   const auditRows = state.auditLog;
   const userCount = new Set(auditRows.map((item) => item.userId)).size;
   const entityCount = new Set(auditRows.map((item) => auditEntityLabel(item.entity))).size;
@@ -143,7 +143,7 @@ export function Auditoria({ formatDateTime, icon, state }) {
         totalValue={auditRows.length}
         totalLabel="eventos registrados"
         description="Registro de usuário, data e horário em todas as ações."
-        actions={<><AdminBackButton icon={icon} /><button className="btn primary" data-export-audit="pdf"><Icon icon={icon} name="chart" size={15} />PDF</button><button className="btn outline" data-export-audit="xlsx"><Icon icon={icon} name="clipboard" size={15} />Excel</button></>}
+        actions={<><AdminBackButton icon={icon} /><ExportButtons exportMenuOpen={exportMenuOpen} icon={icon} id="auditoria" items={[["pdf", "PDF", "chart"], ["xlsx", "Excel", "clipboard"]]} /></>}
         metrics={[
           { icon, iconName: "history", value: auditRows.length, label: "Eventos" },
           { icon, iconName: "users", value: userCount, label: "Usuários" },

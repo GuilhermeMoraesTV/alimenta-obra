@@ -107,11 +107,7 @@ export async function exportMeasurementExcel(state, rows, options = {}) {
 
 export function exportOrdersExcel(state, rows, options = {}) {
   const model = buildOrdersModel(state, rows, options);
-  const workbook = createMultiSheetWorkbook([
-    { name: "Pedidos", rows: model.tableRows },
-    { name: "Resumo diario", rows: model.blockRows }
-  ]);
-  downloadBlob(`pedidos-${model.filenamePeriod}.xlsx`, new Blob([workbook], { type: XLSX_MIME }));
+  downloadBlob(`pedidos-${model.filenamePeriod}.xlsx`, new Blob([createOrdersWorkbook(model)], { type: XLSX_MIME }));
 }
 
 export function exportOrdersPdf(state, rows, options = {}) {
@@ -124,32 +120,17 @@ export function exportMeasurementPdf(state, rows, options = {}) {
 }
 
 export function exportAuditExcel(state) {
-  const rows = [
-    ["Data/Hora", "Usuario", "Acao", "Area", "Descricao"],
-    ...(state.auditLog ?? []).map((item) => [
-      formatDateTime(item.at),
-      getUserName(state, item.userId),
-      item.action,
-      auditEntityLabel(item.entity),
-      auditDescription(item)
-    ])
-  ];
-  downloadBlob("auditoria-alimentaobra.xlsx", new Blob([createXlsxWorkbook("Auditoria", rows)], { type: XLSX_MIME }));
+  downloadBlob("auditoria-alimentaobra.xlsx", new Blob([createAuditWorkbook(state)], { type: XLSX_MIME }));
 }
 
 export async function exportDailyReportExcel(state, report) {
-  const rows = dailyReportRows(state, report);
-  const totals = report?.totals ?? {};
-  const sheetRows = [
-    ["CONSAG", "", "", "Relatorio Diario Automatico", "", "", "", "", "AlimentaObra"],
-    ["", "", "", `Data: ${formatDate(report.date)}`, "", "", "", "", `Efetivo: ${Number(totals.headcount ?? 0) || "-"}`],
-    ["", "", "", `Solicitado: ${Number(totals.requested ?? 0)} | Realizado: ${Number(totals.consumed ?? 0)}`, "", "", "", "", `Custo: ${money(totals.cost ?? 0)}`],
-    ["", "", "", `Gerado: ${formatDateTime(report.generatedAt)}`],
-    [],
-    ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status"],
-    ...rows.map((row) => [row.date, row.weekday, row.leader, row.section, row.meal, row.requested, row.consumed, row.effective || "", row.unitPrice, row.value, row.status])
-  ];
-  downloadBlob(`relatorio-diario-${report.date}.xlsx`, new Blob([createXlsxWorkbook("Relatorio diario", sheetRows)], { type: XLSX_MIME }));
+  const reportDate = report?.date || new Date().toISOString().slice(0, 10);
+  const model = buildMeasurementModel(state, dailyReportMeasurementRows(state, report), {
+    periodLabel: formatDate(reportDate),
+    filter: { start: reportDate, end: reportDate },
+    scope: "Relatorio diario automatico"
+  });
+  downloadBlob(`relatorio-diario-${reportDate}.xlsx`, new Blob([createDailyReportWorkbook(model)], { type: XLSX_MIME }));
 }
 
 export function exportPdf(state, consolidation) {
@@ -174,8 +155,14 @@ export function exportAuditPdf(state) {
   return openPrintDocument(renderAuditPdfHtml(state), "Auditoria do sistema");
 }
 
-export function exportDailyReportPdf(report) {
-  return openPrintDocument(renderDailyReportPdfHtml(report), `Relatorio diario ${report.date}`);
+export function exportDailyReportPdf(state, report) {
+  const reportDate = report?.date || new Date().toISOString().slice(0, 10);
+  const model = buildMeasurementModel(state, dailyReportMeasurementRows(state, report), {
+    periodLabel: formatDate(reportDate),
+    filter: { start: reportDate, end: reportDate },
+    scope: "Relatorio diario automatico"
+  });
+  return openPrintDocument(renderMeasurementPdfHtml(model), `Relatorio diario ${reportDate}`);
 }
 
 function openPrintDocument(html, title) {
@@ -210,7 +197,8 @@ function buildMeasurementModel(state, rows, options = {}) {
   const rowDates = activeRows.map((request) => request.date).filter(Boolean).sort();
   const periodStart = options.filter?.start || rowDates[0] || state.settings?.defaultMealDate || new Date().toISOString().slice(0, 10);
   const periodEnd = options.filter?.end || rowDates.at(-1) || periodStart;
-  const periodLabel = options.periodLabel || (periodStart === periodEnd ? formatDate(periodStart) : `${formatDate(periodStart)} a ${formatDate(periodEnd)}`);
+  const dateRangeLabel = periodStart === periodEnd ? formatDate(periodStart) : `${formatDate(periodStart)} a ${formatDate(periodEnd)}`;
+  const periodLabel = options.periodLabel || dateRangeLabel;
   const days = dateRange(periodStart, periodEnd);
   const catalog = state.mealCatalog ?? state.mealTypes ?? [];
   const catalogOrder = new Map(catalog.map((meal, index) => [meal.id, index]));
@@ -274,7 +262,7 @@ function buildMeasurementModel(state, rows, options = {}) {
     return {
       date: request.date,
       weekday: weekdayShort(request.date),
-      leader: getUserName(state, request.leaderId),
+      leader: request.leader || request.leaderName || getUserName(state, request.leaderId),
       section: request.sectionName || request.location || "Sem equipe",
       meal: request.mealType || "Refeicao",
       requested: Number(request.quantity ?? 0),
@@ -300,6 +288,7 @@ function buildMeasurementModel(state, rows, options = {}) {
     scope: options.scope || "Servicos de Alimentacao",
     revision: options.revision || "001",
     periodLabel,
+    dateRangeLabel,
     periodStart,
     periodEnd,
     measuredDays: days.length,
@@ -355,6 +344,36 @@ function dailyReportRows(state, report) {
       unitPrice,
       value: consumed * unitPrice,
       status: item.status ?? request.status ?? ""
+    };
+  });
+}
+
+function dailyReportMeasurementRows(state, report) {
+  return (report?.items ?? report?.rows ?? []).map((item, index) => {
+    const request = item.request ?? item;
+    const date = request.date ?? item.date ?? report?.date;
+    const mealType = item.meal ?? request.mealType ?? request.meal_type ?? "Refeicao";
+    const mealTypeId = request.mealTypeId ?? request.meal_type_id ?? item.mealTypeId ?? item.meal_type_id ?? mealType;
+    const consumed = Number(item.consumed ?? item.actualQuantity ?? request.actualQuantity ?? request.actual_quantity ?? request.quantity ?? 0);
+    const unitPrice = Number(item.unitPrice ?? item.unit_price ?? request.unitPrice ?? request.unit_price ?? mealUnitPrice(state, mealTypeId));
+    return {
+      ...request,
+      id: request.id ?? item.id ?? `daily-${date}-${index}`,
+      date,
+      leaderId: request.leaderId ?? request.leader_id ?? item.leaderId ?? item.leader_id ?? "",
+      leader: item.leader ?? request.leader ?? request.leaderName ?? request.leader_name ?? "",
+      sectionName: item.section ?? request.sectionName ?? request.section_name ?? request.location ?? "",
+      location: item.section ?? request.sectionName ?? request.section_name ?? request.location ?? "",
+      mealType,
+      mealTypeId,
+      mealDescription: item.mealDescription ?? request.mealDescription ?? request.meal_description ?? "",
+      quantity: Number(item.requested ?? request.quantity ?? request.requested ?? 0),
+      actualQuantity: consumed,
+      headcount: Number(item.effective ?? request.headcount ?? request.sectionHeadcount ?? 0),
+      sectionHeadcount: Number(item.effective ?? request.headcount ?? request.sectionHeadcount ?? 0),
+      unitPrice,
+      status: item.status ?? request.status ?? "relatorio",
+      notes: item.notes ?? request.notes ?? ""
     };
   });
 }
@@ -539,18 +558,117 @@ function renderSupplierRomaneioHtml(state, consolidation, summary) {
   });
 }
 function renderMeasurementPdfHtml(model) {
-  const mealHeaders = model.meals.map((meal) => `<th colspan="4">${escapeHtml(meal.label)}</th>`).join("");
-  const subHeaders = model.meals.map(() => `<th>Dia</th><th class="number">Real.</th><th class="number">V. unit.</th><th class="number">Total</th>`).join("");
-  const rows = model.dayRows.map((day) => `<tr><td>${escapeHtml(day.longDate)}</td>${day.meals.map((meal) => `<td>${escapeHtml(day.weekday)}</td><td class="number">${meal.consumed || "00"}</td><td class="number">${money(meal.unitPrice)}</td><td class="number">${meal.value ? money(meal.value) : "-"}</td>`).join("")}</tr>`).join("");
-  const totals = `<tr><th>TOTAL</th>${model.meals.map((meal) => `<th></th><th class="number">${meal.quantityTotal}</th><th></th><th class="number">${money(meal.valueTotal)}</th>`).join("")}</tr>`;
+  const quantity = (value, zero = "00") => Number(value ?? 0) ? Number(value ?? 0) : zero;
+  const totalMoney = (value) => Number(value ?? 0) ? money(value) : "-";
+  const dayRows = model.dayRows.map((day) => `<tr><td>${escapeHtml(day.longDate)}</td></tr>`).join("");
+  const mealTables = model.meals.map((meal, index) => {
+    const rows = model.dayRows.map((day) => {
+      const item = day.meals[index] ?? {};
+      return `<tr><td class="day">${escapeHtml(day.weekday)}</td><td class="number">${quantity(item.consumed)}</td><td class="number">${money(item.unitPrice)}</td><td class="number">${totalMoney(item.value)}</td></tr>`;
+    }).join("");
+    return `<table class="measurement-table meal-table"><colgroup><col class="day-col" /><col class="qty-col" /><col class="unit-col" /><col class="total-col" /></colgroup><thead><tr><th colspan="4" class="meal-title">${escapeHtml(meal.label)}</th></tr><tr><th>Dia</th><th>Real.</th><th>V. unit.</th><th>Total</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th></th><th class="number">${quantity(meal.quantityTotal, "0")}</th><th></th><th class="number">${money(meal.valueTotal)}</th></tr></tfoot></table>`;
+  }).join("");
   const detail = model.detailRows.map((row) => `<tr><td>${formatDate(row.date)}</td><td>${escapeHtml(row.leader)}</td><td>${escapeHtml(row.section)}</td><td>${escapeHtml(row.meal)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.unitPrice)}</td><td class="number">${money(row.value)}</td><td>${escapeHtml(row.status)}</td></tr>`).join("");
+  const sectionSummary = model.sectionSummary.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.value)}</td></tr>`).join("");
+  const measurementColumns = `1.04fr repeat(${Math.max(model.meals.length, 1)}, 1.22fr)`;
 
   return renderPrintablePage({
-    title: "Memoria de Calculo - Servico Alimentacao",
-    subtitle: `Empresa: ${model.supplierName} | Periodo: ${model.periodLabel} | Medicao: ${model.periodLabel}`,
-    eyebrow: `Cod. Forn.: ${model.supplierCode}`,
-    children: `<section class="metrics"><div class="metric"><span>CNPJ</span><strong>${escapeHtml(model.supplierDocument)}</strong></div><div class="metric"><span>Qtd. dias</span><strong>${model.measuredDays}</strong></div><div class="metric"><span>Total</span><strong>${money(model.totalValue)}</strong></div></section><section class="two-columns"><div class="info-box"><span>Escopo</span><strong>${escapeHtml(model.scope)}</strong></div><div class="info-box"><span>Area/Setor</span><strong>${escapeHtml(model.area)}</strong></div></section><table><thead><tr><th>DATA</th>${mealHeaders}</tr><tr><th>DATA</th>${subHeaders}</tr></thead><tbody>${rows}${totals}</tbody></table><div class="two-columns"><div class="info-box"><br><br>________________________________<p class="small-note">Solicitante/Acompanhante</p></div><div class="info-box"><br><br>________________________________<p class="small-note">Fornecedor</p></div></div><h2 class="section-title">Detalhamento completo da medicao</h2><table><thead><tr><th>Data</th><th>Encarregado</th><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Real.</th><th class="number">Efetivo</th><th class="number">Valor unit.</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${detail || "<tr><td colspan=\"10\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>`,
-    footer: "Relatorio operacional gerado pelo AlimentaObra."
+    title: "Medicao Todo periodo",
+    orientation: "landscape",
+    showHeader: false,
+    footer: null,
+    children: `<style>
+      .document { width: 297mm; min-height: auto; margin: 0 auto; padding: 0; box-shadow: none; background: #fff; color: #000; font-family: Arial, sans-serif; }
+      .document > .footer { display: none; }
+      .measurement-page { width: 297mm; min-height: 210mm; padding: 15mm 14mm 10mm; break-after: page; page-break-after: always; background: #fff; }
+      .measurement-page:last-child { break-after: auto; page-break-after: auto; }
+      .cover-page { display: flex; flex-direction: column; }
+      .measurement-header { display: grid; grid-template-columns: 29% 42.5% 28.5%; min-height: 31mm; border: 2px solid #000; }
+      .measurement-logo-box, .measurement-info-box, .measurement-meta-box { min-width: 0; display: grid; align-items: center; border-right: 2px solid #000; }
+      .measurement-meta-box { border-right: 0; grid-template-columns: minmax(0,1fr) 92px; column-gap: 12px; padding: 8px 12px; }
+      .measurement-logo-box { justify-items: center; padding: 2mm 4mm; }
+      .measurement-logo-box img { width: 96%; max-height: 28mm; object-fit: contain; }
+      .measurement-system-logo { width: 86px; max-height: 58px; object-fit: contain; justify-self: end; }
+      .measurement-title { background: #0b336a; color: #fff; padding: 5px 8px; text-align: center; font-size: 12pt; font-weight: 900; letter-spacing: .02em; }
+      .measurement-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px; padding: 7px 12px 8px; font-size: 9.5pt; line-height: 1.15; }
+      .measurement-label { font-weight: 900; }
+      .measurement-meta-list { display: grid; gap: 3px; font-size: 9.5pt; line-height: 1.1; }
+      .measurement-layout { display: grid; grid-template-columns: ${measurementColumns}; gap: 6px; margin-top: 8px; align-items: start; }
+      .measurement-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; border-radius: 0; font-size: 6.25pt; line-height: 1.1; }
+      .measurement-table th, .measurement-table td { border: 1px solid #000; padding: 3px 4px; color: #000; vertical-align: middle; }
+      .measurement-table th { background: #b9c2cc; color: #000; text-align: center; font-weight: 900; letter-spacing: 0; text-transform: none; }
+      .measurement-table .meal-title, .measurement-table tfoot th { background: #0b336a; color: #fff; }
+      .date-table thead th, .date-table tfoot th { height: 17px; background: #0b336a; color: #fff; }
+      .date-table tbody th { background: #b9c2cc; }
+      .date-table td { height: 17px; background: #c8d0d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .meal-table th, .meal-table td { height: 17px; }
+      .meal-table .day-col { width: 21%; }
+      .meal-table .qty-col { width: 19%; }
+      .meal-table .unit-col { width: 26%; }
+      .meal-table .total-col { width: 34%; }
+      .meal-table .number { font-size: 6pt; }
+      .meal-table .day { background: #b9c2cc; text-align: center; font-weight: 900; }
+      .number { text-align: right; white-space: nowrap; }
+      .measurement-total { display: grid; grid-template-columns: 45mm 45mm; width: 90mm; margin-top: 8mm; border: 2px solid #000; font-weight: 950; overflow: hidden; }
+      .measurement-total span, .measurement-total strong { min-height: 10mm; display: grid; align-items: center; padding: 0 9px; font-size: 14pt; line-height: 1; white-space: nowrap; }
+      .measurement-total span { justify-content: center; background: #b9b4b4; border-right: 2px solid #000; }
+      .measurement-total strong { justify-content: end; background: #fff; }
+      .measurement-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 18mm; width: 140mm; margin: auto auto 0; padding-bottom: 7mm; text-align: center; font-size: 13pt; font-weight: 950; }
+      .measurement-signature { padding-top: 4mm; border-top: 1px solid #000; }
+      .detail-page { padding-top: 14mm; }
+      .summary-page { padding-top: 16mm; }
+      .measurement-heading { margin: 0 0 5mm; font-size: 17pt; line-height: 1; font-weight: 950; letter-spacing: 0; }
+      .detail-table { font-size: 7pt; }
+      .detail-table th, .detail-table td { height: 17px; padding: 4px 6px; }
+      .detail-table th { background: #0b336a; color: #fff; }
+      .detail-table td { background: #fff; }
+      .summary-title { margin-top: 7mm; }
+      .summary-table { font-size: 7pt; }
+      .summary-table th { background: #0b336a; color: #fff; }
+      @media print {
+        .document { width: 297mm; margin: 0; }
+        .measurement-page { width: 297mm; min-height: 210mm; }
+      }
+    </style>
+    <section class="measurement-page cover-page">
+      <header class="measurement-header">
+        <div class="measurement-logo-box"><img src="${CONSAG_LOGO_URL}" alt="CONSAG" /></div>
+        <div class="measurement-info-box">
+          <div class="measurement-title">Memoria de Calculo - Servico Alimentacao</div>
+          <div class="measurement-info-grid">
+            <div><span class="measurement-label">Empresa:</span> ${escapeHtml(model.supplierName)}</div>
+            <div><span class="measurement-label">Periodo:</span> ${escapeHtml(model.dateRangeLabel ?? model.periodLabel)}</div>
+            <div><span class="measurement-label">CNPJ:</span> ${escapeHtml(model.supplierDocument)}</div>
+            <div><span class="measurement-label">QTD. dias:</span> ${model.measuredDays}</div>
+            <div><span class="measurement-label">Escopo:</span> ${escapeHtml(model.scope)}</div>
+            <div><span class="measurement-label">Area/Setor:</span> ${escapeHtml(model.area)}</div>
+          </div>
+        </div>
+        <div class="measurement-meta-box">
+          <div class="measurement-meta-list">
+            <div><span class="measurement-label">Cod. Forn.:</span> ${escapeHtml(model.supplierCode)}</div>
+            <div><span class="measurement-label">Medicao:</span> ${escapeHtml(model.periodLabel)}</div>
+            <div><span class="measurement-label">Revisao:</span> ${escapeHtml(model.revision)}</div>
+            <div><span class="measurement-label">Gerado:</span> ${escapeHtml(model.generatedAt)}</div>
+          </div>
+          <img class="measurement-system-logo" src="${SYSTEM_LOGO_URL}" alt="AlimentaObra" />
+        </div>
+      </header>
+      <div class="measurement-layout">
+        <table class="measurement-table date-table"><thead><tr><th>&nbsp;</th></tr><tr><th>DATA</th></tr></thead><tbody>${dayRows}</tbody><tfoot><tr><th>TOTAL</th></tr></tfoot></table>
+        ${mealTables}
+      </div>
+      <div class="measurement-total"><span>TOTAL</span><strong>${money(model.totalValue)}</strong></div>
+      <div class="measurement-signatures"><div class="measurement-signature">Solicitante/Acompanhante</div><div class="measurement-signature">Fornecedor</div></div>
+    </section>
+    <section class="measurement-page detail-page">
+      <h2 class="measurement-heading">Detalhamento completo da medicao</h2>
+      <table class="measurement-table detail-table"><thead><tr><th>Data</th><th>Encarregado</th><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Real.</th><th class="number">Efetivo</th><th class="number">Valor unit.</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${detail || "<tr><td colspan=\"10\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
+    </section>
+    <section class="measurement-page summary-page">
+      <h2 class="measurement-heading">Resumo por equipe/trecho</h2>
+      <table class="measurement-table summary-table"><thead><tr><th>Equipe/Trecho</th><th class="number">Solicitado</th><th class="number">Realizado</th><th class="number">Efetivo</th><th class="number">Total</th></tr></thead><tbody>${sectionSummary || "<tr><td colspan=\"5\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
+    </section>`
   });
 }
 
@@ -903,52 +1021,470 @@ function renderWordReportHtml(state, consolidation, summary) {
 }
 
 function createMeasurementWorkbook(model) {
-  const measurementRows = [
-    ["CONSAG", "", "", "", "Memoria de Calculo - Servico Alimentacao", "", "", "", "", "", "", "", "", `Cod. Forn.: ${model.supplierCode} | AlimentaObra`],
-    ["", "", "", "", `Empresa: ${model.supplierName}`, "", "", "", "", "", "", "", "", `Medicao: ${model.periodLabel}`],
-    ["", "", "", "", `CNPJ: ${model.supplierDocument}`, "", "", "", "", "", "", "", "", `Area/Setor: ${model.area}`],
-    ["", "", "", "", `Escopo: ${model.scope} | Periodo: ${formatDate(model.periodStart)} a ${formatDate(model.periodEnd)} | QTD. dias medido: ${model.measuredDays}`, "", "", "", "", "", "", "", "", `Revisao: ${model.revision}`],
-    [],
-    ["DATA", ...model.meals.flatMap((meal) => [meal.label, "", "", ""])],
-    ["DATA", ...model.meals.flatMap(() => ["Dia", "REALIZADO", "VALOR UNITARIO", "VALOR TOTAL"])],
-    ...model.dayRows.map((day) => [day.longDate, ...day.meals.flatMap((meal) => [day.weekday, meal.consumed, meal.unitPrice, meal.value])]),
-    ["TOTAL", ...model.meals.flatMap((meal) => ["", meal.quantityTotal, "", meal.valueTotal])],
-    [],
-    ["TOTAL", model.totalValue]
-  ];
-  const detailRows = [
-    ["CONSAG", "", "", "Detalhamento da Medicao", "", "", "", "", "", `Cod. Forn.: ${model.supplierCode}`],
-    ["", "", "", `Empresa: ${model.supplierName}`, "", "", "", "", "", `Registros: ${model.detailRows.length}`],
-    ["", "", "", `Periodo: ${model.periodLabel}`, "", "", "", "", "", "AlimentaObra"],
-    ["", "", "", `Gerado: ${model.generatedAt}`],
-    [],
-    ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status", "Observacoes"],
-    ...model.detailRows.map((row) => [row.date, row.weekday, row.leader, row.section, row.meal, row.requested, row.consumed, row.effective || "", row.unitPrice, row.value, row.status, row.notes])
-  ];
-  const sectionRows = [
-    ["CONSAG", "", "", "Resumo por Equipe/Trecho", "", "", "", "", "", `Cod. Forn.: ${model.supplierCode}`],
-    ["", "", "", `Empresa: ${model.supplierName}`, "", "", "", "", "", `Equipes: ${model.sectionSummary.length}`],
-    ["", "", "", `Periodo: ${model.periodLabel}`, "", "", "", "", "", "AlimentaObra"],
-    ["", "", "", `Gerado: ${model.generatedAt}`],
-    [],
-    ["Equipe/Trecho", "Solicitado", "Realizado", "Efetivo", "Valor total"],
-    ...model.sectionSummary.map((row) => [row.label, row.requested, row.consumed, row.effective, row.value])
-  ];
-  const mealRows = [
-    ["CONSAG", "", "", "Resumo por Tipo", "", "", "", "", "", `Cod. Forn.: ${model.supplierCode}`],
-    ["", "", "", `Empresa: ${model.supplierName}`, "", "", "", "", "", `Tipos: ${model.mealSummary.length}`],
-    ["", "", "", `Periodo: ${model.periodLabel}`, "", "", "", "", "", "AlimentaObra"],
-    ["", "", "", `Gerado: ${model.generatedAt}`],
-    [],
-    ["Tipo", "Solicitado", "Realizado", "Efetivo", "Valor total"],
-    ...model.mealSummary.map((row) => [row.label, row.requested, row.consumed, row.effective, row.value])
-  ];
-  return createMultiSheetWorkbook([
-    { name: "Medicao", rows: measurementRows },
-    { name: "Detalhamento", rows: detailRows },
-    { name: "Resumo por Equipe", rows: sectionRows },
-    { name: "Resumo por Tipo", rows: mealRows }
+  return createStyledXlsxWorkbook([
+    buildMeasurementSummarySheet(model),
+    buildMeasurementDetailSheet(model),
+    buildMeasurementSectionSheet(model),
+    buildMeasurementMealSheet(model)
   ]);
+}
+
+function createDailyReportWorkbook(model) {
+  return createStyledXlsxWorkbook([
+    { ...buildMeasurementSummarySheet(model), name: "Relatorio diario" }
+  ]);
+}
+
+function createOrdersWorkbook(model) {
+  return createStyledXlsxWorkbook([
+    buildOrdersDetailSheet(model),
+    buildOrdersDailySheet(model)
+  ]);
+}
+
+function createAuditWorkbook(state) {
+  return createStyledXlsxWorkbook([buildAuditSheet(state)]);
+}
+
+function buildMeasurementSummarySheet(model) {
+  const meals = model.meals.length ? model.meals : [{ label: "Refeicao", quantityTotal: 0, valueTotal: 0 }];
+  const columnCount = 1 + (meals.length * 4);
+  const titleEnd = Math.max(5, columnCount - 4);
+  const rightStart = titleEnd + 1;
+  const dataStartRow = 8;
+  const dataEndRow = dataStartRow + Math.max(model.dayRows.length, 1) - 1;
+  const totalRow = dataEndRow + 1;
+  const grandTotalRow = totalRow + 2;
+  const rows = [];
+
+  styleRange(rows, 1, 1, 4, 4, 1);
+  setStyledCell(rows, 1, 1, "CONSAG", 1);
+  styleRange(rows, 1, 5, 1, titleEnd, 5);
+  styleRange(rows, 2, 5, 4, titleEnd, 4);
+  setStyledCell(rows, 1, 5, "Memoria de Calculo - Servico Alimentacao", 5);
+  setStyledCell(rows, 2, 5, `Empresa: ${model.supplierName}`, 4);
+  setStyledCell(rows, 3, 5, `CNPJ: ${model.supplierDocument}`, 4);
+  setStyledCell(rows, 4, 5, `Escopo: ${model.scope} | Periodo: ${formatDate(model.periodStart)} a ${formatDate(model.periodEnd)} | QTD. dias medido: ${model.measuredDays}`, 4);
+  styleRange(rows, 1, rightStart, 4, columnCount, 3);
+  setStyledCell(rows, 1, rightStart, "AlimentaObra", 3);
+  setStyledCell(rows, 2, rightStart, `Medicao: ${model.periodLabel}`, 4);
+  setStyledCell(rows, 3, rightStart, `Area/Setor: ${model.area}`, 4);
+  setStyledCell(rows, 4, rightStart, `Revisao: ${model.revision}`, 4);
+
+  setStyledCell(rows, 6, 1, "DATA", 5);
+  setStyledCell(rows, 7, 1, "DATA", 6);
+  meals.forEach((meal, index) => {
+    const start = 2 + (index * 4);
+    styleRange(rows, 6, start, 6, start + 3, 5);
+    setStyledCell(rows, 6, start, meal.label, 5);
+    ["Dia", "REALIZADO", "VALOR UNITARIO", "VALOR TOTAL"].forEach((label, offset) => {
+      setStyledCell(rows, 7, start + offset, label, 6);
+    });
+  });
+
+  const days = model.dayRows.length ? model.dayRows : [{ longDate: "-", weekday: "-", meals: meals.map((meal) => ({ consumed: 0, unitPrice: 0, value: 0 })) }];
+  days.forEach((day, dayIndex) => {
+    const row = dataStartRow + dayIndex;
+    setStyledCell(rows, row, 1, day.longDate, 8);
+    meals.forEach((_, mealIndex) => {
+      const meal = day.meals[mealIndex] ?? { consumed: 0, unitPrice: 0, value: 0 };
+      const start = 2 + (mealIndex * 4);
+      const qtyCol = start + 1;
+      const unitCol = start + 2;
+      const totalCol = start + 3;
+      setStyledCell(rows, row, start, day.weekday, 8);
+      setStyledCell(rows, row, qtyCol, Number(meal.consumed ?? 0), 4);
+      setStyledCell(rows, row, unitCol, Number(meal.unitPrice ?? 0), 10);
+      setStyledCell(rows, row, totalCol, Number(meal.value ?? 0), 10, { formula: `${columnName(qtyCol)}${row}*${columnName(unitCol)}${row}` });
+    });
+  });
+
+  styleRange(rows, totalRow, 1, totalRow, columnCount, 11);
+  setStyledCell(rows, totalRow, 1, "TOTAL", 11);
+  meals.forEach((_, index) => {
+    const start = 2 + (index * 4);
+    const qtyCol = start + 1;
+    const totalCol = start + 3;
+    setStyledCell(rows, totalRow, qtyCol, meals[index].quantityTotal, 12, { formula: `SUM(${columnName(qtyCol)}${dataStartRow}:${columnName(qtyCol)}${dataEndRow})` });
+    setStyledCell(rows, totalRow, totalCol, meals[index].valueTotal, 12, { formula: `SUM(${columnName(totalCol)}${dataStartRow}:${columnName(totalCol)}${dataEndRow})` });
+  });
+  styleRange(rows, grandTotalRow, 1, grandTotalRow, 2, 13);
+  styleRange(rows, grandTotalRow, 3, grandTotalRow, 4, 14);
+  setStyledCell(rows, grandTotalRow, 1, "TOTAL", 13);
+  setStyledCell(rows, grandTotalRow, 3, model.totalValue, 14, {
+    formula: meals.map((_, index) => `${columnName(5 + (index * 4))}${totalRow}`).join("+") || "0"
+  });
+
+  ensureRangeStyle(rows, 1, 1, grandTotalRow, columnCount, 4);
+  return {
+    name: "Medicao",
+    rows,
+    columnWidths: [34, ...meals.flatMap(() => [9, 11, 14, 15])],
+    rowHeights: { 1: 30, 2: 15, 3: 15, 4: 15, 5: 15, 6: 18, 7: 18, [totalRow]: 18, [grandTotalRow]: 24 },
+    freezeRows: 7,
+    merges: [
+      `A1:D4`,
+      `E1:${columnName(titleEnd)}1`,
+      `E2:${columnName(titleEnd)}2`,
+      `E3:${columnName(titleEnd)}3`,
+      `${columnName(rightStart)}1:${columnName(columnCount)}1`,
+      `${columnName(rightStart)}2:${columnName(columnCount)}2`,
+      `${columnName(rightStart)}3:${columnName(columnCount)}3`,
+      `${columnName(rightStart)}4:${columnName(columnCount)}4`,
+      ...meals.map((_, index) => `${columnName(2 + (index * 4))}6:${columnName(5 + (index * 4))}6`),
+      `A${grandTotalRow}:B${grandTotalRow}`,
+      `C${grandTotalRow}:D${grandTotalRow}`
+    ].filter((ref) => !ref.includes("undefined")),
+    pageSetup: true
+  };
+}
+
+function buildOrdersDetailSheet(model) {
+  const rows = [];
+  applyMeasurementHeader(rows, {
+    logoEnd: 3,
+    titleStart: 4,
+    titleEnd: 9,
+    rightStart: 10,
+    rightEnd: 12,
+    title: "Relatorio de Pedidos",
+    leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
+    rightLines: ["AlimentaObra", `Registros: ${model.detailRows.length}`, "", ""]
+  });
+  ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status", "Observacoes"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  model.detailRows.forEach((item, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, longDate(item.date), 8);
+    setStyledCell(rows, row, 2, item.weekday, 8);
+    [item.leader, item.section, item.meal].forEach((value, colIndex) => setStyledCell(rows, row, colIndex + 3, value, 4));
+    [item.requested, item.consumed, item.effective || ""].forEach((value, colIndex) => setStyledCell(rows, row, colIndex + 6, value, 4));
+    setStyledCell(rows, row, 9, item.unitPrice, 10);
+    setStyledCell(rows, row, 10, item.value, 10);
+    setStyledCell(rows, row, 11, item.status, 4);
+    setStyledCell(rows, row, 12, item.notes, 4);
+  });
+  ensureRangeStyle(rows, 1, 1, Math.max(6, model.detailRows.length + 6), 12, 4);
+  return {
+    name: "Pedidos",
+    rows,
+    columnWidths: [34, 12, 28, 30, 24, 12, 12, 12, 14, 14, 16, 34],
+    rowHeights: standardHeaderRowHeights(Math.max(6, model.detailRows.length + 6)),
+    freezeRows: 6,
+    autoFilter: `A6:L${Math.max(6, model.detailRows.length + 6)}`,
+    merges: ["A1:C4", "D1:I1", "J1:L1", "D2:I2", "J2:L2", "D3:I3", "J3:L3", "D4:I4", "J4:L4"],
+    pageSetup: true
+  };
+}
+
+function buildOrdersDailySheet(model) {
+  const rows = [];
+  const blocks = Object.values(model.detailRows.reduce((acc, row) => {
+    acc[row.date] ??= { date: row.date, count: 0, requested: 0, consumed: 0, effective: 0, leaders: new Set(), sections: new Set(), value: 0 };
+    acc[row.date].count += 1;
+    acc[row.date].requested += row.requested;
+    acc[row.date].consumed += row.consumed;
+    acc[row.date].effective += Number(row.effective || 0);
+    acc[row.date].leaders.add(row.leader);
+    acc[row.date].sections.add(row.section);
+    acc[row.date].value += row.value;
+    return acc;
+  }, {})).sort((a, b) => a.date.localeCompare(b.date));
+  applyMeasurementHeader(rows, {
+    logoEnd: 3,
+    titleStart: 4,
+    titleEnd: 7,
+    rightStart: 8,
+    rightEnd: 9,
+    title: "Resumo Diario de Pedidos",
+    leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
+    rightLines: ["AlimentaObra", `Dias: ${blocks.length}`, "", ""]
+  });
+  ["Data", "Dia", "Pedidos", "Solicitadas", "Realizadas", "Efetivo", "Encarregados", "Equipes", "Valor total"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  blocks.forEach((item, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, longDate(item.date), 8);
+    setStyledCell(rows, row, 2, weekdayShort(item.date), 8);
+    setStyledCell(rows, row, 3, item.count, 4);
+    setStyledCell(rows, row, 4, item.requested, 4);
+    setStyledCell(rows, row, 5, item.consumed, 4);
+    setStyledCell(rows, row, 6, item.effective, 4);
+    setStyledCell(rows, row, 7, item.leaders.size, 4);
+    setStyledCell(rows, row, 8, item.sections.size, 4);
+    setStyledCell(rows, row, 9, item.value, 10);
+  });
+  ensureRangeStyle(rows, 1, 1, Math.max(6, blocks.length + 6), 9, 4);
+  return {
+    name: "Resumo diario",
+    rows,
+    columnWidths: [34, 10, 12, 14, 14, 12, 16, 14, 16],
+    rowHeights: standardHeaderRowHeights(Math.max(6, blocks.length + 6)),
+    freezeRows: 6,
+    autoFilter: `A6:I${Math.max(6, blocks.length + 6)}`,
+    merges: ["A1:C4", "D1:G1", "H1:I1", "D2:G2", "H2:I2", "D3:G3", "H3:I3", "D4:G4", "H4:I4"],
+    pageSetup: true
+  };
+}
+
+function buildMeasurementDetailSheet(model) {
+  const rows = [];
+  applyMeasurementHeader(rows, {
+    logoEnd: 3,
+    titleStart: 4,
+    titleEnd: 9,
+    rightStart: 10,
+    rightEnd: 12,
+    title: "Detalhamento da Medicao",
+    leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
+    rightLines: ["AlimentaObra", `Registros: ${model.detailRows.length}`, "", ""]
+  });
+  ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status", "Observacoes"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  model.detailRows.forEach((item, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, longDate(item.date), 8);
+    setStyledCell(rows, row, 2, item.weekday, 8);
+    [item.leader, item.section, item.meal].forEach((value, colIndex) => setStyledCell(rows, row, colIndex + 3, value, 4));
+    [item.requested, item.consumed, item.effective || ""].forEach((value, colIndex) => setStyledCell(rows, row, colIndex + 6, value, 4));
+    setStyledCell(rows, row, 9, item.unitPrice, 10);
+    setStyledCell(rows, row, 10, item.value, 10);
+    setStyledCell(rows, row, 11, item.status, 4);
+    setStyledCell(rows, row, 12, item.notes, 4);
+  });
+  ensureRangeStyle(rows, 1, 1, Math.max(6, model.detailRows.length + 6), 12, 4);
+  return {
+    name: "Detalhamento",
+    rows,
+    columnWidths: [34, 16, 28, 28, 24, 12, 12, 12, 14, 14, 16, 34],
+    rowHeights: standardHeaderRowHeights(Math.max(6, model.detailRows.length + 6)),
+    freezeRows: 6,
+    autoFilter: `A6:L${Math.max(6, model.detailRows.length + 6)}`,
+    merges: ["A1:C4", "D1:I1", "J1:L1", "D2:I2", "J2:L2", "D3:I3", "J3:L3", "D4:I4", "J4:L4"],
+    pageSetup: true
+  };
+}
+
+function buildAuditSheet(state) {
+  const rows = [];
+  const auditRows = state.auditLog ?? [];
+  const users = new Set(auditRows.map((item) => item.userId).filter(Boolean));
+  const areas = new Set(auditRows.map((item) => auditEntityLabel(item.entity)));
+  applyMeasurementHeader(rows, {
+    logoEnd: 2,
+    titleStart: 3,
+    titleEnd: 5,
+    rightStart: 5,
+    rightEnd: 5,
+    title: "Auditoria do Sistema",
+    leftLines: [`Eventos: ${auditRows.length}`, `Usuarios: ${users.size}`, `Areas: ${areas.size}`],
+    rightLines: ["AlimentaObra", `Gerado: ${formatDateTime(new Date().toISOString())}`, "", ""]
+  });
+  ["Data/Hora", "Usuario", "Acao", "Area", "Descricao"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  auditRows.forEach((item, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, formatDateTime(item.at), 4);
+    setStyledCell(rows, row, 2, getUserName(state, item.userId), 4);
+    setStyledCell(rows, row, 3, item.action, 4);
+    setStyledCell(rows, row, 4, auditEntityLabel(item.entity), 4);
+    setStyledCell(rows, row, 5, auditDescription(item), 4);
+  });
+  const rowCount = Math.max(6, auditRows.length + 6);
+  ensureRangeStyle(rows, 1, 1, rowCount, 5, 4);
+  return {
+    name: "Auditoria",
+    rows,
+    columnWidths: [20, 24, 34, 22, 54],
+    rowHeights: standardHeaderRowHeights(rowCount),
+    freezeRows: 6,
+    autoFilter: `A6:E${rowCount}`,
+    merges: ["A1:B4", "C1:D1", "C2:D2", "C3:D3", "C4:D4"],
+    pageSetup: true
+  };
+}
+
+function buildMeasurementSectionSheet(model) {
+  const rows = [];
+  applyMeasurementHeader(rows, {
+    logoEnd: 2,
+    titleStart: 3,
+    titleEnd: 4,
+    rightStart: 5,
+    rightEnd: 5,
+    title: "Resumo por Equipe/Trecho",
+    leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
+    rightLines: ["AlimentaObra", `Equipes: ${model.sectionSummary.length}`, "", ""]
+  });
+  ["Equipe/Trecho", "Solicitado", "Realizado", "Efetivo", "Valor total"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  model.sectionSummary.forEach((item, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, item.label, 4);
+    setStyledCell(rows, row, 2, item.requested, 4);
+    setStyledCell(rows, row, 3, item.consumed, 4);
+    setStyledCell(rows, row, 4, item.effective, 4);
+    setStyledCell(rows, row, 5, item.value, 10);
+  });
+  ensureRangeStyle(rows, 1, 1, Math.max(6, model.sectionSummary.length + 6), 5, 4);
+  return {
+    name: "Resumo equipes",
+    rows,
+    columnWidths: [34, 14, 14, 14, 16],
+    rowHeights: standardHeaderRowHeights(Math.max(6, model.sectionSummary.length + 6)),
+    freezeRows: 6,
+    autoFilter: `A6:E${Math.max(6, model.sectionSummary.length + 6)}`,
+    merges: ["A1:B4", "C1:D1", "C2:D2", "C3:D3", "C4:D4"],
+    pageSetup: true
+  };
+}
+
+function buildMeasurementMealSheet(model) {
+  const rows = [];
+  const meals = model.meals.length ? model.meals : [{ label: "Refeicao", description: "", quantityTotal: 0, valueTotal: 0 }];
+  applyMeasurementHeader(rows, {
+    logoEnd: 1,
+    titleStart: 2,
+    titleEnd: 3,
+    rightStart: 4,
+    rightEnd: 4,
+    title: "Resumo por Tipo",
+    leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
+    rightLines: ["AlimentaObra", `Tipos: ${meals.length}`, "", ""]
+  });
+  ["Tipo", "Descricao", "Realizado", "Valor total"].forEach((label, index) => {
+    setStyledCell(rows, 6, index + 1, label, 5);
+  });
+  meals.forEach((meal, index) => {
+    const row = index + 7;
+    setStyledCell(rows, row, 1, meal.label, 4);
+    setStyledCell(rows, row, 2, meal.description || "", 4);
+    setStyledCell(rows, row, 3, meal.quantityTotal, 4);
+    setStyledCell(rows, row, 4, meal.valueTotal, 10);
+  });
+  ensureRangeStyle(rows, 1, 1, Math.max(6, meals.length + 6), 4, 4);
+  return {
+    name: "Resumo tipos",
+    rows,
+    columnWidths: [28, 42, 14, 16],
+    rowHeights: standardHeaderRowHeights(Math.max(6, meals.length + 6)),
+    freezeRows: 6,
+    autoFilter: `A6:D${Math.max(6, meals.length + 6)}`,
+    merges: ["A1:A4", "B1:C1", "B2:C2", "B3:C3", "B4:C4"],
+    pageSetup: true
+  };
+}
+
+function applyMeasurementHeader(rows, config) {
+  styleRange(rows, 1, 1, 4, config.logoEnd, 1);
+  setStyledCell(rows, 1, 1, "CONSAG", 1);
+  styleRange(rows, 1, config.titleStart, 1, config.titleEnd, 5);
+  styleRange(rows, 2, config.titleStart, 4, config.titleEnd, 4);
+  setStyledCell(rows, 1, config.titleStart, config.title, 5);
+  config.leftLines.forEach((line, index) => setStyledCell(rows, index + 2, config.titleStart, line, 4));
+  styleRange(rows, 1, config.rightStart, 4, config.rightEnd, 3);
+  config.rightLines.forEach((line, index) => setStyledCell(rows, index + 1, config.rightStart, line, index === 0 ? 3 : 4));
+}
+
+function standardHeaderRowHeights(rowCount) {
+  return Object.fromEntries(Array.from({ length: rowCount }, (_, index) => {
+    const row = index + 1;
+    const fixed = { 1: 28, 2: 18, 3: 18, 4: 18, 5: 15, 6: 18 }[row];
+    return [row, fixed ?? 16];
+  }));
+}
+
+function createStyledXlsxWorkbook(sheets) {
+  const safeSheets = sheets.map((sheet, index) => ({ ...sheet, name: escapeXml(sheet.name).slice(0, 31) || `Planilha ${index + 1}` }));
+  const worksheetOverrides = safeSheets.map((_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("");
+  const workbookSheets = safeSheets.map((sheet, index) => `<sheet name="${sheet.name}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("");
+  const workbookRels = safeSheets.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join("");
+  const entries = {
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${worksheetOverrides}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    "xl/workbook.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets><calcPr calcMode="auto"/></workbook>`,
+    "xl/_rels/workbook.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${workbookRels}<Relationship Id="rId${safeSheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    "xl/styles.xml": measurementStylesXml()
+  };
+  safeSheets.forEach((sheet, index) => {
+    entries[`xl/worksheets/sheet${index + 1}.xml`] = createStyledWorksheetXml(sheet);
+  });
+  return createZip(entries);
+}
+
+function createStyledWorksheetXml(sheet) {
+  const maxRowWidth = sheet.rows.reduce((max, row) => Math.max(max, row?.length ?? 0), 0);
+  const maxHeightRow = Object.keys(sheet.rowHeights ?? {}).reduce((max, row) => Math.max(max, Number(row)), 0);
+  const columnCount = Math.max(1, sheet.columnWidths?.length ?? 0, maxRowWidth);
+  const rowCount = Math.max(1, sheet.rows.length, maxHeightRow);
+  const dimension = `A1:${columnName(columnCount)}${rowCount}`;
+  const sheetViews = sheet.freezeRows
+    ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${sheet.freezeRows}" topLeftCell="A${sheet.freezeRows + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+    : `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
+  const cols = `<cols>${Array.from({ length: columnCount }, (_, index) => `<col min="${index + 1}" max="${index + 1}" width="${sheet.columnWidths?.[index] ?? 14}" customWidth="1"/>`).join("")}</cols>`;
+  const sheetData = Array.from({ length: rowCount }, (_, rowIndex) => {
+    const rowNumber = rowIndex + 1;
+    const row = sheet.rows[rowIndex] ?? [];
+    const cells = Array.from({ length: columnCount }, (_, colIndex) => styledCellXml(row[colIndex], rowNumber, colIndex + 1)).join("");
+    const height = sheet.rowHeights?.[rowNumber];
+    const heightAttr = height ? ` ht="${height}" customHeight="1"` : "";
+    return `<row r="${rowNumber}"${heightAttr}>${cells}</row>`;
+  }).join("");
+  const autoFilter = sheet.autoFilter ? `<autoFilter ref="${sheet.autoFilter}"/>` : "";
+  const merges = sheet.merges?.length ? `<mergeCells count="${sheet.merges.length}">${sheet.merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>` : "";
+  const page = sheet.pageSetup ? `<pageMargins left="0.25" right="0.25" top="0.3" bottom="0.3" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${dimension}"/>${sheetViews}<sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${sheetData}</sheetData>${autoFilter}${merges}${page}</worksheet>`;
+}
+
+function styledCellXml(rawCell, rowNumber, columnIndex) {
+  const cell = normalizeStyledCell(rawCell);
+  if (!cell.formula && !cell.style && (cell.value === "" || cell.value === null || typeof cell.value === "undefined")) return "";
+  const ref = `${columnName(columnIndex)}${rowNumber}`;
+  const styleAttr = cell.style ? ` s="${cell.style}"` : "";
+  if (cell.formula) {
+    const cached = cell.value === "" || cell.value === null || typeof cell.value === "undefined" ? "" : `<v>${escapeXml(cell.value)}</v>`;
+    return `<c r="${ref}"${styleAttr}><f>${escapeXml(String(cell.formula).replace(/^=/, ""))}</f>${cached}</c>`;
+  }
+  if (typeof cell.value === "number" && Number.isFinite(cell.value)) return `<c r="${ref}"${styleAttr}><v>${cell.value}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"${styleAttr}><is><t>${escapeXml(cell.value)}</t></is></c>`;
+}
+
+function normalizeStyledCell(cell) {
+  if (cell && typeof cell === "object" && ("value" in cell || "style" in cell || "formula" in cell)) return cell;
+  return { value: cell ?? "", style: 0 };
+}
+
+function setStyledCell(rows, row, column, value, style = 0, options = {}) {
+  rows[row - 1] ??= [];
+  rows[row - 1][column - 1] = { value, style, ...options };
+}
+
+function styleRange(rows, startRow, startColumn, endRow, endColumn, style) {
+  for (let row = startRow; row <= endRow; row += 1) {
+    for (let column = startColumn; column <= endColumn; column += 1) {
+      const current = normalizeStyledCell(rows[row - 1]?.[column - 1]);
+      setStyledCell(rows, row, column, current.value, style, current.formula ? { formula: current.formula } : {});
+    }
+  }
+}
+
+function ensureRangeStyle(rows, startRow, startColumn, endRow, endColumn, style) {
+  for (let row = startRow; row <= endRow; row += 1) {
+    for (let column = startColumn; column <= endColumn; column += 1) {
+      const current = rows[row - 1]?.[column - 1];
+      if (current) continue;
+      setStyledCell(rows, row, column, "", style);
+    }
+  }
+}
+
+function measurementStylesXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;R$&quot; #,##0.00"/></numFmts><fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="22"/><color rgb="FF2563EB"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font><font><b/><sz val="12"/><name val="Arial"/></font></fonts><fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF062A5E"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB8C2CE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC3CCD6"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B4778"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB9B5B5"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF09090B"/></left><right style="thin"><color rgb="FF09090B"/></right><top style="thin"><color rgb="FF09090B"/></top><bottom style="thin"><color rgb="FF09090B"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="18"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf><xf numFmtId="0" fontId="2" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="164" fontId="2" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf><xf numFmtId="0" fontId="4" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="164" fontId="4" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="bottom"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 }
 
 function createMultiSheetWorkbook(sheets) {

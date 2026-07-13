@@ -231,7 +231,7 @@ export function Consolidacao(props) {
                   <select defaultValue={selectedSupplier} data-supplier-id aria-label="Fornecedor">{suppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}</select>
                   <span className={`badge ${consolidation.status}`}>{statusLabel(STATUS_LABEL, consolidation.status)}</span>
                 </AdminFilterMenu>
-                <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="consolidacao" items={[["doc", "Word", "clipboard"], ["pdf", "PDF", "chart"]]} />
+                <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="consolidacao" items={[["pdf", "PDF", "chart"], ["doc", "Word", "clipboard"]]} />
               </div>
               <button className="btn primary admin-send-submit" data-action="send-consolidation"><Icon icon={icon} name="truck" size={15} />Enviar</button>
             </>

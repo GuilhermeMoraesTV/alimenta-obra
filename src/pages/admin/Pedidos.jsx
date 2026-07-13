@@ -180,7 +180,7 @@ export function Pedidos(props) {
                 <select defaultValue={meal} data-filter-meal aria-label="Filtrar refeição"><option value="">Tipos</option>{state.mealTypes.map((item) => <option value={item.label} key={item.id}>{item.label}</option>)}</select>
                 <button className="btn outline small" type="button" data-clear-admin-request-filters>Todos os dias</button>
               </AdminFilterMenu>
-              <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="pedidos" items={[["xlsx", "Excel", "chart"], ["pdf", "PDF", "clipboard"]]} />
+              <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="pedidos" items={[["pdf", "PDF", "clipboard"], ["xlsx", "Excel", "chart"]]} />
             </>
           )}
           metrics={[

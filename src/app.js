@@ -776,7 +776,7 @@ function renderPedidosAdmin() {
           <option value="">Tipos</option>
           ${state.mealTypes.map((item) => `<option ${meal === item.label ? "selected" : ""}>${item.label}</option>`).join("")}
         </select>
-        ${renderExportMenu("pedidos", [["xlsx", "Excel", "chart"], ["pdf", "PDF", "clipboard"]])}
+        ${renderExportMenu("pedidos", [["pdf", "PDF", "clipboard"], ["xlsx", "Excel", "chart"]])}
       </div>
     </header>
     <div class="table-panel admin-requests-panel">
@@ -859,7 +859,7 @@ function renderConsolidacao() {
           </select>
           <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
         </div>
-        ${renderExportMenu("consolidacao", [["doc", "Word", "clipboard"], ["pdf", "PDF", "chart"]])}
+        ${renderExportMenu("consolidacao", [["pdf", "PDF", "chart"], ["doc", "Word", "clipboard"]])}
         <button class="btn primary admin-send-submit" data-action="send-consolidation">${icon("truck", 15)}Enviar</button>
       </div>
     </header>
@@ -1047,7 +1047,7 @@ function renderRelatorios() {
       </select>
       </div>
       <button class="btn primary small" type="button" data-export-kpi>${icon("chart", 14)}KPI PDF</button>
-      ${renderExportMenu("relatorios", [["xlsx", "Excel", "chart"], ["pdf", "PDF", "clipboard"]], "Medicao")}
+      ${renderExportMenu("relatorios", [["pdf", "PDF", "clipboard"], ["xlsx", "Excel", "chart"]], "Medicao")}
       ${renderAdminBackButton()}
     `)}
     <div class="stats-grid report-metrics-grid">
@@ -1916,7 +1916,7 @@ async function downloadDailyReport(reportDate, type) {
       toast("Excel do relatorio diario preparado.");
       return;
     }
-    if (!exportDailyReportPdf(report)) {
+    if (!exportDailyReportPdf(state, report)) {
       toast("Permita a abertura de janela para gerar o PDF.");
       return;
     }
@@ -1928,6 +1928,10 @@ async function downloadDailyReport(reportDate, type) {
 }
 
 async function handleExport(type) {
+  if (state.activeView === "auditoria") {
+    handleAuditExport(type);
+    return;
+  }
   const date = activeDate();
   const rows = state.activeView === "relatorios"
     ? getReportRows()
