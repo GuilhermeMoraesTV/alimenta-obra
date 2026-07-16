@@ -151,7 +151,7 @@ export function Auditoria({ exportMenuOpen, formatDateTime, icon, state }) {
           { icon, iconName: "clock", value: lastEvent ? formatDateTime(lastEvent.at) : "-", label: "Ultimo registro" },
         ]}
       />
-      <div className="audit-panel"><h2 className="section-title">Eventos do sistema</h2><div className="timeline">{auditRows.map((item) => <div className="timeline-item" key={item.id}><div className="timeline-dot" /><div className="timeline-body"><strong>{item.action}</strong><br />{getUserName(state, item.userId)} - {formatDateTime(item.at)} - {auditEntityLabel(item.entity)}</div></div>)}</div></div>
+      <div className="audit-panel"><div className="timeline">{auditRows.map((item) => <div className="timeline-item" key={item.id}><div className="timeline-dot" /><div className="timeline-body"><strong>{item.action}</strong><br />{getUserName(state, item.userId)} - {formatDateTime(item.at)} - {auditEntityLabel(item.entity)}</div></div>)}</div></div>
     </>
   );
 }

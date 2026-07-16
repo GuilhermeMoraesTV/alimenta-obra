@@ -1,3 +1,4 @@
+supabase/.temp/
 *.log
 vite-preview*.out
 vite-preview*.err

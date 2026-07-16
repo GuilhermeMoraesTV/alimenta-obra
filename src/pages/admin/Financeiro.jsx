@@ -186,6 +186,7 @@ export function Financeiro(props) {
             { icon, iconName: "utensils", label: "Ticket medio", value: money(mealCount ? projected / mealCount : 0) },
           ]}
         />
+        {false ? (
         <div className="finance-hero">
           <div className="finance-hero-head">
             <div className="finance-hero-row">
@@ -212,6 +213,8 @@ export function Financeiro(props) {
             <FinanceMetric icon={icon} iconName="utensils" label="Ticket médio" value={money(mealCount ? projected / mealCount : 0)} hint="por refeição" />
           </div>
         </div>
+
+        ) : null}
 
         <div className="mt-2 grid gap-3 lg:grid-cols-2">
 

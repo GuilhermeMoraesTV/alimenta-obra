@@ -15,7 +15,7 @@ function TicketPanel({ children, number, title }) {
   );
 }
 
-export function RequestForm({ icon, state, user }) {
+export function RequestForm({ icon, requestError = "", state, user }) {
   const [mealTypeId, setMealTypeId] = useState(state.mealTypes[0]?.id ?? "");
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -35,6 +35,11 @@ export function RequestForm({ icon, state, user }) {
 
   return (
     <form className="grid gap-3 sm:gap-4" data-form="request">
+      {requestError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700" role="alert">
+          {requestError}
+        </div>
+      ) : null}
       <TicketPanel number="1" title="Quando e quantas?">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="request-quantity" label="Quantidade de refeicoes">
@@ -74,7 +79,7 @@ export function RequestForm({ icon, state, user }) {
         </div>
         {!sections.length ? (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
-            Cadastre uma equipe/trecho ativo antes de enviar pedidos.
+            Nenhuma equipe/trecho esta vinculada ao seu usuario. Peça ao admin para configurar antes de enviar pedidos.
           </div>
         ) : null}
         <div className="mt-3"><Field id="request-notes" label="Observacao" optional><textarea className={`${inputClass} min-h-24 resize-y`} id="request-notes" name="notes" placeholder="Ex.: reforco de efetivo, ajuste de equipe ou observacao operacional" /></Field></div>

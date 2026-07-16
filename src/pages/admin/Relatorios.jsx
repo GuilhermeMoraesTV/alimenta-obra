@@ -531,6 +531,7 @@ export function Relatorios(props) {
 
       <DailyReportCard icon={icon} report={yesterdayReport} reportDate={yesterday} />
 
+      {false ? (
       <div className="finance-hero mt-2">
         <div className="finance-hero-head">
 
@@ -585,6 +586,8 @@ export function Relatorios(props) {
           <FinanceMetric icon={icon} iconName="moon" label="Jantas" value={totalsByMeal(rows).Jantar ?? 0} hint="período noturno" />
         </div>
       </div>
+
+      ) : null}
 
       <section className="report-analytics mt-3">
         <div className="report-insights">

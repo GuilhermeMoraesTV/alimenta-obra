@@ -46,7 +46,7 @@ export function Inicio(props) {
     <div className={shellClass}>
       {/* BARRA SUPERIOR */}
       <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-black uppercase tracking-[.16em] text-orange-700">Painel do lider</p>
+        <h1 className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-700">Painel do lider</h1>
         <button
           className="inline-flex items-center gap-1 text-xs font-extrabold text-stone-500 transition hover:text-orange-700"
           data-view="historico"

@@ -37,7 +37,7 @@ export function Historico(props) {
           />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-200">Histórico do líder</p>
+              <h1 className="m-0 text-[10px] font-black uppercase tracking-[.16em] text-orange-200">Histórico do líder</h1>
               <div className="mt-2 flex items-end gap-2.5">
                 <span className="text-[46px] font-black leading-[0.85] tracking-tight sm:text-[60px]">{rows.length}</span>
                 <span className="mb-1 text-[10px] font-extrabold uppercase leading-tight tracking-[.1em] text-white/55 sm:text-xs">

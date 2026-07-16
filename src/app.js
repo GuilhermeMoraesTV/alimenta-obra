@@ -68,6 +68,7 @@ let exportMenuOpen = null;
 let generatedInviteLink = "";
 let pendingCancelRequestId = null;
 let operationNotice = null;
+let requestFormError = "";
 let adminConsumptionWeekOffset = 0;
 let adminRequestDateFilter = "";
 let reportFilter = {
@@ -170,6 +171,7 @@ function activeDate() {
 function setView(view) {
   adminRequestDetailId = null;
   exportMenuOpen = null;
+  if (view !== "pedido") requestFormError = "";
   state.activeView = view;
   if (view !== "painel") adminConsumptionWeekOffset = 0;
   persist();
@@ -223,6 +225,7 @@ function render() {
     getLeaderAddressFormOpen: () => leaderAddressFormOpen,
     icon,
     page: state.activeView,
+    requestError: state.activeView === "pedido" ? requestFormError : "",
     requestMealDescription,
     state,
     sumQty,
@@ -1500,6 +1503,7 @@ async function handleLogout() {
 
 async function handleRequestSubmit(event) {
   event.preventDefault();
+  requestFormError = "";
   const submitter = event.submitter;
   if (submitter) submitter.disabled = true;
   const form = new FormData(event.currentTarget);
@@ -1517,6 +1521,7 @@ async function handleRequestSubmit(event) {
       notes: String(form.get("notes") ?? "")
     }, user.id);
     await refreshData();
+    requestFormError = "";
     operationNotice = status === "enviado"
       ? {
           title: "Pedido enviado",
@@ -1529,6 +1534,8 @@ async function handleRequestSubmit(event) {
     render();
   } catch (error) {
     console.error(error);
+    requestFormError = error.message || "Nao foi possivel salvar o pedido.";
+    render();
     toast(`Não foi possível salvar: ${error.message}`);
   } finally {
     if (submitter) submitter.disabled = false;

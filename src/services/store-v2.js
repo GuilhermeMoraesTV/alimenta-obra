@@ -70,8 +70,8 @@ export function sectionHeadcount(state, sectionId) {
 
 export function getActiveWorkSections(state, leaderId = "") {
   const sections = (state.workSections ?? []).filter((section) => section.active !== false);
-  const owned = leaderId ? sections.filter((section) => !section.leaderId || section.leaderId === leaderId) : sections;
-  return owned.length ? owned : sections;
+  if (!leaderId) return sections;
+  return sections.filter((section) => !section.leaderId || section.leaderId === leaderId);
 }
 
 export function canEditRequest(state, request) {
