@@ -1,5 +1,7 @@
 supabase/.temp/
 *.log
+vite-dev*.out
+vite-dev*.err
 vite-preview*.out
 vite-preview*.err
 node_modules/
