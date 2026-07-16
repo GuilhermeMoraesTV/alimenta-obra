@@ -36,4 +36,4 @@ end;
 $$;
 
 revoke all on function public.admin_update_user_password_v2(text, text) from public;
-grant execute on function public.admin_update_user_password_v2(text, text) to anon, authenticated;
+grant execute on function public.admin_update_user_password_v2(text, text) to authenticated;

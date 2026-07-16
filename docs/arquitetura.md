@@ -2,17 +2,16 @@
 
 ## Camadas atuais
 
-- Entrada da SPA: `src/app.js` inicializa estado, autenticação, eventos globais e renderização principal.
-- Roteamento por pagina: `src/pages/` agrupa as telas por perfil (`admin`, `encarregado` e `fornecedor`) e monta o registro usado pelo app.
-- Configuração de navegação: `src/core/navigation.js` centraliza menus por perfil, rótulos de status e nomes de telas.
-- Componentes compartilhados: `src/components/` guarda shell da aplicação, login, helpers visuais e ícones.
-- Utilitários: `src/utils/` guarda formatação de data, dinheiro e escape de HTML.
-- Dados iniciais: `src/data/seed.js` centraliza usuários, tipos de refeição e pedidos de demonstração.
-- Regras e estado: `src/services/store-v2.js` contem o estado derivado atual; `src/services/store.js` preserva a camada local legada.
-- Banco/Supabase: `src/services/database.js` concentra auth, consultas, mutações e inscrições realtime; `src/services/supabase.js` cria o client.
-- Exportação: `src/services/exports.js` gera CSV, Excel, PDF, Word e romaneios.
-- Estilos: `src/styles/app.css` concentra a linguagem visual da aplicação.
-- Offline/PWA: `service-worker.js` faz cache dos arquivos principais.
+- Entrada da SPA: `src/app.js` inicializa autenticacao, estado, eventos globais, renderizacao principal e integracao das telas.
+- Roteamento por pagina: `src/pages/` agrupa as telas por perfil (`admin`, `encarregado` e `fornecedor`) e expoe os registros usados pelo app.
+- Navegacao: `src/core/navigation.js` centraliza menus por perfil, rotulos de status e nomes de telas.
+- Componentes compartilhados: `src/components/` guarda shell, login, helpers visuais e icones.
+- Dominio: `src/features/` guarda regras reutilizaveis de refeicoes, operacao e metricas.
+- Estado de interface: `src/services/store-v2.js` contem estado derivado, filtros, regras locais e calculos de consolidacao.
+- Banco/Supabase: `src/services/database.js` concentra Auth, consultas, mutacoes, RPCs, adaptadores e inscricoes Realtime; `src/services/supabase.js` cria o client.
+- Exportacao: `src/services/exports.js` gera PDF, Excel, Word, relatorios e romaneios.
+- Estilos: `src/styles/app.css` concentra a linguagem visual responsiva.
+- Offline/PWA: `service-worker.js` faz cache dos arquivos principais em producao.
 
 ## Estrutura de pastas
 
@@ -26,24 +25,21 @@ src/
     shared-ui.js
   core/
     navigation.js
-  data/
-    seed.js
-  pages/
-    admin.js
-    encarregado.js
-    fornecedor.js
-    index.js
-    settings.js
   features/
     meals/
       domain.js
     operations/
       metrics.js
+  pages/
+    admin/
+    encarregado/
+    fornecedor/
+    index.js
+    settings.js
   services/
     database.js
     exports.js
     store-v2.js
-    store.js
     supabase.js
   styles/
     app.css
@@ -51,32 +47,31 @@ src/
     formatters.js
 ```
 
-## Direção da refatoração
+`src/data/seed.js` e `src/services/store.js` permanecem no repositorio como historico de migracao e apoio legado; nao sao a fonte atual de dados do produto. A fonte operacional e o Supabase, com regras de exibicao em `store-v2`.
 
-As telas de `encarregado` e `configuracoes` já foram movidas para `src/pages/`. O `src/app.js` ainda preserva orquestração, eventos globais, modais e algumas telas administrativas/fornecedor para evitar quebra funcional durante a separação. A partir desta base, novas telas devem nascer em `src/pages/` ou em subpastas por funcionalidade, e código compartilhado deve ir para `src/components/`, `src/core/`, `src/features/`, `src/services/` ou `src/utils/`.
-
-## Arquitetura para produção
+## Fluxo principal
 
 ```mermaid
 flowchart LR
-  A["App Web/PWA"] --> B["Supabase"]
-  B --> C["Postgres"]
-  B --> D["Auth"]
-  B --> E["Realtime"]
-  B --> F["Storage"]
-  A --> G["Exportadores locais"]
+  A["Encarregado"] --> B["Pedido"]
+  B --> C["Supabase RPC"]
+  C --> D["Consolidacao diaria"]
+  D --> E["Administrador"]
+  E --> F["Fornecedor"]
+  F --> G["Confirmacoes e consumo real"]
+  G --> H["Relatorios e auditoria"]
 ```
 
 ## Banco centralizado
 
-As migrações em `supabase/migrations/` são a fonte principal do schema em produção. A pasta `database/` preserva scripts auxiliares e históricos de carga/promoção.
+As migracoes em `supabase/migrations/` sao a fonte principal do schema, das politicas RLS e das funcoes RPC. A pasta `database/` preserva scripts auxiliares de administracao, promocao inicial de perfis e historico de apoio.
 
-## Offline e sincronização
+Funcoes sensiveis devem conceder `execute` apenas aos papeis necessarios. Rotinas administrativas usam `authenticated` com validacao interna de perfil, e nao devem ficar liberadas para `anon`.
 
-No produto final:
+## Direcao de evolucao
 
-- O app grava ações em IndexedDB quando offline.
-- Cada acao recebe um `client_operation_id`.
-- Ao voltar internet, o app envia a fila para o backend.
-- O backend aplica operações de forma idempotente.
-- Conflitos são resolvidos por regra de status e horário limite.
+- Manter telas novas dentro de `src/pages/<perfil>/`.
+- Levar regras compartilhadas para `src/features/` ou `src/services/store-v2.js`.
+- Concentrar acesso ao Supabase em `src/services/database.js`.
+- Criar migracoes incrementais para qualquer alteracao de schema, RLS ou RPC.
+- Validar entrega com `npm run ci` antes de publicar.

@@ -1,33 +1,28 @@
 # AlimentaObra
 
-## Configuração atual com Supabase
+Sistema PWA para gestao de refeicoes em obras. O AlimentaObra centraliza pedidos dos encarregados, consolida a demanda para o administrador, envia o pedido ao fornecedor e registra confirmacoes com data, hora e usuario.
 
-O frontend agora usa Supabase Auth e PostgreSQL. Para concluir a conexão:
+## Configuracao com Supabase
 
-1. No SQL Editor do projeto Supabase, execute
-   `supabase/migrations/20260620000100_initial_schema.sql`.
-2. Copie `.env.example` para `.env.local`.
-3. Preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
-4. Crie os usuarios em **Authentication > Users**.
-5. Edite e execute `database/promover-usuario.sql` para definir o administrador
-   e o fornecedor.
-6. Rode `npm install` e `npm run dev`.
+O frontend usa Supabase Auth, PostgreSQL, RLS, RPCs transacionais e Realtime.
 
-Nunca coloque a chave `service_role` no frontend, no Git ou em variáveis
-iniciadas com `VITE_`.
+1. Crie um projeto Supabase exclusivo para o AlimentaObra.
+2. Aplique as migracoes em `supabase/migrations/` na ordem dos arquivos.
+3. Copie `.env.example` para `.env.local`.
+4. Preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
+5. Crie ou convide os usuarios iniciais pelo Supabase Auth.
+6. Promova os perfis iniciais com os scripts administrativos em `database/`.
+7. Rode `npm install` e `npm run dev`.
 
-Validação local:
+Nunca coloque a chave `service_role` no frontend, no Git ou em variaveis iniciadas com `VITE_`.
+
+Validacao local:
 
 ```powershell
-npm run check
-npm run build
+npm run ci
 ```
 
-Protótipo completo de um aplicativo PWA para gestão de refeições em obras. O sistema centraliza pedidos dos encarregados, consolida a demanda para o administrador, envia o pedido ao fornecedor e registra confirmações com data, hora e usuário.
-
 ## Como abrir
-
-Instale as dependências e inicie o servidor Vite:
 
 ```powershell
 npm install
@@ -42,43 +37,53 @@ http://127.0.0.1:5190
 
 ## Perfis do sistema
 
-- Encarregado: cria, salva, envia, consulta, edita e cancela pedidos antes do limite.
-- Administrador: acompanha dashboard, filtra pedidos, consolida, envia ao fornecedor e exporta relatórios.
-- Fornecedor: recebe pedido consolidado e confirma recebimento, produção e saída para entrega.
+- Encarregado: cria, salva, envia, consulta, edita e cancela pedidos enquanto a regra operacional permite.
+- Administrador: acompanha dashboard, filtra pedidos, consolida, envia ao fornecedor, audita eventos e exporta relatorios.
+- Fornecedor: recebe pedidos consolidados, confirma etapas operacionais e registra consumo real.
 
 ## Estrutura
 
 ```text
-assets/                 Icones PWA
-database/schema.sql      Modelo inicial do banco centralizado
-docs/                    Documentação funcional e técnica
-src/app.js               Interface e fluxos do protótipo
-src/data/seed.js         Dados iniciais de demonstração
-src/services/store.js    Estado, regras, auditoria e consolidação
-src/services/exports.js  Exportações de relatório
-src/styles/app.css       Layout responsivo
-service-worker.js        Cache offline do PWA
-manifest.webmanifest     Instalação Android/iPhone/Web
+assets/                         Icones, logo e recursos PWA
+database/                       Scripts administrativos e apoio operacional
+docs/                           Documentacao funcional, arquitetura e Supabase
+src/app.js                      Orquestracao da SPA, eventos globais e integracao das telas
+src/components/                 Shell, login, icones e componentes compartilhados
+src/core/navigation.js          Menus, rotulos e navegacao por perfil
+src/features/                   Regras de dominio e metricas reutilizaveis
+src/pages/admin/                Telas do administrador
+src/pages/encarregado/          Telas do encarregado
+src/pages/fornecedor/           Telas do fornecedor
+src/services/database.js        Auth, consultas, RPCs, Realtime e adaptadores Supabase
+src/services/store-v2.js        Estado derivado e regras locais de interface
+src/services/exports.js         Exportacoes PDF, Excel, Word e romaneios
+src/styles/app.css              Layout responsivo e linguagem visual
+supabase/migrations/            Schema, RLS, funcoes RPC e evolucoes do banco
+service-worker.js               Cache PWA em producao
+manifest.webmanifest            Instalacao Android, iPhone e Web
 ```
 
-## Recursos implementados no protótipo
+`src/data/seed.js`, `src/services/store.js` e `database/schema.sql` ficam apenas como historico/apoio legado. A base atual do produto e Supabase + `store-v2`.
 
-- Login por perfil.
-- Solicitação de refeição com data, tipo, quantidade e local.
-- Regras de local por tipo de refeição.
-- Histórico do encarregado.
-- Dashboard administrativo com totais do dia.
-- Filtros por data, encarregado e tipo.
-- Consolidação automática por data.
-- Envio ao fornecedor.
-- Confirmação de recebimento, produção e saída para entrega.
-- Registro de auditoria para ações relevantes.
-- Fila de sincronização simulada para modo offline.
-- Exportação de dados em CSV, Excel compatível, PDF via impressão e Word compatível.
-- PWA com manifest e service worker.
+## Recursos implementados
 
-## Próximos passos para produção
+- Login por Supabase Auth e carregamento de perfil.
+- Pedidos por data, tipo de refeicao, quantidade, equipe/trecho e observacao.
+- Regras de edicao, cancelamento e bloqueio apos confirmacao do fornecedor.
+- Consolidacao diaria com blocos extras quando a data ja foi confirmada.
+- Fluxo do fornecedor com confirmacao de recebimento, producao, saida/entrega e consumo real.
+- Auditoria de acoes relevantes.
+- Dashboard administrativo, relatorios, financeiro, romaneios e exportacoes.
+- PWA com manifest, cache de assets e layout responsivo por perfil.
 
-- Gerar `.xlsx`, `.pdf` e `.docx` nativos no backend.
-- Enviar notificações push/e-mail/WhatsApp corporativo.
-- Adicionar testes automatizados de regras de negócio.
+## Scripts
+
+```powershell
+npm run lint
+npm run format:check
+npm run test
+npm run build
+npm run ci
+```
+
+`npm run format` normaliza arquivos de texto acompanhados pelo projeto.

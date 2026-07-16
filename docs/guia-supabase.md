@@ -1,367 +1,97 @@
-# Guia de integração com Supabase
+# Guia de integracao com Supabase
 
-O AlimentaObra já possui a camada de integração com Supabase. Este documento
-explica a arquitetura adotada e os cuidados para configurar e manter o banco.
+O AlimentaObra ja possui a camada de integracao com Supabase. Este documento descreve a manutencao do produto atual.
 
-## Situação atual
+## Situacao atual
 
-- `src/data/seed.js`: usuários e dados de demonstração.
-- `src/services/store-v2.js`: estado visual e regras locais.
-- `src/services/database.js`: Auth, consultas, RPC e Realtime.
-- `src/app.js`: interface conectada ao banco.
-- `supabase/migrations/20260620000100_initial_schema.sql`: banco, Auth e RLS.
-- `service-worker.js`: cache apenas dos arquivos públicos da aplicação.
+- `src/services/supabase.js`: cliente Supabase e validacao das variaveis `VITE_`.
+- `src/services/database.js`: Auth, consultas, RPCs, adaptadores e Realtime.
+- `src/services/store-v2.js`: estado visual, filtros e regras locais de interface.
+- `src/pages/`: telas por perfil conectadas aos dados carregados do banco.
+- `supabase/migrations/`: schema, RLS, funcoes RPC e evolucoes incrementais.
+- `service-worker.js`: cache dos arquivos publicos da aplicacao em producao.
 
-## 1. Criar o projeto
+Arquivos como `src/data/seed.js`, `src/services/store.js` e `database/schema.sql` sao historico legado e nao devem orientar novas entregas.
 
-1. Acesse <https://supabase.com/dashboard>.
-2. Crie um projeto chamado `alimenta-obra`.
-3. Guarde a senha do banco.
-4. Em **Project Settings > API**, copie:
-   - Project URL;
-   - Publishable key, ou `anon key` em projetos antigos;
+## 1. Projeto e variaveis
 
-Nunca coloque a chave `service_role` no navegador ou no GitHub.
+Use um projeto Supabase exclusivo para o AlimentaObra. Em **Project Settings > API**, copie:
 
-## 2. Instalar as dependências
+- Project URL;
+- Publishable key, ou `anon key` em projetos antigos.
 
-O projeto atual é estático. Recomenda-se usar Vite:
-
-```powershell
-npm install @supabase/supabase-js
-npm install -D vite
-```
-
-Scripts sugeridos no `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5190",
-    "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 5190",
-    "check": "node --check src/app.js && node --check src/services/store.js"
-  }
-}
-```
-
-Crie `.env.local`:
+Crie `.env.local` a partir de `.env.example`:
 
 ```env
 VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=SUA_CHAVE_PUBLICAVEL
 ```
 
-Adicione ao `.gitignore`:
+Nunca coloque a chave `service_role` no navegador, no GitHub ou em variaveis iniciadas com `VITE_`.
 
-```gitignore
-.env
-.env.*
-!.env.example
+## 2. Banco e migracoes
+
+Aplique as migracoes de `supabase/migrations/` na ordem dos nomes dos arquivos. Elas mantem:
+
+- perfis ligados ao Supabase Auth;
+- catalogo de refeicoes;
+- equipes/trechos e enderecos de entrega;
+- pedidos e consolidacoes;
+- confirmacoes do fornecedor;
+- consumo real e relatorios diarios;
+- auditoria;
+- RLS e politicas por perfil;
+- RPCs transacionais para operacoes criticas.
+
+Qualquer mudanca de schema, permissao, RLS ou RPC deve entrar como nova migracao. Nao edite uma migracao ja aplicada em producao.
+
+## 3. Auth e cadastro
+
+Para entrega a cliente, mantenha cadastro publico desligado no Supabase e crie/convide usuarios pelo painel administrativo do projeto. Todos os perfis devem nascer sem privilegio administrativo; administradores e fornecedores sao promovidos por rotina controlada.
+
+Em ambiente local, `supabase/config.toml` tambem deve refletir essa politica:
+
+```toml
+[auth]
+enable_signup = false
+
+[auth.email]
+enable_signup = false
 ```
 
-## 3. Criar o cliente
+## 4. Permissoes sensiveis
 
-Crie `src/services/supabase.js`:
-
-```js
-import { createClient } from "@supabase/supabase-js";
-
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-if (!url || !key) {
-  throw new Error("Configure as variáveis do Supabase no .env.local.");
-}
-
-export const supabase = createClient(url, key, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-});
-```
-
-## 4. Ajustar o banco
-
-O `database/schema.sql` é um ponto de partida, mas precisa destes ajustes:
-
-- substituir `users` por `profiles`;
-- usar o mesmo UUID de `auth.users`;
-- adicionar configurações operacionais;
-- padronizar os status;
-- ativar RLS em todas as tabelas;
-- criar políticas diferentes para administrador, encarregado e fornecedor.
-
-Estrutura recomendada para perfis:
+RPCs administrativas devem ser concedidas somente para `authenticated`, com validacao interna de perfil no banco. Exemplo de padrao:
 
 ```sql
-create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  name text not null,
-  email text not null,
-  role text not null default 'encarregado'
-    check (role in ('encarregado', 'admin', 'fornecedor')),
-  team text,
-  active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+revoke all on function public.admin_update_user_password_v2(text, text) from public;
+revoke execute on function public.admin_update_user_password_v2(text, text) from anon;
+grant execute on function public.admin_update_user_password_v2(text, text) to authenticated;
 ```
 
-Crie automaticamente o perfil após o cadastro:
+Mesmo com `security definer`, a funcao precisa checar `auth.uid()` e `public.is_admin()` antes de executar qualquer acao sensivel.
 
-```sql
-create or replace function public.handle_new_auth_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  insert into public.profiles (id, name, email, role, team)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)),
-    new.email,
-    'encarregado',
-    new.raw_user_meta_data ->> 'team'
-  );
-  return new;
-end;
-$$;
+## 5. Validacao local
 
-create trigger on_auth_user_created
-after insert on auth.users
-for each row execute procedure public.handle_new_auth_user();
+```powershell
+npm run ci
 ```
 
-Todo cadastro público deve começar como `encarregado`. Administradores e
-fornecedores devem ser promovidos por um administrador.
+O `ci` local executa verificacao sintatica, formatacao, testes de regras e build de producao.
 
-## 5. Ativar RLS
+## 6. Testes obrigatorios antes de entrega
 
-Exemplo:
+- Encarregado ve apenas o proprio escopo operacional.
+- Administrador ve todos os pedidos, consolidacoes, auditoria e relatorios.
+- Fornecedor ve apenas os blocos atribuidos ao seu fluxo.
+- Usuario comum nao consegue alterar papel, senha de terceiros ou dados de outro perfil.
+- RPC administrativa nao esta concedida para `anon`.
+- Cadastro publico esta desligado, salvo decisao explicita do cliente.
+- Consolidacao nao fica parcialmente gravada.
+- Fornecedor nao pula etapas.
+- Nenhuma chave `service_role` aparece no frontend, no Git ou nos bundles.
 
-```sql
-alter table public.profiles enable row level security;
-alter table public.meal_types enable row level security;
-alter table public.meal_locations enable row level security;
-alter table public.meal_requests enable row level security;
-alter table public.consolidations enable row level security;
-alter table public.consolidation_items enable row level security;
-alter table public.supplier_confirmations enable row level security;
-alter table public.audit_log enable row level security;
-```
-
-Função auxiliar:
-
-```sql
-create or replace function public.current_user_role()
-returns text
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select role
-  from public.profiles
-  where id = (select auth.uid())
-    and active = true;
-$$;
-```
-
-Política básica para pedidos:
-
-```sql
-create policy "read permitted requests"
-on public.meal_requests
-for select
-to authenticated
-using (
-  leader_id = (select auth.uid())
-  or public.current_user_role() = 'admin'
-);
-
-create policy "create own requests"
-on public.meal_requests
-for insert
-to authenticated
-with check (
-  leader_id = (select auth.uid())
-  and created_by = (select auth.uid())
-);
-```
-
-Antes da produção, teste tentativas manuais de acessar pedidos de outro
-encarregado e de alterar o próprio papel para `admin`.
-
-## 6. Implementar autenticação
-
-Cadastro:
-
-```js
-const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    data: { name, team }
-  }
-});
-```
-
-Login:
-
-```js
-const { error } = await supabase.auth.signInWithPassword({
-  email,
-  password
-});
-```
-
-Logout:
-
-```js
-await supabase.auth.signOut();
-```
-
-Carregamento inicial:
-
-```js
-const {
-  data: { session }
-} = await supabase.auth.getSession();
-
-if (session) {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", session.user.id)
-    .single();
-}
-```
-
-Remova o seletor de usuários e os botões de demonstração da tela de login.
-
-## 7. Criar uma camada de banco
-
-Centralize as consultas em `src/services/database.js`.
-
-```js
-import { supabase } from "./supabase.js";
-
-export async function fetchRequests() {
-  const { data, error } = await supabase
-    .from("meal_requests")
-    .select(`
-      *,
-      meal_types (id, name),
-      meal_locations (id, name),
-      profiles!meal_requests_leader_id_fkey (id, name, team)
-    `)
-    .order("meal_date", { ascending: false });
-
-  if (error) throw error;
-  return data;
-}
-
-export async function createRequest(input, userId) {
-  const { data, error } = await supabase
-    .from("meal_requests")
-    .insert({
-      meal_date: input.date,
-      meal_type_id: input.mealTypeId,
-      location_id: input.locationId,
-      quantity: Number(input.quantity),
-      leader_id: userId,
-      created_by: userId,
-      updated_by: userId,
-      status: input.status,
-      notes: input.notes ?? ""
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-```
-
-Use adaptadores para converter `snake_case` do banco para `camelCase` usado na
-interface.
-
-## 8. Consolidação e fornecedor
-
-As operações abaixo devem ser funções PostgreSQL chamadas por `supabase.rpc()`:
-
-- criar consolidação e respectivos itens;
-- enviar consolidação;
-- confirmar recebimento;
-- confirmar produção;
-- confirmar saída;
-- registrar entrega.
-
-Isso garante transações atômicas e impede estados incompletos. A sequência deve
-ser validada pelo banco:
-
-```text
-enviado -> confirmado -> producao -> saiu_entrega -> entregue
-```
-
-Não deixe apenas o JavaScript validar essa ordem.
-
-## 9. Offline
-
-Implemente offline somente depois de estabilizar o fluxo online:
-
-- use IndexedDB para a fila;
-- adicione `client_operation_id` único;
-- confirme a resposta do Supabase antes de marcar como sincronizado;
-- trate reenvios de forma idempotente;
-- não considere `navigator.onLine` uma confirmação de gravação.
-
-O `localStorage` pode continuar guardando filtros e preferências, mas não deve
-ser a fonte oficial de pedidos e usuários.
-
-## 10. Usuários iniciais
-
-Em **Authentication > Users**:
-
-1. crie o administrador;
-2. crie o fornecedor;
-3. abra `profiles`;
-4. altere o papel do primeiro para `admin`;
-5. altere o segundo para `fornecedor`;
-6. crie ou convide os encarregados.
-
-Senhas pertencem ao Supabase Auth e nunca à tabela `profiles`.
-
-## 11. Ordem de implementação
-
-1. Criar projeto, variáveis, cliente e tabelas.
-2. Implementar Auth e carregamento de perfil.
-3. Migrar catálogo, pedidos e auditoria.
-4. Migrar painel administrativo e consolidação.
-5. Migrar fluxo do fornecedor.
-6. Implementar Realtime e offline, se necessários.
-7. Configurar domínio, SMTP, backups e monitoramento.
-
-## 12. Testes obrigatórios
-
-- encarregado vê apenas seus pedidos;
-- administrador vê todos;
-- fornecedor vê apenas consolidações atribuídas;
-- cadastro público não escolhe `admin`;
-- usuário não altera o próprio papel;
-- sessão sobrevive ao recarregamento;
-- logout remove acesso;
-- consolidação não fica parcialmente gravada;
-- fornecedor não pula etapas;
-- dados persistem entre navegadores e dispositivos;
-- nenhuma chave `service_role` aparece no frontend.
-
-## Documentação oficial
+## Documentacao oficial
 
 - <https://supabase.com/docs/reference/javascript/introduction>
 - <https://supabase.com/docs/guides/auth/passwords>
