@@ -23,7 +23,7 @@ Aplique as migracoes de `supabase/migrations/` em ordem cronologica. Elas criam 
 - funcoes RPC atomicas;
 - Realtime para tabelas operacionais.
 
-`database/schema.sql` e material historico de apoio. Para entrega e manutencao, use as migracoes em `supabase/migrations/`.
+Os modelos e cargas antigos ficam em `docs/legacy/database/` apenas como material historico de apoio. Para entrega e manutencao, use as migracoes em `supabase/migrations/`.
 
 ## 2. Configurar o frontend
 
@@ -104,4 +104,5 @@ Teste com as tres funcoes:
 - `src/pages/`: telas por perfil.
 - `src/app.js`: orquestracao da SPA.
 - `supabase/migrations/`: schema, RLS, RPCs e evolucoes do banco.
-- `database/`: scripts administrativos e historico de apoio.
+- `database/`: scripts administrativos de operacao.
+- `docs/legacy/database/`: modelo e carga historicos, fora da fonte de producao.

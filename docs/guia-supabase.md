@@ -11,7 +11,7 @@ O AlimentaObra ja possui a camada de integracao com Supabase. Este documento des
 - `supabase/migrations/`: schema, RLS, funcoes RPC e evolucoes incrementais.
 - `service-worker.js`: cache dos arquivos publicos da aplicacao em producao.
 
-Arquivos como `src/data/seed.js`, `src/services/store.js` e `database/schema.sql` sao historico legado e nao devem orientar novas entregas.
+Arquivos como `src/data/seed.js`, `src/services/store.js` e os SQLs em `docs/legacy/database/` sao historico legado e nao devem orientar novas entregas.
 
 ## 1. Projeto e variaveis
 

@@ -60,7 +60,10 @@ const files = (await collectFiles(root)).filter((file) =>
   || file === "package.json"
   || file === "README.md"
   || file === "supabase/config.toml"
-  || file.startsWith("docs/")
+  || file === "docs/arquitetura.md"
+  || file === "docs/configuracao-supabase.md"
+  || file === "docs/guia-supabase.md"
+  || file.startsWith("docs/legacy/")
   || file.startsWith("scripts/")
   || file.startsWith("supabase/migrations/20260716")
 );

@@ -6,9 +6,6 @@ import { createSharedUi } from "./components/shared-ui.js";
 import { NAV_BY_ROLE, STATUS_LABEL, viewLabel } from "./core/navigation.js";
 import { createMealDomain } from "./features/meals/domain.js";
 import { countStatus, initials, nextSupplierStep, roleName, sumQty, totalsByMeal } from "./features/operations/metrics.js";
-import { mountAdminReactPage, unmountAdminReactPage } from "./pages/admin/mount.jsx";
-import { mountLeaderReactPage, unmountLeaderReactPage } from "./pages/encarregado/mount.jsx";
-import { mountSupplierReactPage, unmountSupplierReactPage } from "./pages/fornecedor/mount.jsx";
 import { createPageRegistry } from "./pages/index.js";
 import {
   canEditRequest,
@@ -77,6 +74,8 @@ let reportFilter = {
   end: ""
 };
 let dailyReportGenerationDate = "";
+let renderCycle = 0;
+const pageMountModules = new Map();
 
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
@@ -178,14 +177,13 @@ function setView(view) {
 }
 
 function render() {
+  const currentRenderCycle = ++renderCycle;
   const adminFilters = {
     date: state.activeView === "pedidos" ? adminRequestDateFilter : activeDate(),
     leader: document.querySelector("[data-filter-leader]")?.value ?? "",
     meal: document.querySelector("[data-filter-meal]")?.value ?? ""
   };
-  unmountAdminReactPage(root);
-  unmountLeaderReactPage(root);
-  unmountSupplierReactPage(root);
+  unmountLoadedReactPages(root);
   if (state.loading) {
     root.innerHTML = `<section class="grid min-h-screen place-content-center justify-items-center gap-4 bg-[#1b1c1a] p-6 text-white" aria-live="polite"><img class="h-24 w-auto max-w-[360px] object-contain brightness-110" src="${appLogoAsset}" alt="AlimentaObra" /><div class="h-1 w-40 overflow-hidden rounded-full bg-white/15" aria-hidden="true"><i class="block h-full w-1/2 animate-pulse rounded-full bg-orange-600"></i></div><p class="m-0 text-xs font-black uppercase tracking-[.08em] text-white/60">Preparando sua operação</p></section>`;
     return;
@@ -216,7 +214,7 @@ function render() {
     user,
     workspaceIntro: renderWorkspaceIntro(user)
   });
-  mountLeaderReactPage(root, {
+  const leaderProps = {
     STATUS_LABEL,
     canEditRequest,
     countStatus,
@@ -230,8 +228,8 @@ function render() {
     state,
     sumQty,
     user
-  });
-  mountAdminReactPage(root, {
+  };
+  const adminProps = {
     STATUS_LABEL,
     adminConsumptionWeekOffset,
     adminFilters,
@@ -255,8 +253,8 @@ function render() {
     sumQty,
     totalsByMeal,
     user
-  });
-  mountSupplierReactPage(root, {
+  };
+  const supplierProps = {
     STATUS_LABEL,
     consolidationValue,
     formatDate,
@@ -274,7 +272,34 @@ function render() {
     supplierOrderDate,
     supplierOrderStatus,
     user
-  });
+  };
+  mountActiveReactPage(user.role, { adminProps, leaderProps, supplierProps }, currentRenderCycle);
+}
+
+function unmountLoadedReactPages(container) {
+  pageMountModules.get("admin")?.unmountAdminReactPage(container);
+  pageMountModules.get("encarregado")?.unmountLeaderReactPage(container);
+  pageMountModules.get("fornecedor")?.unmountSupplierReactPage(container);
+}
+
+async function loadPageMountModule(role) {
+  if (pageMountModules.has(role)) return pageMountModules.get(role);
+  const loader = {
+    admin: () => import("./pages/admin/mount.jsx"),
+    encarregado: () => import("./pages/encarregado/mount.jsx"),
+    fornecedor: () => import("./pages/fornecedor/mount.jsx")
+  }[role];
+  const module = loader ? await loader() : null;
+  if (module) pageMountModules.set(role, module);
+  return module;
+}
+
+async function mountActiveReactPage(role, props, cycle) {
+  const module = await loadPageMountModule(role);
+  if (!module || cycle !== renderCycle) return;
+  if (role === "admin") module.mountAdminReactPage(root, props.adminProps);
+  if (role === "encarregado") module.mountLeaderReactPage(root, props.leaderProps);
+  if (role === "fornecedor") module.mountSupplierReactPage(root, props.supplierProps);
   bindEvents();
 }
 

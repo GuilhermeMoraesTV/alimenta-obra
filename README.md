@@ -45,8 +45,9 @@ http://127.0.0.1:5190
 
 ```text
 assets/                         Icones, logo e recursos PWA
-database/                       Scripts administrativos e apoio operacional
+database/                       Scripts administrativos de operacao
 docs/                           Documentacao funcional, arquitetura e Supabase
+docs/legacy/                    Modelos e cargas historicas fora do fluxo de producao
 src/app.js                      Orquestracao da SPA, eventos globais e integracao das telas
 src/components/                 Shell, login, icones e componentes compartilhados
 src/core/navigation.js          Menus, rotulos e navegacao por perfil
@@ -63,7 +64,7 @@ service-worker.js               Cache PWA em producao
 manifest.webmanifest            Instalacao Android, iPhone e Web
 ```
 
-`src/data/seed.js`, `src/services/store.js` e `database/schema.sql` ficam apenas como historico/apoio legado. A base atual do produto e Supabase + `store-v2`.
+`src/data/seed.js`, `src/services/store.js` e os SQLs em `docs/legacy/database/` ficam apenas como historico/apoio legado. A base atual do produto e Supabase + `store-v2`.
 
 ## Recursos implementados
 

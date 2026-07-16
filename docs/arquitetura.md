@@ -47,7 +47,7 @@ src/
     formatters.js
 ```
 
-`src/data/seed.js` e `src/services/store.js` permanecem no repositorio como historico de migracao e apoio legado; nao sao a fonte atual de dados do produto. A fonte operacional e o Supabase, com regras de exibicao em `store-v2`.
+`src/data/seed.js`, `src/services/store.js` e `docs/legacy/database/` permanecem no repositorio como historico de migracao e apoio legado; nao sao a fonte atual de dados do produto. A fonte operacional e o Supabase, com regras de exibicao em `store-v2`.
 
 ## Fluxo principal
 
@@ -64,7 +64,7 @@ flowchart LR
 
 ## Banco centralizado
 
-As migracoes em `supabase/migrations/` sao a fonte principal do schema, das politicas RLS e das funcoes RPC. A pasta `database/` preserva scripts auxiliares de administracao, promocao inicial de perfis e historico de apoio.
+As migracoes em `supabase/migrations/` sao a fonte principal do schema, das politicas RLS e das funcoes RPC. A pasta `database/` preserva scripts auxiliares de administracao, como promocao inicial de perfis. Modelos e cargas antigos ficam em `docs/legacy/database/`.
 
 Funcoes sensiveis devem conceder `execute` apenas aos papeis necessarios. Rotinas administrativas usam `authenticated` com validacao interna de perfil, e nao devem ficar liberadas para `anon`.
 
