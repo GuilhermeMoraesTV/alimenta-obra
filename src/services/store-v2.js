@@ -9,7 +9,11 @@ export function createEmptyState() {
     users: [],
     mealCatalog: [],
     mealTypes: [],
+    supplierCompanies: [],
+    supplierCompanyUsers: [],
+    supplierMealTypes: [],
     workSections: [],
+    sectionMealTypes: [],
     deliveryAddresses: [],
     deliveryAddressFeatureAvailable: false,
     requests: [],
@@ -60,6 +64,48 @@ export function getSuppliers(state) {
   return state.users.filter((user) => user.role === "fornecedor" && user.active !== false);
 }
 
+export function getSupplierCompanies(state, { includeInactive = true } = {}) {
+  const companies = state.supplierCompanies?.length
+    ? state.supplierCompanies
+    : getSuppliers(state).map((user) => ({
+      id: user.id,
+      legalName: user.name,
+      tradeName: user.team || user.name,
+      active: user.active !== false,
+      legacyUserId: user.id
+    }));
+  return includeInactive ? companies : companies.filter((company) => company.active !== false);
+}
+
+export function getSupplierCompanyName(state, supplierCompanyId, fallbackUserId = "") {
+  if (!supplierCompanyId && fallbackUserId) return getUserName(state, fallbackUserId);
+  const company = getSupplierCompanies(state).find((item) => item.id === supplierCompanyId);
+  if (!company && fallbackUserId) return getUserName(state, fallbackUserId);
+  return company?.tradeName || company?.legalName || "Fornecedor";
+}
+
+export function getSupplierMealLink(state, supplierCompanyId, mealTypeId) {
+  return state.supplierMealTypes?.find((item) => item.supplierCompanyId === supplierCompanyId && item.mealTypeId === mealTypeId) ?? null;
+}
+
+export function getSuppliersForMeal(state, mealTypeId, { includeInactive = false } = {}) {
+  const companies = getSupplierCompanies(state, { includeInactive });
+  if (!state.supplierMealTypes?.length) return companies;
+  return companies.filter((company) => {
+    const link = getSupplierMealLink(state, company.id, mealTypeId);
+    return link?.active === true;
+  });
+}
+
+export function mealCategoryLabel(category) {
+  return {
+    marmita: "Marmita",
+    buffet: "Buffet",
+    janta: "Janta",
+    outro: "Outro"
+  }[category] ?? "Outro";
+}
+
 export function sectionLabel(state, sectionId, fallback = "Sem equipe") {
   return state.workSections?.find((section) => section.id === sectionId)?.name ?? fallback;
 }
@@ -72,6 +118,25 @@ export function getActiveWorkSections(state, leaderId = "") {
   const sections = (state.workSections ?? []).filter((section) => section.active !== false);
   if (!leaderId) return sections;
   return sections.filter((section) => !section.leaderId || section.leaderId === leaderId);
+}
+
+export function getMealsForSection(state, sectionId = "") {
+  const activeMeals = state.mealTypes ?? [];
+  if (!sectionId) return activeMeals;
+  const allowedIds = (state.sectionMealTypes ?? [])
+    .filter((item) => item.sectionId === sectionId && item.active !== false)
+    .map((item) => item.mealTypeId);
+  if (!allowedIds.length) return activeMeals;
+  return activeMeals.filter((meal) => allowedIds.includes(meal.id));
+}
+
+export function requestOriginLabel(request) {
+  return request.originRole === "admin" && !request.leaderId ? "Admin" : "Encarregado";
+}
+
+export function requestResponsibleName(state, request) {
+  if (request.originRole === "admin" && !request.leaderId) return getUserName(state, request.createdBy) || "Admin";
+  return getUserName(state, request.leaderId) || getUserName(state, request.createdBy) || "Sem responsavel";
 }
 
 export function canEditRequest(state, request) {
@@ -122,6 +187,9 @@ export function getConsolidationForDate(state, date) {
     status: "rascunho",
     sentAt: null,
     supplierId: getSuppliers(state)[0]?.id ?? null,
+    supplierCompanyId: state.requests.find((request) => request.date === date && request.supplierCompanyId)?.supplierCompanyId
+      ?? getSupplierCompanies(state, { includeInactive: false })[0]?.id
+      ?? null,
     requestIds,
     confirmations: []
   };
@@ -182,4 +250,10 @@ export function getActualQuantity(state, consolidationId, request) {
     return sameConsolidation && item.teamId === request.teamId && item.mealTypeId === request.mealTypeId;
   });
   return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+}
+
+export function requestUnitPrice(state, request) {
+  const supplierId = request.supplierCompanyId;
+  const link = supplierId ? getSupplierMealLink(state, supplierId, request.mealTypeId) : null;
+  return Number(link?.unitPrice ?? request.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }

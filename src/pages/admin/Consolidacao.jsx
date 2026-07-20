@@ -1,5 +1,6 @@
 import React from "react";
-import { AdminFilterMenu, AdminReceiptHeader, ExportButtons, Icon, RequestTable, getSuppliers, getUserName, statusLabel } from "./shared.jsx";
+import { getSupplierCompanies } from "../../services/store-v2.js";
+import { AdminFilterMenu, AdminReceiptHeader, ExportButtons, Icon, RequestTable, getUserName, statusLabel } from "./shared.jsx";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -207,8 +208,8 @@ export function Consolidacao(props) {
   const date = adminFilters.date;
   const consolidation = getConsolidationForDate(state, date);
   const summary = getConsolidationSummary(state, consolidation);
-  const suppliers = getSuppliers(state);
-  const selectedSupplier = consolidation.supplierId ?? suppliers[0]?.id ?? "";
+  const suppliers = getSupplierCompanies(state, { includeInactive: false });
+  const selectedSupplier = consolidation.supplierCompanyId ?? suppliers[0]?.id ?? "";
   const leadersCount = new Set(summary.rows.map((request) => request.leaderId)).size;
   const mealGroupsCount = Object.keys(summary.byMeal).length;
 
@@ -228,7 +229,7 @@ export function Consolidacao(props) {
               <div className="admin-send-top-actions">
                 <AdminFilterMenu icon={icon}>
                   <input type="date" defaultValue={date} data-filter-date aria-label="Data do pedido" />
-                  <select defaultValue={selectedSupplier} data-supplier-id aria-label="Fornecedor">{suppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}</select>
+                  <select defaultValue={selectedSupplier} data-supplier-id aria-label="Fornecedor">{suppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.tradeName || supplier.legalName}</option>)}</select>
                   <span className={`badge ${consolidation.status}`}>{statusLabel(STATUS_LABEL, consolidation.status)}</span>
                 </AdminFilterMenu>
                 <ExportButtons exportMenuOpen={props.exportMenuOpen} icon={icon} id="consolidacao" items={[["pdf", "PDF", "chart"], ["doc", "Word", "clipboard"]]} />

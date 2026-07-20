@@ -66,8 +66,11 @@ export function getUserName(state, userId) {
 }
 
 export function supplierConsolidations(state, user) {
+  const companyIds = new Set((state.supplierCompanyUsers ?? [])
+    .filter((item) => item.userId === user?.id && item.active !== false)
+    .map((item) => item.supplierCompanyId));
   return state.consolidations
-    .filter((item) => item.supplierId === user?.id)
+    .filter((item) => item.supplierId === user?.id || companyIds.has(item.supplierCompanyId))
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
 }
 

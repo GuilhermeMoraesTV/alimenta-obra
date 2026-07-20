@@ -15,9 +15,15 @@ import {
   getConsolidationForDate,
   getConsolidationSummary,
   getLeaders,
+  getMealsForSection,
+  getSupplierCompanies,
+  getSupplierCompanyName,
+  getSuppliersForMeal,
   getSuppliers,
   getUserName,
   loadUiState,
+  mealCategoryLabel,
+  requestOriginLabel,
   requestsForDate,
   saveUiState
 } from "./services/store-v2.js";
@@ -25,6 +31,7 @@ import {
   changeRequestStatus,
   confirmSupplierStep,
   createAccessInvite,
+  createAdminManagedUser,
   createDeliveryAddress,
   createMealRequest,
   fetchApplicationData,
@@ -37,6 +44,9 @@ import {
   removeSubscription,
   saveConsolidationActuals,
   saveMealTypeCatalog,
+  saveSupplierCompany,
+  saveSupplierCompanyUser,
+  saveSupplierMealTypeLink,
   saveWorkSection,
   sendDailyConsolidation,
   signIn,
@@ -63,15 +73,27 @@ let editingRequestId = null;
 let adminRequestDetailId = null;
 let exportMenuOpen = null;
 let generatedInviteLink = "";
+let settingsActiveTab = "resumo";
+let settingsUserModalOpen = false;
+let settingsUserModalError = "";
+let settingsSupplierModalId = null;
+let settingsMealModalId = null;
+let settingsWorkSectionModalId = null;
 let pendingCancelRequestId = null;
 let operationNotice = null;
 let requestFormError = "";
+let adminOrderFormOpen = false;
+let adminOrderError = "";
 let adminConsumptionWeekOffset = 0;
 let adminRequestDateFilter = "";
 let reportFilter = {
   range: "all",
   start: "",
-  end: ""
+  end: "",
+  supplierCompanyId: "",
+  mealTypeId: "",
+  teamId: "",
+  originRole: ""
 };
 let dailyReportGenerationDate = "";
 let renderCycle = 0;
@@ -92,6 +114,16 @@ function previousLocalDateKey(dateKey = localDateKey()) {
 
 function minimumMealDate() {
   return state.settings.defaultMealDate || localDateKey();
+}
+
+function areaTypeLabel(value) {
+  const labels = {
+    campo: "Campo",
+    canteiro: "Canteiro",
+    escritorio: "Escritorio",
+    misto: "Misto"
+  };
+  return labels[value] ?? "Campo";
 }
 
 function assertMealDateIsNotPast(date) {
@@ -204,7 +236,7 @@ function render() {
   root.innerHTML = renderAppShell({
     accessSwitcher: renderAccessSwitcher(user),
     activeView: state.activeView,
-    adminRequestDetailModal: renderAdminRequestDetailModal(),
+    adminRequestDetailModal: `${renderAdminOrderModal()}${renderAdminRequestDetailModal()}`,
     content: renderView(user),
     editRequestModal: renderEditRequestModal(),
     initials,
@@ -395,8 +427,15 @@ const pageRegistry = createPageRegistry({
   settings: {
     escapeHtml,
     getGeneratedInviteLink: () => generatedInviteLink,
+    getSettingsActiveTab: () => settingsActiveTab,
+    getSettingsMealModalId: () => settingsMealModalId,
+    getSettingsSupplierModalId: () => settingsSupplierModalId,
+    getSettingsWorkSectionModalId: () => settingsWorkSectionModalId,
+    getSettingsUserModalError: () => settingsUserModalError,
+    getSettingsUserModalOpen: () => settingsUserModalOpen,
     getState: () => state,
     icon,
+    mealCategoryLabel,
     money,
     renderAdminBackButton,
     renderEmptyState,
@@ -443,6 +482,22 @@ function renderEditRequestModalLegacy() {
   const addresses = state.deliveryAddresses.filter((address) => address.leaderId === user?.id && address.active !== false);
   const addressOptions = `<option value="">Selecione um endereço</option>${addresses.map((address) => `<option value="${address.id}" ${address.id === request.deliveryAddressId ? "selected" : ""}>${address.label} · ${address.addressLine}</option>`).join("")}`;
   return `<div class="${modalBackdropClass}" data-close-edit-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="edit-request-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Edição de pedido</span><h2 class="${modalTitleClass}" id="edit-request-title">Atualizar solicitação</h2><p class="mt-1 text-sm text-stone-500">As alterações serão aplicadas ao pedido já registrado.</p></div><button class="${modalCloseClass}" type="button" data-close-edit-modal aria-label="Fechar">×</button></header><form class="grid gap-3" data-form="edit-request"><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-date">Data da refeição</label><input class="${modalInputClass}" id="edit-request-date" name="date" type="date" value="${request.date}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-quantity">Quantidade</label><input class="${modalInputClass}" id="edit-request-quantity" name="quantity" type="number" min="1" value="${request.quantity}" required /></div></div><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-meal">Tipo de refeição</label><select class="${modalInputClass}" id="edit-request-meal" name="mealTypeId" data-edit-meal>${state.mealTypes.map((meal) => `<option value="${meal.id}" ${meal.id === request.mealTypeId ? "selected" : ""}>${meal.label}</option>`).join("")}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-location">Local operacional</label><select class="${modalInputClass}" id="edit-request-location" name="locationId">${locationOptions(request.mealTypeId, request.locationId)}</select></div></div>${state.deliveryAddressFeatureAvailable ? `<div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-address">Endereço de entrega</label><select class="${modalInputClass}" id="edit-request-address" name="deliveryAddressId" required>${addressOptions}</select></div>` : ""}<div class="${modalFieldClass}"><label class="${modalLabelClass}" for="edit-request-notes">Observação</label><textarea class="${modalInputClass} min-h-24 py-2" id="edit-request-notes" name="notes">${request.notes}</textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-edit-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar alterações</button></footer></form></section></div>`;
+}
+
+function renderAdminOrderModal() {
+  const user = getActiveUser(state);
+  if (!adminOrderFormOpen || user?.role !== "admin") return "";
+  const sections = getActiveWorkSections(state);
+  const selectedSectionId = sections[0]?.id ?? "";
+  const meals = getMealsForSection(state, selectedSectionId);
+  const selectedMeal = meals[0] ?? state.mealTypes[0];
+  const suppliers = selectedMeal ? getSuppliersForMeal(state, selectedMeal.id, { includeInactive: false }) : [];
+  const fallbackLocationId = selectedMeal?.locations?.[0]?.id ?? "";
+  const sectionOptions = sections.map((section) => `<option value="${section.id}">${escapeHtml(section.name)} - ${areaTypeLabel(section.areaType)}</option>`).join("") || `<option value="">Nenhum efetivo ativo</option>`;
+  const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
+  const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor ativo para essa refeicao</option>`;
+
+  return `<div class="${modalBackdropClass}" data-close-admin-order-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="admin-order-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Pedido administrativo</span><h2 class="${modalTitleClass}" id="admin-order-title">Fazer pedido</h2><p class="mt-1 text-sm text-stone-500">Use para buffet, canteiro, escritorio ou ajustes criados diretamente pelo Admin.</p></div><button class="${modalCloseClass}" type="button" data-close-admin-order-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="admin-order"><input type="hidden" name="originRole" value="admin" /><input type="hidden" name="leaderId" value="" /><input type="hidden" name="locationId" value="${fallbackLocationId}" />${adminOrderError ? `<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">${escapeHtml(adminOrderError)}</div>` : ""}<div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-date">Data da refeicao</label><input class="${modalInputClass}" id="admin-order-date" name="date" type="date" min="${minimumMealDate()}" value="${minimumMealDate()}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-quantity">Quantidade solicitada</label><input class="${modalInputClass}" id="admin-order-quantity" name="quantity" type="number" min="1" value="10" required /></div></div><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-team">Efetivo / local</label><select class="${modalInputClass}" id="admin-order-team" name="teamId" data-admin-order-team required>${sectionOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="admin-order-meal" name="mealTypeId" data-admin-order-meal required>${mealOptions}</select></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-supplier">Fornecedor vinculado</label><select class="${modalInputClass}" id="admin-order-supplier" name="supplierCompanyId" required>${supplierOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="admin-order-notes" name="notes" placeholder="Ex.: buffet para escritorio, reforco de equipe ou evento interno"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-admin-order-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit" ${sections.length && meals.length && suppliers.length ? "" : "disabled"}>Salvar pedido admin</button></footer></form></section></div>`;
 }
 
 function renderActualsModal() {
@@ -606,30 +661,40 @@ function toDateKey(date) {
 
 function normalizeReportFilter(nextFilter = reportFilter) {
   const baseDate = nextFilter.start || state.settings.defaultMealDate;
-  if (nextFilter.range === "all") return { range: "all", start: "", end: "" };
-  if (nextFilter.range === "day") return { range: "day", start: baseDate, end: baseDate };
+  const extra = {
+    supplierCompanyId: nextFilter.supplierCompanyId ?? "",
+    mealTypeId: nextFilter.mealTypeId ?? "",
+    teamId: nextFilter.teamId ?? "",
+    originRole: nextFilter.originRole ?? ""
+  };
+  if (nextFilter.range === "all") return { range: "all", start: "", end: "", ...extra };
+  if (nextFilter.range === "day") return { range: "day", start: baseDate, end: baseDate, ...extra };
   if (nextFilter.range === "week") {
     const start = getWeekStart(baseDate);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    return { range: "week", start: toDateKey(start), end: toDateKey(end) };
+    return { range: "week", start: toDateKey(start), end: toDateKey(end), ...extra };
   }
   if (nextFilter.range === "month") {
     const [year, month] = baseDate.split("-").map(Number);
     const start = new Date(year, month - 1, 1, 12);
     const end = new Date(year, month, 0, 12);
-    return { range: "month", start: toDateKey(start), end: toDateKey(end) };
+    return { range: "month", start: toDateKey(start), end: toDateKey(end), ...extra };
   }
   const start = nextFilter.start || state.settings.defaultMealDate;
   const end = nextFilter.end || start;
-  return start <= end ? { range: "custom", start, end } : { range: "custom", start: end, end: start };
+  return start <= end ? { range: "custom", start, end, ...extra } : { range: "custom", start: end, end: start, ...extra };
 }
 
 function getReportRows() {
   const filter = normalizeReportFilter(reportFilter);
   return state.requests
     .filter((request) => request.status !== "cancelado")
-    .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end));
+    .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end))
+    .filter((request) => !filter.supplierCompanyId || request.supplierCompanyId === filter.supplierCompanyId)
+    .filter((request) => !filter.mealTypeId || request.mealTypeId === filter.mealTypeId)
+    .filter((request) => !filter.teamId || request.teamId === filter.teamId)
+    .filter((request) => !filter.originRole || request.originRole === filter.originRole);
 }
 
 function getReportPeriodLabel() {
@@ -870,8 +935,8 @@ function renderConsolidacao() {
   const date = activeDate();
   const consolidation = getConsolidationForDate(state, date);
   const summary = getConsolidationSummary(state, consolidation);
-  const suppliers = getSuppliers(state);
-  const selectedSupplier = consolidation.supplierId ?? suppliers[0]?.id ?? "";
+  const suppliers = getSupplierCompanies(state, { includeInactive: false });
+  const selectedSupplier = consolidation.supplierCompanyId ?? suppliers[0]?.id ?? "";
   return `
     <header class="admin-send-header">
       <div class="admin-send-title">
@@ -883,7 +948,7 @@ function renderConsolidacao() {
         <div class="admin-send-filters">
           <input type="date" value="${date}" data-filter-date aria-label="Data do pedido" />
           <select data-supplier-id aria-label="Fornecedor">
-            ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${supplier.name}</option>`).join("")}
+            ${suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplier ? "selected" : ""}>${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("")}
           </select>
           <span class="badge ${consolidation.status}">${STATUS_LABEL[consolidation.status] ?? consolidation.status}</span>
         </div>
@@ -909,8 +974,11 @@ function renderConsolidacao() {
 
 function supplierConsolidations() {
   const user = getActiveUser(state);
+  const companyIds = new Set((state.supplierCompanyUsers ?? [])
+    .filter((item) => item.userId === user?.id && item.active !== false)
+    .map((item) => item.supplierCompanyId));
   return state.consolidations
-    .filter((item) => item.supplierId === user?.id)
+    .filter((item) => item.supplierId === user?.id || companyIds.has(item.supplierCompanyId))
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
@@ -1241,6 +1309,24 @@ function bindEvents() {
     render();
   });
   root.querySelector("[data-save-delivery-address]")?.addEventListener("click", saveDeliveryAddress);
+  root.querySelectorAll("[data-open-admin-order]").forEach((button) => {
+    button.addEventListener("click", () => {
+      adminOrderFormOpen = true;
+      adminOrderError = "";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-admin-order-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      adminOrderFormOpen = false;
+      adminOrderError = "";
+      render();
+    });
+  });
+  root.querySelector("[data-form='admin-order']")?.addEventListener("submit", handleAdminOrderSubmit);
+  root.querySelectorAll("[data-admin-order-team], [data-admin-order-meal]").forEach((control) => {
+    control.addEventListener("change", updateAdminOrderOptions);
+  });
   root.querySelectorAll("[data-filter-date], [data-filter-leader], [data-filter-meal]").forEach((control) => {
     control.addEventListener("change", (event) => {
       if (state.activeView === "pedidos" && event.currentTarget.matches("[data-filter-date]")) {
@@ -1268,6 +1354,19 @@ function bindEvents() {
   root.querySelectorAll("[data-report-end]").forEach((control) => {
     control.addEventListener("change", (event) => {
       reportFilter = normalizeReportFilter({ ...reportFilter, end: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-report-supplier], [data-report-meal], [data-report-team], [data-report-origin]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      const key = event.currentTarget.matches("[data-report-supplier]")
+        ? "supplierCompanyId"
+        : event.currentTarget.matches("[data-report-meal]")
+          ? "mealTypeId"
+          : event.currentTarget.matches("[data-report-team]")
+            ? "teamId"
+            : "originRole";
+      reportFilter = normalizeReportFilter({ ...reportFilter, [key]: event.currentTarget.value });
       render();
     });
   });
@@ -1311,17 +1410,80 @@ function bindEvents() {
   root.querySelector("[data-form='profile-settings']")?.addEventListener("submit", handleProfileSettingsSubmit);
   root.querySelector("[data-form='password-settings']")?.addEventListener("submit", handlePasswordSettingsSubmit);
   root.querySelector("[data-form='meal-price-settings']")?.addEventListener("submit", handleMealPriceSettingsSubmit);
+  root.querySelectorAll("[data-settings-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsActiveTab = button.dataset.settingsTab || "conta";
+      settingsUserModalOpen = false;
+      settingsUserModalError = "";
+      settingsSupplierModalId = null;
+      settingsMealModalId = null;
+      settingsWorkSectionModalId = null;
+      render();
+    });
+  });
   root.querySelector("[data-form='access-invite']")?.addEventListener("submit", handleAccessInviteSubmit);
+  root.querySelector("[data-open-admin-user-modal]")?.addEventListener("click", () => {
+    settingsUserModalOpen = true;
+    settingsUserModalError = "";
+    render();
+  });
+  root.querySelectorAll("[data-close-admin-user-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsUserModalOpen = false;
+      settingsUserModalError = "";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-open-supplier-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsSupplierModalId = button.dataset.openSupplierModal || "new";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-supplier-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsSupplierModalId = null;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-open-meal-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsMealModalId = button.dataset.openMealModal || "new";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-meal-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsMealModalId = null;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-open-work-section-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsWorkSectionModalId = button.dataset.openWorkSectionModal || "new";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-work-section-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsWorkSectionModalId = null;
+      render();
+    });
+  });
+  root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
+  root.querySelectorAll("[data-form='supplier-company']").forEach((form) => {
+    form.addEventListener("submit", handleSupplierCompanySubmit);
+  });
+  root.querySelector("[data-form='supplier-company-user']")?.addEventListener("submit", handleSupplierCompanyUserSubmit);
+  root.querySelectorAll("[data-form='supplier-meal-link']").forEach((form) => {
+    form.addEventListener("submit", handleSupplierMealLinkSubmit);
+  });
   root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
   root.querySelectorAll("[data-form='work-section']").forEach((form) => {
     form.addEventListener("submit", handleWorkSectionSubmit);
   });
   root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
     form.addEventListener("submit", handleMealCatalogSubmit);
-  });
-  root.querySelector("[data-open-new-meal]")?.addEventListener("click", () => {
-    const panel = root.querySelector("[data-new-meal-panel]");
-    if (panel) panel.open = true;
   });
   root.querySelectorAll("[data-delete-meal-type]").forEach((button) => {
     button.addEventListener("click", () => handleMealCatalogDelete(button.dataset.deleteMealType));
@@ -1541,6 +1703,8 @@ async function handleRequestSubmit(event) {
       mealTypeId: form.get("mealTypeId"),
       locationId: form.get("locationId"),
       teamId: form.get("teamId"),
+      supplierCompanyId: form.get("supplierCompanyId"),
+      originRole: "encarregado",
       quantity: form.get("quantity"),
       status,
       notes: String(form.get("notes") ?? "")
@@ -1662,6 +1826,58 @@ async function handleMealPriceSettingsSubmit(event) {
   }
 }
 
+function updateAdminOrderOptions() {
+  const teamSelect = root.querySelector("[data-admin-order-team]");
+  const mealSelect = root.querySelector("[data-admin-order-meal]");
+  const supplierSelect = root.querySelector("#admin-order-supplier");
+  const locationInput = root.querySelector("[data-form='admin-order'] input[name='locationId']");
+  const teamId = teamSelect?.value ?? "";
+  const selectedMealId = mealSelect?.value ?? "";
+  const meals = getMealsForSection(state, teamId);
+  if (mealSelect) {
+    const nextMealId = meals.some((meal) => meal.id === selectedMealId) ? selectedMealId : meals[0]?.id ?? "";
+    mealSelect.innerHTML = meals.map((meal) => `<option value="${meal.id}" ${meal.id === nextMealId ? "selected" : ""}>${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
+  }
+  const meal = state.mealTypes.find((item) => item.id === mealSelect?.value);
+  if (locationInput) locationInput.value = meal?.locations?.[0]?.id ?? "";
+  if (supplierSelect) {
+    const suppliers = meal ? getSuppliersForMeal(state, meal.id, { includeInactive: false }) : [];
+    supplierSelect.innerHTML = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor ativo para essa refeicao</option>`;
+  }
+}
+
+async function handleAdminOrderSubmit(event) {
+  event.preventDefault();
+  adminOrderError = "";
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    assertMealDateIsNotPast(form.get("date"));
+    await createMealRequest({
+      date: form.get("date"),
+      mealTypeId: form.get("mealTypeId"),
+      locationId: form.get("locationId"),
+      teamId: form.get("teamId"),
+      supplierCompanyId: form.get("supplierCompanyId"),
+      leaderId: null,
+      originRole: "admin",
+      quantity: form.get("quantity"),
+      status: "enviado",
+      notes: String(form.get("notes") ?? "")
+    }, null);
+    adminOrderFormOpen = false;
+    await refreshData();
+    toast("Pedido administrativo criado.");
+  } catch (error) {
+    console.error(error);
+    adminOrderError = error.message || "Nao foi possivel criar o pedido administrativo.";
+    render();
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function handleWorkSectionSubmit(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -1674,9 +1890,11 @@ async function handleWorkSectionSubmit(event) {
       name: form.get("name"),
       headcount: form.get("headcount"),
       leaderId: String(form.get("leaderId") ?? "") || null,
+      areaType: String(form.get("areaType") ?? "campo"),
       active: form.get("active") === "true"
     });
     if (!form.get("id")) formElement.reset();
+    settingsWorkSectionModalId = null;
     await refreshData();
     toast("Equipe/trecho salvo.");
   } catch (error) {
@@ -1699,9 +1917,11 @@ async function handleMealCatalogSubmit(event) {
       name: form.get("name"),
       description: form.get("description"),
       unitPrice: form.get("unitPrice"),
+      category: String(form.get("category") ?? "outro"),
       active: form.get("active") === "true"
     });
     if (!form.get("id")) formElement.reset();
+    settingsMealModalId = null;
     await refreshData();
     toast("Tipo de alimentacao salvo.");
   } catch (error) {
@@ -1723,6 +1943,7 @@ async function handleMealCatalogDelete(id) {
       name: meal.label,
       description: meal.description,
       unitPrice: meal.unitPrice,
+      category: meal.category,
       active: false
     });
     await refreshData();
@@ -1759,6 +1980,155 @@ async function handleAccessInviteSubmit(event) {
   } catch (error) {
     console.error(error);
     toast(`Não foi possível gerar o convite: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleAdminUserSubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await createAdminManagedUser({
+      name: form.get("name"),
+      email: form.get("email"),
+      password: form.get("password"),
+      role: form.get("role"),
+      team: form.get("team"),
+      supplierCompanyId: String(form.get("supplierCompanyId") ?? "") || null,
+      active: form.get("active") === "true"
+    });
+    formElement.reset();
+    settingsUserModalOpen = false;
+    settingsUserModalError = "";
+    await refreshData();
+    toast("Usuario criado pelo Admin.");
+  } catch (error) {
+    console.error(error);
+    settingsUserModalError = error.message || "Nao foi possivel criar usuario.";
+    render();
+    toast(`Nao foi possivel criar usuario: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleSupplierCompanySubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    const supplierId = String(form.get("id") ?? "") || null;
+    const active = form.get("active") === "true";
+    const savedSupplierId = await saveSupplierCompany({
+      id: supplierId,
+      legalName: form.get("legalName"),
+      tradeName: form.get("tradeName"),
+      cnpj: form.get("cnpj"),
+      stateRegistration: form.get("stateRegistration"),
+      municipalRegistration: form.get("municipalRegistration"),
+      addressLine: form.get("addressLine"),
+      city: form.get("city"),
+      state: form.get("state"),
+      zipCode: form.get("zipCode"),
+      phone: form.get("phone"),
+      email: form.get("email"),
+      contactName: form.get("contactName"),
+      bankDetails: form.get("bankDetails"),
+      notes: form.get("notes"),
+      active
+    });
+    const currentLinkMealIds = new Set((state.supplierMealTypes ?? [])
+      .filter((item) => item.supplierCompanyId === savedSupplierId)
+      .map((item) => item.mealTypeId));
+    const newMealNames = form.getAll("newMealName").map((value) => String(value ?? "").trim());
+    const newMealCategories = form.getAll("newMealCategory").map((value) => String(value ?? "outro"));
+    const newMealUnitPrices = form.getAll("newMealUnitPrice").map((value) => String(value ?? "").trim());
+    const newMealDescriptions = form.getAll("newMealDescription").map((value) => String(value ?? "").trim());
+    if (!active) {
+      await Promise.all([...currentLinkMealIds].map((mealTypeId) => saveSupplierMealTypeLink({
+        supplierCompanyId: savedSupplierId,
+        mealTypeId,
+        active: false,
+        unitPrice: null,
+        notes: ""
+      })));
+    }
+    const newMeals = await Promise.all(newMealNames.map(async (name, index) => {
+      if (!name) return null;
+      const unitPrice = newMealUnitPrices[index] || state.settings.defaultMealUnitPrice || 0;
+      return saveMealTypeCatalog({
+        id: null,
+        name,
+        description: newMealDescriptions[index] || "",
+        unitPrice,
+        category: newMealCategories[index] || "outro",
+        active
+      });
+    }));
+    await Promise.all(newMeals.filter(Boolean).map((mealTypeId) => saveSupplierMealTypeLink({
+      supplierCompanyId: savedSupplierId,
+      mealTypeId,
+      active,
+      unitPrice: null,
+      notes: ""
+    })));
+    if (!form.get("id")) formElement.reset();
+    settingsSupplierModalId = null;
+    await refreshData();
+    toast("Fornecedor salvo.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar fornecedor: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleSupplierCompanyUserSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await saveSupplierCompanyUser({
+      supplierCompanyId: form.get("supplierCompanyId"),
+      userId: form.get("userId"),
+      active: form.get("active") === "true"
+    });
+    await refreshData();
+    toast("Login vinculado ao fornecedor.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel vincular login: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleSupplierMealLinkSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    await saveSupplierMealTypeLink({
+      supplierCompanyId: form.get("supplierCompanyId"),
+      mealTypeId: form.get("mealTypeId"),
+      active: form.get("active") === "true",
+      unitPrice: form.get("unitPrice"),
+      notes: form.get("notes")
+    });
+    await refreshData();
+    toast("Vinculo refeicao-fornecedor salvo.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar vinculo: ${error.message}`);
   } finally {
     if (button) button.disabled = false;
   }
@@ -1865,7 +2235,9 @@ async function sendConsolidation() {
 
 async function sendConsolidationForDate(date) {
   const consolidation = getConsolidationForDate(state, date);
-  const supplierId = consolidation?.supplierId ?? getSuppliers(state)[0]?.id;
+  const supplierId = consolidation?.supplierCompanyId
+    ?? state.requests.find((request) => request.date === date && request.supplierCompanyId)?.supplierCompanyId
+    ?? getSupplierCompanies(state, { includeInactive: false })[0]?.id;
   if (!supplierId) {
     state.activeView = "pedidos";
     persist("Selecione um fornecedor para enviar este pedido.");
@@ -2118,12 +2490,53 @@ function mapApplicationData(data, profile) {
     team: item.team ?? "",
     active: item.active
   }));
+  const supplierUsers = state.users.filter((item) => item.role === "fornecedor");
+  state.supplierCompanies = (data.supplierCompanies?.length ? data.supplierCompanies.map((item) => ({
+    id: item.id,
+    legalName: item.legal_name,
+    tradeName: item.trade_name || item.legal_name,
+    cnpj: item.cnpj ?? "",
+    stateRegistration: item.state_registration ?? "",
+    municipalRegistration: item.municipal_registration ?? "",
+    addressLine: item.address_line ?? "",
+    city: item.city ?? "",
+    state: item.state ?? "",
+    zipCode: item.zip_code ?? "",
+    phone: item.phone ?? "",
+    email: item.email ?? "",
+    contactName: item.contact_name ?? "",
+    bankDetails: item.bank_details ?? "",
+    notes: item.notes ?? "",
+    active: item.active,
+    legacyUserId: item.legacy_profile_id,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at
+  })) : supplierUsers.map((user) => ({
+    id: user.id,
+    legalName: user.name,
+    tradeName: user.team || user.name,
+    cnpj: "",
+    email: user.email,
+    active: user.active !== false,
+    legacyUserId: user.id
+  })));
+  state.supplierCompanyUsers = (data.supplierCompanyUsers?.length ? data.supplierCompanyUsers.map((item) => ({
+    supplierCompanyId: item.supplier_company_id,
+    userId: item.user_id,
+    active: item.active,
+    createdAt: item.created_at
+  })) : supplierUsers.map((user) => ({
+    supplierCompanyId: user.id,
+    userId: user.id,
+    active: user.active !== false
+  })));
   const mappedCatalog = data.catalog
     .map((item) => ({
       id: item.id,
       label: item.name,
       description: item.description ?? "",
       unitPrice: Number(item.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
+      category: item.category ?? (String(item.name ?? "").toLowerCase().includes("marmita") ? "marmita" : String(item.name ?? "").toLowerCase().includes("jantar") ? "janta" : "buffet"),
       active: item.active,
       locations: (item.meal_locations ?? [])
         .filter((location) => location.active)
@@ -2132,11 +2545,31 @@ function mapApplicationData(data, profile) {
     }));
   state.mealCatalog = mappedCatalog;
   state.mealTypes = mappedCatalog.filter((item) => item.active);
+  state.supplierMealTypes = (data.supplierMealTypes?.length ? data.supplierMealTypes.map((item) => ({
+    supplierCompanyId: item.supplier_company_id,
+    mealTypeId: item.meal_type_id,
+    active: item.active,
+    unitPrice: item.unit_price === null ? null : Number(item.unit_price ?? 0),
+    notes: item.notes ?? "",
+    updatedAt: item.updated_at
+  })) : data.supplierCompanies?.length ? [] : state.supplierCompanies.flatMap((supplier) => mappedCatalog.map((meal) => ({
+    supplierCompanyId: supplier.id,
+    mealTypeId: meal.id,
+    active: supplier.active !== false && meal.active !== false,
+    unitPrice: null,
+    notes: ""
+  }))));
+  state.sectionMealTypes = (data.sectionMealTypes ?? []).map((item) => ({
+    sectionId: item.work_section_id,
+    mealTypeId: item.meal_type_id,
+    active: item.active
+  }));
   state.workSections = (data.workSections?.length ? data.workSections.map((item) => ({
     id: item.id,
     name: item.name,
     headcount: Number(item.headcount ?? 0),
     leaderId: item.leader_id,
+    areaType: item.area_type ?? "campo",
     active: item.active,
     createdAt: item.created_at,
     updatedAt: item.updated_at
@@ -2147,6 +2580,7 @@ function mapApplicationData(data, profile) {
       name: item.team || item.name,
       headcount: 0,
       leaderId: item.id,
+      areaType: "campo",
       active: true,
       derived: true
     })));
@@ -2156,9 +2590,13 @@ function mapApplicationData(data, profile) {
     mealTypeId: item.meal_type_id,
     mealType: item.meal_types?.name ?? "",
     mealDescription: item.meal_types?.description ?? "",
+    mealCategory: item.meal_types?.category ?? "",
     unitPrice: Number(item.meal_types?.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
     locationId: item.location_id,
     location: item.meal_locations?.name ?? "",
+    supplierCompanyId: item.supplier_company_id ?? "",
+    supplierName: item.supplier_companies?.trade_name || item.supplier_companies?.legal_name || "",
+    originRole: item.origin_role === "admin" && !item.leader_id ? "admin" : "encarregado",
     teamId: item.team_id ?? "",
     sectionName: item.work_sections?.name ?? item.meal_locations?.name ?? "",
     sectionHeadcount: Number(item.work_sections?.headcount ?? 0),
@@ -2166,6 +2604,7 @@ function mapApplicationData(data, profile) {
     deliveryAddress: item.delivery_addresses?.label ?? "",
     deliveryAddressLine: item.delivery_addresses?.address_line ?? "",
     leaderId: item.leader_id,
+    createdBy: item.created_by,
     quantity: item.quantity,
     status: item.status,
     notes: item.notes ?? "",
@@ -2176,6 +2615,7 @@ function mapApplicationData(data, profile) {
     id: item.id,
     date: item.meal_date,
     supplierId: item.supplier_id,
+    supplierCompanyId: item.supplier_company_id ?? item.supplier_id,
     status: item.status,
     sentAt: item.sent_at,
     createdAt: item.created_at,

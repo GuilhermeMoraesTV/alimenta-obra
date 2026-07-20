@@ -1,4 +1,4 @@
-import { getConsolidationSummary, getSuppliers, getUserName } from "./store-v2.js";
+import { getConsolidationSummary, getSupplierCompanies, getSupplierCompanyName, getSuppliers, getUserName, requestOriginLabel, requestUnitPrice as resolveRequestUnitPrice } from "./store-v2.js";
 import { STATUS_LABEL } from "../core/navigation.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -42,7 +42,7 @@ const mealUnitPrice = (state, mealTypeId = "") => {
 const mealDescription = (state, mealTypeId) => state.mealCatalog?.find((meal) => meal.id === mealTypeId)?.description ?? "";
 const sectionHeadcount = (state, sectionId) => Number(state.workSections?.find((section) => section.id === sectionId)?.headcount ?? 0);
 const requestHeadcount = (state, request) => Number(request.sectionHeadcount ?? request.headcount ?? sectionHeadcount(state, request.teamId));
-const requestUnitPrice = (state, request) => Number(request.unitPrice ?? request.unit_price ?? mealUnitPrice(state, request.mealTypeId));
+const requestUnitPrice = (state, request) => resolveRequestUnitPrice(state, request);
 const actualQuantity = (state, request) => Number(state.consolidationActuals?.find((item) => item.date === request.date && item.teamId === request.teamId && item.mealTypeId === request.mealTypeId)?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
 const formatDateTime = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "-";
 const formatDate = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(`${value}T12:00:00`)) : "-";
@@ -262,9 +262,11 @@ function buildMeasurementModel(state, rows, options = {}) {
     return {
       date: request.date,
       weekday: weekdayShort(request.date),
-      leader: request.leader || request.leaderName || getUserName(state, request.leaderId),
+      leader: request.originRole === "admin" ? getUserName(state, request.createdBy) : request.leader || request.leaderName || getUserName(state, request.leaderId),
       section: request.sectionName || request.location || "Sem equipe",
       meal: request.mealType || "Refeicao",
+      origin: requestOriginLabel(request),
+      supplier: getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId),
       requested: Number(request.quantity ?? 0),
       consumed,
       effective: requestHeadcount(state, request),
@@ -277,12 +279,15 @@ function buildMeasurementModel(state, rows, options = {}) {
 
   const sectionSummary = summarizeBy(detailRows, "section");
   const mealSummary = summarizeBy(detailRows, "meal");
-  const supplier = getSuppliers(state)[0];
+  const selectedSupplierCompanyId = options.supplierCompanyId || options.filter?.supplierCompanyId || "";
+  const supplier = selectedSupplierCompanyId
+    ? getSupplierCompanies(state).find((company) => company.id === selectedSupplierCompanyId)
+    : getSupplierCompanies(state, { includeInactive: true })[0] ?? getSuppliers(state)[0];
   const totalValue = meals.reduce((sum, meal) => sum + meal.valueTotal, 0);
   const totalQuantity = meals.reduce((sum, meal) => sum + meal.quantityTotal, 0);
   return {
     supplierCode: supplier?.supplierCode || supplier?.id?.slice(0, 10)?.toUpperCase() || "-",
-    supplierName: supplier?.name || state.settings?.supplierName || "Fornecedor",
+    supplierName: supplier?.tradeName || supplier?.legalName || supplier?.name || state.settings?.supplierName || "Fornecedor",
     supplierDocument: supplier?.cnpj || supplier?.document || "-",
     area: options.area || state.settings?.measurementArea || "Administracao",
     scope: options.scope || "Servicos de Alimentacao",

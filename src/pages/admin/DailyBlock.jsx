@@ -1,4 +1,5 @@
 import React from "react";
+import { getActualQuantity, getSupplierCompanyName, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 import { Icon, getUserName, statusLabel } from "./shared.jsx";
 
 export const dailyBlockStyles = `
@@ -91,11 +92,11 @@ export function DailyBlockCard(props) {
           return (
             <div className="daily-request-row" key={request.id}>
               <div className="daily-request-title">
-                <strong>{getUserName(state, request.leaderId)}</strong>
-                <small>{request.mealType} - {request.sectionName || request.location}</small>
+                <strong>{requestResponsibleName(state, request)}</strong>
+                <small>{requestOriginLabel(request)} - {request.mealType} - {request.sectionName || request.location} - {getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId)}</small>
               </div>
               <div className="daily-request-side">
-                <div className="daily-request-qty"><strong>{request.quantity}</strong><small>ref.</small></div>
+                <div className="daily-request-qty"><strong>{request.quantity}</strong><small>sol.</small><small>{getActualQuantity(state, consolidation?.id ?? "", request)} real</small></div>
                 <div className="daily-request-actions">
                   {editable ? (
                     <>

@@ -202,10 +202,16 @@ export function Painel(props) {
         totalLabel="pedidos a enviar"
         description="Pedidos registrados hoje, mesmo quando a refeição está agendada para outra data"
         actions={(
-          <button className="btn primary" data-view="pedidos">
-            <Icon icon={icon} name="clipboard" size={16} />
-            Ver pedidos
-          </button>
+          <>
+            <button className="btn primary" data-open-admin-order>
+              <Icon icon={icon} name="plus" size={16} />
+              Fazer pedido
+            </button>
+            <button className="btn outline" data-view="pedidos">
+              <Icon icon={icon} name="clipboard" size={16} />
+              Ver pedidos
+            </button>
+          </>
         )}
         metrics={[
           { icon, iconName: "utensils", value: sumQty(rows), label: "Refeições lançadas" },

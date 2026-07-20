@@ -31,6 +31,18 @@ function isMissingOperationSchema(error) {
     || String(error?.message ?? "").includes("unit_price");
 }
 
+function isMissingSupplierCompanySchema(error) {
+  return ["42703", "42P01", "PGRST200", "PGRST202", "PGRST205"].includes(error?.code)
+    || String(error?.message ?? "").includes("supplier_companies")
+    || String(error?.message ?? "").includes("supplier_company_users")
+    || String(error?.message ?? "").includes("supplier_meal_types")
+    || String(error?.message ?? "").includes("work_section_meal_types")
+    || String(error?.message ?? "").includes("supplier_company_id")
+    || String(error?.message ?? "").includes("origin_role")
+    || String(error?.message ?? "").includes("category")
+    || String(error?.message ?? "").includes("area_type");
+}
+
 function deliveryAddressErrorMessage(error) {
   const message = String(error?.message ?? "");
   if (error?.code === "23505" || message.includes("delivery_addresses_leader_id_label_key")) {
@@ -70,10 +82,11 @@ function mealRequestsQuery(client, includeDeliveryAddress = true) {
   return client
     .from("meal_requests")
     .select(`
-      id, meal_date, meal_type_id, location_id, team_id, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
-      status, notes, created_at, updated_at,
-      meal_types(id, name, description, unit_price),
+      id, meal_date, meal_type_id, location_id, team_id, supplier_company_id, origin_role, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
+      status, notes, created_by, created_at, updated_at,
+      meal_types(id, name, description, unit_price, category),
       meal_locations!meal_requests_location_id_fkey(id, name),
+      supplier_companies(id, legal_name, trade_name, active),
       work_sections(id, name, headcount)
       ${includeDeliveryAddress ? ", delivery_addresses(id, label, address_line)" : ""}
     `)
@@ -86,7 +99,7 @@ function legacyMealRequestsQuery(client, includeDeliveryAddress = true) {
     .from("meal_requests")
     .select(`
       id, meal_date, meal_type_id, location_id, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
-      status, notes, created_at, updated_at,
+      status, notes, created_by, created_at, updated_at,
       meal_types(id, name, description),
       meal_locations!meal_requests_location_id_fkey(id, name)
       ${includeDeliveryAddress ? ", delivery_addresses(id, label, address_line)" : ""}
@@ -98,7 +111,7 @@ function legacyMealRequestsQuery(client, includeDeliveryAddress = true) {
 async function fetchMealRequestsWithCompatibility(client) {
   const response = await mealRequestsQuery(client, true);
   if (!response.error) return response;
-  if (isMissingOperationSchema(response.error)) {
+  if (isMissingOperationSchema(response.error) || isMissingSupplierCompanySchema(response.error)) {
     const legacy = await legacyMealRequestsQuery(client, true);
     if (!legacy.error || !isMissingDeliveryAddressSchema(legacy.error)) return legacy;
     return legacyMealRequestsQuery(client, false);
@@ -107,6 +120,55 @@ async function fetchMealRequestsWithCompatibility(client) {
   const retry = await mealRequestsQuery(client, false);
   if (!retry.error || !isMissingOperationSchema(retry.error)) return retry;
   return legacyMealRequestsQuery(client, false);
+}
+
+async function fetchConsolidationsWithCompatibility(client) {
+  const response = await client
+    .from("consolidations")
+    .select(`
+      id, meal_date, supplier_id, supplier_company_id, status, sent_at, created_by, created_at, updated_at,
+      consolidation_items(meal_request_id),
+      supplier_confirmations(step, confirmed_by, confirmed_at, metadata),
+      consolidation_revisions(id, edited_by, edited_at, reason, snapshot)
+    `)
+    .order("meal_date", { ascending: false });
+  if (!response.error) return response;
+  if (!isMissingSupplierCompanySchema(response.error) && !isMissingOperationSchema(response.error)) return response;
+  return client
+    .from("consolidations")
+    .select(`
+      id, meal_date, supplier_id, status, sent_at, created_by, created_at, updated_at,
+      consolidation_items(meal_request_id),
+      supplier_confirmations(step, confirmed_by, confirmed_at, metadata),
+      consolidation_revisions(id, edited_by, edited_at, reason, snapshot)
+    `)
+    .order("meal_date", { ascending: false });
+}
+
+async function fetchMealCatalogWithCompatibility(client) {
+  const response = await client
+    .from("meal_types")
+    .select("id, name, description, unit_price, category, active, sort_order, meal_locations(id, name, active, sort_order)")
+    .order("sort_order");
+  if (!response.error) return response;
+  if (!isMissingSupplierCompanySchema(response.error) && !isMissingOperationSchema(response.error)) return response;
+  return client
+    .from("meal_types")
+    .select("id, name, description, unit_price, active, sort_order, meal_locations(id, name, active, sort_order)")
+    .order("sort_order");
+}
+
+async function fetchWorkSectionsWithCompatibility(client) {
+  const response = await client
+    .from("work_sections")
+    .select("id, name, headcount, leader_id, area_type, active, created_at, updated_at")
+    .order("name");
+  if (!response.error) return response;
+  if (!isMissingSupplierCompanySchema(response.error) && !isMissingOperationSchema(response.error)) return response;
+  return client
+    .from("work_sections")
+    .select("id, name, headcount, leader_id, active, created_at, updated_at")
+    .order("name");
 }
 
 export async function validateAlimentaObraSchema() {
@@ -206,10 +268,7 @@ export async function fetchApplicationData() {
     .from("consolidation_documents")
     .select("id, consolidation_id, document_type, storage_path, original_name, mime_type, size_bytes, uploaded_by, created_at")
     .order("created_at", { ascending: false });
-  const workSectionsPromise = client
-    .from("work_sections")
-    .select("id, name, headcount, leader_id, active, created_at, updated_at")
-    .order("name");
+  const workSectionsPromise = fetchWorkSectionsWithCompatibility(client);
   const actualsPromise = client
     .from("consolidation_actuals")
     .select("id, consolidation_id, meal_date, team_id, meal_type_id, quantity, notes, recorded_by, recorded_at")
@@ -219,23 +278,25 @@ export async function fetchApplicationData() {
     .select("id, report_date, status, totals, snapshot, generated_at, generated_by")
     .order("report_date", { ascending: false })
     .limit(90);
+  const supplierCompaniesPromise = client
+    .from("supplier_companies")
+    .select("id, legal_name, trade_name, cnpj, state_registration, municipal_registration, address_line, city, state, zip_code, phone, email, contact_name, bank_details, notes, active, legacy_profile_id, created_at, updated_at")
+    .order("legal_name");
+  const supplierCompanyUsersPromise = client
+    .from("supplier_company_users")
+    .select("supplier_company_id, user_id, active, created_at");
+  const supplierMealTypesPromise = client
+    .from("supplier_meal_types")
+    .select("supplier_company_id, meal_type_id, active, unit_price, notes, updated_at");
+  const sectionMealTypesPromise = client
+    .from("work_section_meal_types")
+    .select("work_section_id, meal_type_id, active");
   const results = await Promise.all([
     client.from("profiles").select("id, name, email, role, team, active").order("name"),
-    client
-      .from("meal_types")
-      .select("id, name, description, unit_price, active, sort_order, meal_locations(id, name, active, sort_order)")
-      .order("sort_order"),
+    fetchMealCatalogWithCompatibility(client),
     client.from("app_settings").select("*").eq("id", true).single(),
     fetchMealRequestsWithCompatibility(client),
-    client
-      .from("consolidations")
-      .select(`
-        id, meal_date, supplier_id, status, sent_at, created_by, created_at, updated_at,
-        consolidation_items(meal_request_id),
-        supplier_confirmations(step, confirmed_by, confirmed_at, metadata),
-        consolidation_revisions(id, edited_by, edited_at, reason, snapshot)
-      `)
-      .order("meal_date", { ascending: false }),
+    fetchConsolidationsWithCompatibility(client),
     client
       .from("audit_log")
       .select("id, actor_id, action, entity, entity_id, payload, created_at")
@@ -245,9 +306,13 @@ export async function fetchApplicationData() {
     addressesPromise,
     workSectionsPromise,
     actualsPromise,
-    reportsPromise
+    reportsPromise,
+    supplierCompaniesPromise,
+    supplierCompanyUsersPromise,
+    supplierMealTypesPromise,
+    sectionMealTypesPromise
   ]);
-  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports] = results;
+  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports, supplierCompanies, supplierCompanyUsers, supplierMealTypes, sectionMealTypes] = results;
   const documentRows = documents.error && ["42P01", "PGRST205"].includes(documents.error.code)
     ? []
     : ensure(documents.data, documents.error);
@@ -264,6 +329,18 @@ export async function fetchApplicationData() {
   const reportRows = reports.error && isMissingOperationSchema(reports.error)
     ? []
     : ensure(reports.data, reports.error);
+  const supplierCompanyRows = supplierCompanies.error && isMissingSupplierCompanySchema(supplierCompanies.error)
+    ? []
+    : ensure(supplierCompanies.data, supplierCompanies.error);
+  const supplierCompanyUserRows = supplierCompanyUsers.error && isMissingSupplierCompanySchema(supplierCompanyUsers.error)
+    ? []
+    : ensure(supplierCompanyUsers.data, supplierCompanyUsers.error);
+  const supplierMealTypeRows = supplierMealTypes.error && isMissingSupplierCompanySchema(supplierMealTypes.error)
+    ? []
+    : ensure(supplierMealTypes.data, supplierMealTypes.error);
+  const sectionMealTypeRows = sectionMealTypes.error && isMissingSupplierCompanySchema(sectionMealTypes.error)
+    ? []
+    : ensure(sectionMealTypes.data, sectionMealTypes.error);
   return {
     profiles: ensure(profiles.data, profiles.error),
     catalog: ensure(catalog.data, catalog.error),
@@ -276,28 +353,36 @@ export async function fetchApplicationData() {
     addressFeatureAvailable,
     workSections: workSectionRows,
     actuals: actualRows,
-    reports: reportRows
+    reports: reportRows,
+    supplierCompanies: supplierCompanyRows,
+    supplierCompanyUsers: supplierCompanyUserRows,
+    supplierMealTypes: supplierMealTypeRows,
+    sectionMealTypes: sectionMealTypeRows
   };
 }
 
 export async function createMealRequest(input, userId) {
   const params = {
-    p_leader_id: userId,
+    p_leader_id: input.leaderId === undefined ? userId : input.leaderId || null,
     p_meal_date: input.date,
     p_meal_type_id: input.mealTypeId,
     p_location_id: input.locationId || null,
     p_team_id: input.teamId || null,
     p_quantity: Number(input.quantity),
     p_status: input.status,
-    p_notes: input.notes
+    p_notes: input.notes,
+    p_supplier_company_id: input.supplierCompanyId || null,
+    p_origin_role: input.originRole || null
   };
   const { data, error } = await requireSupabase().rpc("create_meal_request_as_user", params);
   if (!error) return data;
-  if (!isMissingOperationSchema(error) && !String(error?.message ?? "").includes("p_team_id")) {
+  if (!isMissingOperationSchema(error) && !isMissingSupplierCompanySchema(error) && !String(error?.message ?? "").includes("p_team_id")) {
     return ensure(data, error);
   }
   const legacyParams = { ...params };
   delete legacyParams.p_team_id;
+  delete legacyParams.p_supplier_company_id;
+  delete legacyParams.p_origin_role;
   const retry = await requireSupabase().rpc("create_meal_request_as_user", legacyParams);
   return ensure(retry.data, retry.error);
 }
@@ -313,16 +398,17 @@ export async function createDeliveryAddress({ leaderId, label, addressLine, refe
   return data;
 }
 
-export async function saveMealTypeCatalog({ id = null, name, description = "", unitPrice = 0, active = true }) {
+export async function saveMealTypeCatalog({ id = null, name, description = "", unitPrice = 0, active = true, category = "outro" }) {
   const { data, error } = await requireSupabase().rpc("upsert_meal_type_catalog", {
     p_id: id,
     p_name: String(name).trim(),
     p_description: String(description ?? "").trim(),
     p_unit_price: Number(unitPrice ?? 0),
-    p_active: Boolean(active)
+    p_active: Boolean(active),
+    p_category: category || "outro"
   });
   if (!error) return data;
-  if (!isMissingOperationSchema(error) && !String(error?.message ?? "").includes("p_unit_price")) {
+  if (!isMissingOperationSchema(error) && !isMissingSupplierCompanySchema(error) && !String(error?.message ?? "").includes("p_unit_price")) {
     return ensure(data, error);
   }
   const retry = await requireSupabase().rpc("upsert_meal_type_catalog", {
@@ -334,15 +420,95 @@ export async function saveMealTypeCatalog({ id = null, name, description = "", u
   return ensure(retry.data, retry.error);
 }
 
-export async function saveWorkSection({ id = null, name, headcount = 0, leaderId = null, active = true }) {
+export async function saveWorkSection({ id = null, name, headcount = 0, leaderId = null, active = true, areaType = "campo", mealTypeIds = null }) {
   const { data, error } = await requireSupabase().rpc("upsert_work_section", {
+    p_id: id,
+    p_name: String(name).trim(),
+    p_headcount: Number(headcount ?? 0),
+    p_leader_id: leaderId || null,
+    p_active: Boolean(active),
+    p_area_type: areaType || "campo",
+    p_meal_type_ids: Array.isArray(mealTypeIds) ? mealTypeIds : null
+  });
+  if (!error) return data;
+  if (!isMissingSupplierCompanySchema(error) && !String(error?.message ?? "").includes("p_area_type")) return ensure(data, error);
+  const retry = await requireSupabase().rpc("upsert_work_section", {
     p_id: id,
     p_name: String(name).trim(),
     p_headcount: Number(headcount ?? 0),
     p_leader_id: leaderId || null,
     p_active: Boolean(active)
   });
+  return ensure(retry.data, retry.error);
+}
+
+export async function saveSupplierCompany(input) {
+  const { data, error } = await requireSupabase().rpc("upsert_supplier_company", {
+    p_id: input.id || null,
+    p_legal_name: String(input.legalName ?? "").trim(),
+    p_trade_name: String(input.tradeName ?? "").trim(),
+    p_cnpj: String(input.cnpj ?? "").trim(),
+    p_state_registration: String(input.stateRegistration ?? "").trim(),
+    p_municipal_registration: String(input.municipalRegistration ?? "").trim(),
+    p_address_line: String(input.addressLine ?? "").trim(),
+    p_city: String(input.city ?? "").trim(),
+    p_state: String(input.state ?? "").trim(),
+    p_zip_code: String(input.zipCode ?? "").trim(),
+    p_phone: String(input.phone ?? "").trim(),
+    p_email: String(input.email ?? "").trim(),
+    p_contact_name: String(input.contactName ?? "").trim(),
+    p_bank_details: String(input.bankDetails ?? "").trim(),
+    p_notes: String(input.notes ?? "").trim(),
+    p_active: input.active !== false
+  });
   return ensure(data, error);
+}
+
+export async function saveSupplierMealTypeLink({ supplierCompanyId, mealTypeId, active = true, unitPrice = null, notes = "" }) {
+  const { data, error } = await requireSupabase().rpc("upsert_supplier_meal_type", {
+    p_supplier_company_id: supplierCompanyId,
+    p_meal_type_id: mealTypeId,
+    p_active: Boolean(active),
+    p_unit_price: unitPrice === "" || unitPrice === null || unitPrice === undefined ? null : Number(unitPrice),
+    p_notes: String(notes ?? "").trim()
+  });
+  return ensure(data, error);
+}
+
+export async function saveSupplierCompanyUser({ supplierCompanyId, userId, active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_supplier_company_user", {
+    p_supplier_company_id: supplierCompanyId,
+    p_user_id: userId,
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
+export async function createAdminManagedUser({ email, password, name, role, supplierCompanyId = null, team = "", active = true }) {
+  const { data, error } = await requireSupabase().functions.invoke("admin-create-user", {
+    body: {
+      email: String(email ?? "").trim(),
+      password,
+      name: String(name ?? "").trim(),
+      role,
+      supplierCompanyId,
+      team: String(team ?? "").trim(),
+      active: Boolean(active)
+    }
+  });
+  if (data?.error) throw new Error(data.error);
+  if (error) {
+    const response = error.context;
+    if (response?.json) {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {}
+      if (payload?.error) throw new Error(payload.error);
+    }
+    throw error;
+  }
+  return data;
 }
 
 export async function updateDefaultMealUnitPrice(unitPrice) {
@@ -399,12 +565,19 @@ export async function updateMealRequest(requestId, input) {
   return ensure(retry.data, retry.error);
 }
 
-export async function sendDailyConsolidation(mealDate, supplierId) {
+export async function sendDailyConsolidation(mealDate, supplierCompanyId, supplierUserId = null) {
   const { data, error } = await requireSupabase().rpc("send_consolidation", {
     p_meal_date: mealDate,
-    p_supplier_id: supplierId
+    p_supplier_company_id: supplierCompanyId,
+    p_supplier_user_id: supplierUserId
   });
-  return ensure(data, error);
+  if (!error) return data;
+  if (!isMissingSupplierCompanySchema(error) && !String(error?.message ?? "").includes("p_supplier_company_id")) return ensure(data, error);
+  const retry = await requireSupabase().rpc("send_consolidation", {
+    p_meal_date: mealDate,
+    p_supplier_id: supplierCompanyId
+  });
+  return ensure(retry.data, retry.error);
 }
 
 export async function confirmSupplierStep(consolidationId, step) {
@@ -495,6 +668,8 @@ export function subscribeToChanges(onChange) {
     .on("postgres_changes", { event: "*", schema: "public", table: "work_sections" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "daily_reports" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "meal_types" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "supplier_companies" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "supplier_meal_types" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onChange)
     .subscribe();
 }

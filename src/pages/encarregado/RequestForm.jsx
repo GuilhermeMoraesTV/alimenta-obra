@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getActiveWorkSections } from "../../services/store-v2.js";
+import { getActiveWorkSections, getSuppliersForMeal, mealCategoryLabel } from "../../services/store-v2.js";
 import { Field, Icon, SectionTitle, inputClass, outlineButtonClass, panelClass, primaryButtonClass } from "./shared.jsx";
 
 const ticketPanelClass = "overflow-hidden rounded-[18px] border border-stone-200 bg-white shadow-[0_12px_30px_rgba(25,27,24,.06)]";
@@ -21,6 +21,7 @@ export function RequestForm({ icon, requestError = "", state, user }) {
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const currentMeal = state.mealTypes.find((meal) => meal.id === mealTypeId) ?? state.mealTypes[0];
   const sections = getActiveWorkSections(state, user.id);
+  const suppliers = currentMeal ? getSuppliersForMeal(state, currentMeal.id, { includeInactive: false }) : [];
   const fallbackLocationId = currentMeal?.locations?.[0]?.id ?? "";
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export function RequestForm({ icon, requestError = "", state, user }) {
             <label className="grid cursor-pointer grid-cols-[34px_minmax(0,1fr)_18px] items-start gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-200 bg-white p-3 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50" key={meal.id}>
               <input className="sr-only" type="radio" name="mealTypeId" value={meal.id} checked={mealTypeId === meal.id} onChange={() => setMealTypeId(meal.id)} />
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-stone-100 text-orange-700"><Icon icon={icon} name={index === 0 ? "package" : "utensils"} size={20} /></span>
-              <span className="min-w-0"><span className="block font-black text-stone-950">{meal.label}</span><span className="mt-1 block text-xs font-semibold text-stone-500">{meal.description || "Sem composicao cadastrada"}</span></span>
+              <span className="min-w-0"><span className="block font-black text-stone-950">{meal.label}</span><span className="mt-1 block text-xs font-semibold text-stone-500">{mealCategoryLabel(meal.category)} - {meal.description || "Sem composicao cadastrada"}</span></span>
               <span className="mt-1 h-4 w-4 rounded-full border border-stone-300 bg-white shadow-inner" />
             </label>
           ))}
@@ -77,6 +78,15 @@ export function RequestForm({ icon, requestError = "", state, user }) {
           </Field>
           <Field id="request-leader" label="Responsavel"><input className={`${inputClass} bg-stone-50 text-stone-500`} id="request-leader" value={user.name} disabled readOnly /></Field>
         </div>
+        <div className="mt-3">
+          <Field id="request-supplier" label="Fornecedor">
+            <select className={inputClass} id="request-supplier" name="supplierCompanyId" required>
+              {suppliers.length
+                ? suppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.tradeName || supplier.legalName}</option>)
+                : <option value="">Nenhum fornecedor ativo para essa refeicao</option>}
+            </select>
+          </Field>
+        </div>
         {!sections.length ? (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
             Nenhuma equipe/trecho esta vinculada ao seu usuario. Peça ao admin para configurar antes de enviar pedidos.
@@ -89,7 +99,7 @@ export function RequestForm({ icon, requestError = "", state, user }) {
         <div className="inline-flex items-center gap-2 text-xs font-bold text-white/65"><Icon icon={icon} name="clock" size={16} />Limite: {state.settings.cutoffTime} do dia anterior</div>
         <div className="grid grid-cols-2 gap-2">
           <button className={`${outlineButtonClass} border-white/15 bg-white/10 text-white hover:border-white/30 hover:bg-white/15`} type="submit" name="status" value="rascunho">Salvar rascunho</button>
-          <button className={primaryButtonClass} type="submit" name="status" value="enviado" disabled={!sections.length}>Enviar pedido <Icon icon={icon} name="arrow" size={16} /></button>
+          <button className={primaryButtonClass} type="submit" name="status" value="enviado" disabled={!sections.length || !suppliers.length}>Enviar pedido <Icon icon={icon} name="arrow" size={16} /></button>
         </div>
       </div>
     </form>

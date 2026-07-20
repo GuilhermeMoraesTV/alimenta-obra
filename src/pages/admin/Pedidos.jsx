@@ -1,6 +1,7 @@
 import React from "react";
 import { RequestCard } from "../encarregado/RequestCard.jsx";
 import { Icon, primaryButtonClass } from "../encarregado/shared.jsx";
+import { requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 import { AdminFilterMenu, AdminReceiptHeader, ExportButtons, getUserName } from "./shared.jsx";
 import { DailyBlockCard, dailyBlockStyles, groupRequestsByDate } from "./DailyBlock.jsx";
 
@@ -142,7 +143,7 @@ function AdminRequestCard(props) {
   const { formatDateTime, request, state } = props;
   return (
     <article className="admin-request-shell">
-      <div className="admin-request-owner">Encarregado <strong>{getUserName(state, request.leaderId)}</strong><span>Pedido em {formatDateTime(request.createdAt)}</span></div>
+      <div className="admin-request-owner">{requestOriginLabel(request)} <strong>{requestResponsibleName(state, request)}</strong><span>Pedido em {formatDateTime(request.createdAt)}</span></div>
       <RequestCard {...props} request={request} compact />
       {request.status === "enviado" ? <button className="btn outline small" type="button" data-send-request-date={request.date}>Enviar pedidos de {props.formatDate(request.date)} ao fornecedor</button> : null}
     </article>
@@ -174,6 +175,7 @@ export function Pedidos(props) {
           description={waitingCount ? `${waitingCount} aguardando envio ao fornecedor` : "Fila operacional atualizada"}
           actions={(
             <>
+              <button className="btn primary small" type="button" data-open-admin-order><Icon icon={icon} name="plus" size={14} />Fazer pedido</button>
               <AdminFilterMenu icon={icon}>
                 <input type="date" defaultValue={date} data-filter-date aria-label="Filtrar por data" />
                 <select defaultValue={leader} data-filter-leader aria-label="Filtrar encarregado"><option value="">Todos</option>{state.users.map((user) => <option value={user.id} key={user.id}>{user.name}</option>)}</select>

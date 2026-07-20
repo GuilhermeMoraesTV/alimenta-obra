@@ -1,5 +1,6 @@
 import React from "react";
-import { Icon, getUserName, statusLabel } from "./shared.jsx";
+import { getActualQuantity, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
+import { Icon, statusLabel } from "./shared.jsx";
 
 export const supplierDailyBlockStyles = `
   .supplier-page .supplier-daily-block-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: start; gap: .75rem; }
@@ -52,7 +53,8 @@ export function SupplierDailyBlockCard(props) {
     return Number.isFinite(itemCreatedAt) && itemCreatedAt < createdAt;
   });
   const byMeal = Object.entries(summary.byMeal);
-  const leadersCount = new Set(summary.rows.map((request) => request.leaderId)).size;
+  const consumedTotal = summary.rows.reduce((sum, request) => sum + getActualQuantity(props.state, consolidation.id, request), 0);
+  const leadersCount = new Set(summary.rows.map((request) => request.leaderId || request.createdBy)).size;
   const sectionsCount = new Set(summary.rows.map((request) => request.teamId || request.sectionName || request.location)).size;
   const updatedRows = consolidation.sentAt
     ? summary.rows.filter((request) => request.updatedAt && new Date(request.updatedAt) > new Date(consolidation.sentAt))
@@ -68,7 +70,7 @@ export function SupplierDailyBlockCard(props) {
             <h2>{formatDate(consolidation.date)}</h2>
             <p>{summary.rows.length} pedidos - {leadersCount} encarregados - {sectionsCount} equipes</p>
           </div>
-          <div className="supplier-daily-block-total"><strong>{summary.total}</strong><span>refeicoes</span></div>
+          <div className="supplier-daily-block-total"><strong>{summary.total}</strong><span>solicitadas</span></div>
         </div>
         {isExtra ? <span className="supplier-daily-extra-chip"><Icon icon={icon} name="plus" size={12} />Pedido extra da data</span> : null}
         <div className="supplier-daily-food-summary">
@@ -79,10 +81,10 @@ export function SupplierDailyBlockCard(props) {
         {summary.rows.map((request) => (
           <div className="supplier-daily-request-row" key={request.id}>
             <div className="supplier-daily-request-title">
-              <strong>{getUserName(props.state, request.leaderId)}</strong>
-              <small>{request.mealType} - {request.sectionName || request.location}</small>
+              <strong>{requestResponsibleName(props.state, request)}</strong>
+              <small>{requestOriginLabel(request)} - {request.mealType} - {request.sectionName || request.location}</small>
             </div>
-            <div className="supplier-daily-request-qty"><strong>{request.quantity}</strong><small>ref.</small></div>
+            <div className="supplier-daily-request-qty"><strong>{request.quantity}</strong><small>sol.</small><small>{getActualQuantity(props.state, consolidation.id, request)} real</small></div>
           </div>
         ))}
       </div>
@@ -93,7 +95,7 @@ export function SupplierDailyBlockCard(props) {
             <div><strong>Pedido atualizado pelo Admin</strong><span>Confira quantidades e itens antes de confirmar recebimento.</span></div>
           </div>
         ) : null}
-        <div className="supplier-daily-total-line"><span>{isExtra ? "Total do extra" : "Total do dia"}</span><strong>{summary.total} refeicoes</strong></div>
+        <div className="supplier-daily-total-line"><span>{isExtra ? "Total do extra" : "Total do dia"}</span><strong>{summary.total} solicitadas - {consumedTotal} consumidas</strong></div>
         <div className="supplier-daily-actions">
           <button className="btn outline small" data-supplier-select={consolidation.id}>Detalhes</button>
           {next ? <button className="btn primary small" data-step={next.step} data-id={consolidation.id}><Icon icon={icon} name={next.iconName ?? "check"} size={15} />{next.label}</button> : <span className={`badge ${consolidation.status}`}>{statusLabel(STATUS_LABEL, consolidation.status)}</span>}

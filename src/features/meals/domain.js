@@ -1,6 +1,8 @@
+import { requestUnitPrice as resolveRequestUnitPrice } from "../../services/store-v2.js";
+
 export function createMealDomain({ getState, getConsolidationSummary }) {
-  function requestUnitPrice() {
-    return Number(getState().settings.defaultMealUnitPrice ?? 0);
+  function requestUnitPrice(request = {}) {
+    return resolveRequestUnitPrice(getState(), request);
   }
 
   function requestValue(request) {

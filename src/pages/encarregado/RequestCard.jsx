@@ -1,10 +1,14 @@
 import React from "react";
+import { getActualQuantity, getSupplierCompanyName, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 import { Icon, iconButtonClass, statusBadgeClass } from "./shared.jsx";
 
 export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, request, requestMealDescription, state, STATUS_LABEL, compact = false }) {
   const editable = canEditRequest(state, request);
   const composition = requestMealDescription(request);
   const operationalLabel = request.sectionName || "Equipe nao informada";
+  const actual = getActualQuantity(state, "", request);
+  const supplierName = getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId);
+  const responsible = requestResponsibleName(state, request);
 
   return (
     <article className={`${compact ? "rounded-r-2xl rounded-l-md border-l-2 border-dashed bg-[#fffefa] p-3" : "rounded-2xl bg-white p-3 sm:p-4"} border border-stone-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(34,29,24,.12)]`}>
@@ -20,12 +24,15 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold text-stone-500">
             <span className="inline-flex items-center gap-1"><Icon icon={icon} name="clock" size={14} />{formatDate(request.date)}</span>
             <span className="inline-flex min-w-0 items-center gap-1"><Icon icon={icon} name="users" size={14} />{operationalLabel}</span>
+            <span className="inline-flex min-w-0 items-center gap-1"><Icon icon={icon} name="clipboard" size={14} />{requestOriginLabel(request)}: {responsible}</span>
+            <span className="inline-flex min-w-0 items-center gap-1"><Icon icon={icon} name="package" size={14} />{supplierName}</span>
           </div>
           {composition ? <div className={`${compact ? "border border-dashed border-stone-200 bg-stone-50/70" : "bg-stone-50"} mt-2 rounded-lg px-3 py-2 text-xs font-semibold text-stone-600`}>{composition}</div> : null}
         </div>
         <div className="text-right">
           <strong className={`${compact ? "text-xl" : "text-2xl"} block font-black leading-none text-stone-950`}>{request.quantity}</strong>
-          <span className="text-[10px] font-black uppercase text-stone-500">refeições</span>
+          <span className="text-[10px] font-black uppercase text-stone-500">solicitadas</span>
+          <small className="mt-1 block text-[10px] font-black uppercase text-emerald-700">{actual} consumidas</small>
         </div>
       </div>
       <div className={`${compact ? "mt-2 pt-2" : "mt-3 pt-3"} flex flex-col gap-2 border-t border-stone-100 text-xs font-bold text-stone-500 sm:flex-row sm:items-center sm:justify-between`}>
@@ -42,3 +49,4 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
     </article>
   );
 }
+

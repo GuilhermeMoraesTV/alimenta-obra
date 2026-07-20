@@ -195,16 +195,17 @@ function requestHeadcount(state, request) {
   return Number(request.sectionHeadcount ?? request.headcount ?? state.workSections?.find((section) => section.id === request.teamId)?.headcount ?? 0);
 }
 
-function requestUnitPrice(state) {
-  return Number(state.settings?.defaultMealUnitPrice ?? 0);
+function requestUnitPrice(state, request) {
+  const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === request.supplierCompanyId && item.mealTypeId === request.mealTypeId);
+  return Number(link?.unitPrice ?? request.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }
 
 function summarizeRows(state, rows, statusLabels = {}) {
-  const unitPrice = requestUnitPrice(state);
   const summary = rows.reduce((acc, request) => {
     const requested = Number(request.quantity ?? 0);
     const consumed = actualQuantity(state, request);
     const effective = requestHeadcount(state, request);
+    const unitPrice = requestUnitPrice(state, request);
     const value = consumed * unitPrice;
     const meal = request.mealType || "Sem tipo";
     const section = request.sectionName || request.location || "Sem equipe";
@@ -508,6 +509,23 @@ export function Relatorios(props) {
               </select>
               <input type="date" value={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} onChange={() => {}} />
               <input type="date" value={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} onChange={() => {}} />
+              <select data-report-supplier value={currentFilter.supplierCompanyId || ""} onChange={() => {}} aria-label="Fornecedor">
+                <option value="">Todos fornecedores</option>
+                {(state.supplierCompanies ?? []).map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.tradeName || supplier.legalName}</option>)}
+              </select>
+              <select data-report-meal value={currentFilter.mealTypeId || ""} onChange={() => {}} aria-label="Tipo de refeicao">
+                <option value="">Todas refeicoes</option>
+                {(state.mealCatalog ?? state.mealTypes ?? []).map((meal) => <option value={meal.id} key={meal.id}>{meal.label}</option>)}
+              </select>
+              <select data-report-team value={currentFilter.teamId || ""} onChange={() => {}} aria-label="Efetivo ou local">
+                <option value="">Todos locais</option>
+                {(state.workSections ?? []).map((section) => <option value={section.id} key={section.id}>{section.name}</option>)}
+              </select>
+              <select data-report-origin value={currentFilter.originRole || ""} onChange={() => {}} aria-label="Origem do pedido">
+                <option value="">Todas origens</option>
+                <option value="admin">Admin</option>
+                <option value="encarregado">Encarregado</option>
+              </select>
             </AdminFilterMenu>
 
             <button className="btn primary small" type="button" data-export-kpi><Icon icon={icon} name="chart" size={14} />KPI PDF</button>
