@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { countStatus, initials, nextSupplierStep, roleName, sumQty, totalsByMeal } from "../src/features/operations/metrics.js";
-import { getActiveWorkSections, getConsolidationForDate, getSupplierCompanies, getSuppliersForMeal, getActualQuantity, requestOriginLabel, requestUnitPrice } from "../src/services/store-v2.js";
+import { getActiveWorkSections, getConsolidationForDate, getMealsForSection, getSupplierCompanies, getSuppliersForMeal, getActualQuantity, requestOriginLabel, requestResponsibleName, requestUnitPrice } from "../src/services/store-v2.js";
 
 const rows = [
   { id: "r1", mealType: "Almoco", quantity: 10, status: "enviado" },
@@ -54,12 +54,27 @@ const supplierState = {
 };
 
 assert.deepEqual(getSupplierCompanies(supplierState, { includeInactive: false }).map((item) => item.id), ["sc1"]);
+assert.deepEqual(getSupplierCompanies(supplierState, { includeInactive: true }).map((item) => item.id), ["sc1", "sc2"]);
 assert.deepEqual(getSuppliersForMeal(supplierState, "m1", { includeInactive: false }).map((item) => item.id), ["sc1"]);
 assert.deepEqual(getSuppliersForMeal(supplierState, "m2", { includeInactive: false }).map((item) => item.id), []);
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: null }), "Admin");
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: "u1" }), "Encarregado");
 assert.equal(requestUnitPrice(supplierState, { supplierCompanyId: "sc1", mealTypeId: "m1", unitPrice: 20 }), 21);
 assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m1", quantity: 100 }), 7);
+assert.deepEqual(getMealsForSection({
+  mealTypes: supplierState.mealTypes,
+  sectionMealTypes: [
+    { sectionId: "s1", mealTypeId: "m1", active: true },
+    { sectionId: "s1", mealTypeId: "m2", active: false }
+  ]
+}, "s1").map((item) => item.id), ["m1"]);
+assert.deepEqual(getMealsForSection({
+  mealTypes: supplierState.mealTypes,
+  sectionMealTypes: []
+}, "s9").map((item) => item.id), ["m1", "m2"]);
+assert.equal(requestResponsibleName({
+  users: [{ id: "admin1", name: "Ana Admin" }, { id: "u1", name: "Lider Campo" }]
+}, { originRole: "admin", leaderId: null, createdBy: "admin1" }), "Ana Admin");
 
 const blockState = {
   ...workState,

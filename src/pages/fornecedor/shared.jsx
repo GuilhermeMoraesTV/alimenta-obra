@@ -1,4 +1,5 @@
 import React from "react";
+import { getActualQuantity, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 
 export function Icon({ icon, name, size = 16 }) {
   return <span className="inline-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: icon(name, size) }} />;
@@ -140,13 +141,22 @@ export function OriginRequestCards({ formatDate, formatDateTime, rows, state, ST
   if (!rows.length) return <div className="empty">Nenhum pedido de origem encontrado.</div>;
   return (
     <div className="supplier-origin-list">
-      {rows.map((request) => (
-        <article className="supplier-origin-card" key={request.id}>
-          <div><strong>{request.mealType}</strong><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></div>
-          <p>{getUserName(state, request.leaderId)} - {request.sectionName || request.location}</p>
-          <footer><span>{formatDate(request.date)}</span><b>{request.quantity} ref.</b><small>{formatDateTime(request.updatedAt)}</small></footer>
-        </article>
-      ))}
+      {rows.map((request) => {
+        const actual = getActualQuantity(state, "", request);
+        return (
+          <article className="supplier-origin-card" key={request.id}>
+            <div><strong>{request.mealType}</strong><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></div>
+            <p>{requestOriginLabel(request)} - {requestResponsibleName(state, request)} - {request.sectionName || request.location}</p>
+            <footer>
+              <span>{formatDate(request.date)}</span>
+              <span>{mealCategoryLabel(request.mealCategory)}</span>
+              <b>{request.quantity} ped.</b>
+              <b>{actual} cons.</b>
+              <small>{formatDateTime(request.updatedAt)}</small>
+            </footer>
+          </article>
+        );
+      })}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { getActualQuantity, getSupplierCompanyName, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
+import { getActualQuantity, getSupplierCompanyName, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 import { Icon, iconButtonClass, statusBadgeClass } from "./shared.jsx";
 
 export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, request, requestMealDescription, state, STATUS_LABEL, compact = false }) {
@@ -9,6 +9,7 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
   const actual = getActualQuantity(state, "", request);
   const supplierName = getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId);
   const responsible = requestResponsibleName(state, request);
+  const category = mealCategoryLabel(request.mealCategory);
 
   return (
     <article className={`${compact ? "rounded-r-2xl rounded-l-md border-l-2 border-dashed bg-[#fffefa] p-3" : "rounded-2xl bg-white p-3 sm:p-4"} border border-stone-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(34,29,24,.12)]`}>
@@ -20,6 +21,7 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
           <div className="flex flex-wrap items-center gap-2">
             <strong className="min-w-0 text-[15px] text-stone-950">{request.mealType}</strong>
             <span className={statusBadgeClass(request.status)}>{STATUS_LABEL[request.status] ?? request.status}</span>
+            <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-black uppercase text-stone-500">{category}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold text-stone-500">
             <span className="inline-flex items-center gap-1"><Icon icon={icon} name="clock" size={14} />{formatDate(request.date)}</span>
