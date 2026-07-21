@@ -87,6 +87,7 @@ const baseAdminScreenStyles = `
   .admin-page .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
   .admin-page .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
   .admin-page .badge.cancelado { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+  .admin-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .admin-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .admin-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
   .admin-page .badge.saiu_entrega { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
@@ -147,7 +148,10 @@ function FinanceMetric({ accent = false, icon, iconName, label, value, hint }) {
 
 export function Financeiro(props) {
   const { formatDate, icon, money, requestValue, state, sumQty, STATUS_LABEL } = props;
-  const sourceRows = state.requests.filter((request) => request.status !== "cancelado");
+  const cancelledConfirmedRequestIds = new Set((state.consolidations ?? [])
+    .filter((consolidation) => consolidation.status === "cancelado_confirmado")
+    .flatMap((consolidation) => consolidation.requestIds ?? []));
+  const sourceRows = state.requests.filter((request) => request.status !== "cancelado" && !cancelledConfirmedRequestIds.has(request.id));
   const month = state.settings.defaultMealDate.slice(0, 7);
   const rows = sourceRows.filter((request) => request.date.startsWith(month));
   const delivered = rows.filter((request) => request.status === "entregue");

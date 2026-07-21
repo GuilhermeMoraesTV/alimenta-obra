@@ -28,6 +28,7 @@ import {
   saveUiState
 } from "./services/store-v2.js";
 import {
+  cancelConfirmedConsolidation,
   changeRequestStatus,
   confirmSupplierStep,
   createAccessInvite,
@@ -80,6 +81,7 @@ let settingsSupplierModalId = null;
 let settingsMealModalId = null;
 let settingsWorkSectionModalId = null;
 let pendingCancelRequestId = null;
+let pendingConfirmedCancelConsolidationId = null;
 let operationNotice = null;
 let requestFormError = "";
 let adminOrderFormOpen = false;
@@ -524,9 +526,19 @@ function renderActualsModal() {
   return `<div class="${modalBackdropClass}" data-close-actuals-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="actuals-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Consumo real</span><h2 class="${modalTitleClass}" id="actuals-title">Registrar saida do bloco</h2><p class="mt-1 text-sm text-stone-500">Informe o consumido por equipe/trecho e alimentacao antes de concluir a saida.</p></div><button class="${modalCloseClass}" type="button" data-close-actuals-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="actuals"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="grid gap-2">${rows.map((row, index) => `<div class="grid gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_110px] sm:items-end"><input type="hidden" name="teamId-${index}" value="${row.teamId}" /><input type="hidden" name="mealTypeId-${index}" value="${row.mealTypeId}" /><div><span class="${modalLabelClass}">Equipe / trecho</span><strong class="block text-sm">${escapeHtml(row.teamName)}</strong><small class="text-xs font-bold text-stone-500">Solicitado ${row.requested} - efetivo ${row.headcount || "-"}</small></div><div><span class="${modalLabelClass}">Alimentacao</span><strong class="block text-sm">${escapeHtml(row.mealType)}</strong></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="actual-${index}">Consumido</label><input class="${modalInputClass}" id="actual-${index}" name="quantity-${index}" type="number" min="0" value="${row.actual}" required /></div></div>`).join("")}</div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-actuals-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar e registrar saida</button></footer></form></section></div>`;
 }
 
+function renderConfirmedCancelModal() {
+  const consolidation = state.consolidations.find((item) => item.id === pendingConfirmedCancelConsolidationId);
+  const user = getActiveUser(state);
+  if (!consolidation || user?.role !== "admin") return "";
+  const summary = getConsolidationSummary(state, consolidation);
+  return `<div class="${modalBackdropClass}" data-close-confirmed-cancel-modal><section class="${modalPanelClass} max-w-lg" role="dialog" aria-modal="true" aria-labelledby="confirmed-cancel-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Cancelamento pos-confirmacao</span><h2 class="${modalTitleClass}" id="confirmed-cancel-title">Cancelar pedido confirmado?</h2><p class="mt-1 text-sm text-stone-500">O pedido original continua no historico. O consumo real deste bloco sera registrado como zero.</p></div><button class="${modalCloseClass}" type="button" data-close-confirmed-cancel-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="confirmed-cancel"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800"><div class="flex items-center justify-between gap-3"><span>Pedido original</span><strong>${summary.total} refeicoes</strong></div><div class="mt-1 flex items-center justify-between gap-3"><span>Consumo real</span><strong>0 refeicoes</strong></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="confirmed-cancel-reason">Motivo obrigatorio</label><textarea class="${modalInputClass} min-h-24 py-2" id="confirmed-cancel-reason" name="reason" minlength="5" required placeholder="Ex.: obra paralisada, equipe dispensada, pedido feito em duplicidade"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-confirmed-cancel-modal>Voltar</button><button class="${modalButtonDangerClass}" type="submit">Cancelar apos confirmacao</button></footer></form></section></div>`;
+}
+
 function renderOperationModal() {
   const actualsModal = renderActualsModal();
   if (actualsModal) return actualsModal;
+  const confirmedCancelModal = renderConfirmedCancelModal();
+  if (confirmedCancelModal) return confirmedCancelModal;
   const request = state.requests.find((item) => item.id === pendingCancelRequestId);
   if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar cancelamento</span><h2 class="${modalTitleClass} mt-1">Cancelar este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeições para ${formatDate(request.date)} será cancelado e não entrará no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
   if (operationNotice) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-orange-700">${icon("clipboard", 23)}</span><span class="${modalKickerClass} mt-3 block">Operacao registrada</span><h2 class="${modalTitleClass} mt-1">${operationNotice.title}</h2><p class="mt-2 text-sm text-stone-500">${operationNotice.message}</p><button class="${modalButtonPrimaryClass} mt-4 w-full" data-dismiss-operation>Continuar</button></section></div>`;
@@ -535,9 +547,12 @@ function renderOperationModal() {
 
 function renderFinanceiro(mode) {
   const isSupplier = mode === "fornecedor";
+  const cancelledConfirmedRequestIds = new Set(state.consolidations
+    .filter((consolidation) => consolidation.status === "cancelado_confirmado")
+    .flatMap((consolidation) => consolidation.requestIds ?? []));
   const sourceRows = isSupplier
-    ? supplierConsolidations().flatMap((consolidation) => getConsolidationSummary(state, consolidation).rows)
-    : state.requests.filter((request) => request.status !== "cancelado");
+    ? supplierConsolidations().filter((consolidation) => consolidation.status !== "cancelado_confirmado").flatMap((consolidation) => getConsolidationSummary(state, consolidation).rows)
+    : state.requests.filter((request) => request.status !== "cancelado" && !cancelledConfirmedRequestIds.has(request.id));
   const month = state.settings.defaultMealDate.slice(0, 7);
   const rows = sourceRows.filter((request) => request.date.startsWith(month));
   const delivered = rows.filter((request) => request.status === "entregue");
@@ -1001,7 +1016,7 @@ function renderSupplierMetric(label, value, detail, accent = "") {
 
 function renderFornecedor() {
   const rows = supplierConsolidations();
-  const activeRows = rows.filter((item) => !["entregue", "rascunho"].includes(item.status));
+  const activeRows = rows.filter((item) => !["entregue", "rascunho", "cancelado_confirmado"].includes(item.status));
   const priority = [...activeRows].sort((a, b) => {
     const rank = { enviado: 0, confirmado: 1, producao: 2, saiu_entrega: 3 };
     return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || new Date(a.date) - new Date(b.date);
@@ -1056,12 +1071,12 @@ function renderSupplierQueueRow(consolidation) {
 function renderSupplierOrders() {
   const rows = supplierConsolidations().filter((item) => {
     const matchesStatus = supplierOrderStatus === "todos"
-      || (supplierOrderStatus === "ativos" ? !["entregue", "rascunho"].includes(item.status) : item.status === supplierOrderStatus);
+      || (supplierOrderStatus === "ativos" ? !["entregue", "rascunho", "cancelado_confirmado"].includes(item.status) : item.status === supplierOrderStatus);
     return matchesStatus && (!supplierOrderDate || item.date === supplierOrderDate);
   });
   const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? rows[0] ?? null;
   return `<section class="supplier-workspace">
-    ${topbar("Pedidos", "Fila de produção, entrega e acompanhamento", `<div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${supplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${supplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${supplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${supplierOrderStatus === "confirmado" ? "selected" : ""}>Em produção</option><option value="saiu_entrega" ${supplierOrderStatus === "saiu_entrega" ? "selected" : ""}>Em rota</option><option value="entregue" ${supplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>`)}
+    ${topbar("Pedidos", "Fila de produção, entrega e acompanhamento", `<div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${supplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${supplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${supplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${supplierOrderStatus === "confirmado" ? "selected" : ""}>Em produção</option><option value="saiu_entrega" ${supplierOrderStatus === "saiu_entrega" ? "selected" : ""}>Em rota</option><option value="entregue" ${supplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option><option value="cancelado_confirmado" ${supplierOrderStatus === "cancelado_confirmado" ? "selected" : ""}>Cancelados apos confirmacao</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>`)}
     <div class="supplier-orders-layout"><div class="supplier-order-list">${rows.map((item) => renderSupplierOrderListItem(item, item.id === selected?.id)).join("") || `<div class="empty">Nenhum pedido encontrado.</div>`}</div>${selected ? renderSupplierOrderDetail(selected) : `<div class="empty supplier-detail-empty">Selecione um pedido para ver os detalhes.</div>`}</div>
   </section>`;
 }
@@ -1250,14 +1265,16 @@ function renderConsolidationTimeline(consolidation) {
     ["saiu_entrega", "Saida para entrega registrada"],
     ["entregue", "Entrega concluida"]
   ];
+  if (consolidation.status === "cancelado_confirmado") steps.push(["cancelado_confirmado", "Cancelado apos confirmacao"]);
   return `
     <div class="timeline">
       ${steps.map(([step, label]) => {
         const confirmation = consolidation.confirmations.find((item) => item.step === step);
+        const cancelled = step === "cancelado_confirmado" && consolidation.status === "cancelado_confirmado";
         return `
           <div class="timeline-item">
-            <div class="timeline-dot" style="background:${confirmation ? "var(--orange)" : "var(--line)"}"></div>
-            <div class="timeline-body"><strong>${label}</strong><br>${confirmation ? `${getUserName(state, confirmation.userId)} · ${formatDateTime(confirmation.at)}` : "Aguardando"}</div>
+            <div class="timeline-dot" style="background:${confirmation || cancelled ? "var(--orange)" : "var(--line)"}"></div>
+            <div class="timeline-body"><strong>${label}</strong><br>${confirmation ? `${getUserName(state, confirmation.userId)} · ${formatDateTime(confirmation.at)}` : cancelled ? formatDateTime(consolidation.updatedAt) : "Aguardando"}</div>
           </div>`;
       }).join("")}
     </div>`;
@@ -1376,6 +1393,7 @@ function bindEvents() {
   root.querySelectorAll("[data-dismiss-operation]").forEach((button) => {
     button.addEventListener("click", () => {
       pendingCancelRequestId = null;
+      pendingConfirmedCancelConsolidationId = null;
       operationNotice = null;
       render();
     });
@@ -1400,6 +1418,19 @@ function bindEvents() {
   root.querySelectorAll("[data-send-request-date]").forEach((button) => {
     button.addEventListener("click", () => sendConsolidationForDate(button.dataset.sendRequestDate));
   });
+  root.querySelectorAll("[data-cancel-confirmed-consolidation]").forEach((button) => {
+    button.addEventListener("click", () => {
+      pendingConfirmedCancelConsolidationId = button.dataset.cancelConfirmedConsolidation;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-confirmed-cancel-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      pendingConfirmedCancelConsolidationId = null;
+      render();
+    });
+  });
+  root.querySelector("[data-form='confirmed-cancel']")?.addEventListener("submit", handleConfirmedCancelSubmit);
   root.querySelectorAll("[data-close-edit-modal]").forEach((button) => {
     button.addEventListener("click", () => {
       editingRequestId = null;
@@ -2163,6 +2194,31 @@ async function cancelRequest(id, confirmed = false) {
   }
 }
 
+async function handleConfirmedCancelSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const consolidationId = String(form.get("consolidationId") ?? "");
+  const reason = String(form.get("reason") ?? "").trim();
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    if (reason.length < 5) throw new Error("Informe um motivo para o cancelamento.");
+    const rows = await cancelConfirmedConsolidation(consolidationId, reason);
+    pendingConfirmedCancelConsolidationId = null;
+    await refreshData();
+    operationNotice = {
+      title: "Pedido cancelado apos confirmacao",
+      message: `Historico preservado e consumo real zerado${Number(rows ?? 0) ? ` em ${rows} linhas` : ""}.`
+    };
+    render();
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel cancelar apos confirmacao: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function duplicateForEdit(id) {
   const request = state.requests.find((item) => item.id === id);
   if (!request) return;
@@ -2441,7 +2497,12 @@ async function handleActualsSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
-    await saveConsolidationActuals(consolidationId, actuals);
+    const expectedRows = actuals.filter((item) => item.team_id && item.meal_type_id).length;
+    if (!expectedRows) throw new Error("Nao ha linhas validas para registrar consumo real.");
+    const savedRows = await saveConsolidationActuals(consolidationId, actuals);
+    if (Number(savedRows ?? 0) < expectedRows) {
+      throw new Error("Nem todas as linhas de consumo real foram salvas. Revise equipe e alimentacao antes de concluir.");
+    }
     await confirmSupplierStep(consolidationId, "saiu_entrega");
     pendingActualsConsolidationId = null;
     await refreshData();

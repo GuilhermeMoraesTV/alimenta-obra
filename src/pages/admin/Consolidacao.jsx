@@ -88,6 +88,7 @@ const baseAdminScreenStyles = `
   .admin-page .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
   .admin-page .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
   .admin-page .badge.cancelado { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+  .admin-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .admin-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .admin-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
   .admin-page .badge.saiu_entrega { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
@@ -127,10 +128,27 @@ const consolidacaoStyles = `
   .admin-page .data-panel,
   .admin-page .timeline-panel,
   .admin-page .table-panel { border-radius: 18px; border: 1px solid #ded9d1; background: rgba(255,254,250,.94); padding: 1rem; box-shadow: 0 12px 30px rgba(25,27,24,.055); }
-  .admin-page .consolidated-block { border-radius: 0 1rem 1rem .4rem; border: 1px solid #e4ded4; border-left: 2px dashed #d6d3d1; background: #fffefa; padding: .8rem; box-shadow: 0 1px 2px rgba(0,0,0,.035); }
+  .admin-page .consolidated-summary { display: grid; gap: .65rem; }
+  .admin-page .consolidated-block { display: grid; gap: .4rem; overflow: hidden; border-radius: 0 1rem 1rem .4rem; border: 1px solid #e4ded4; border-left: 2px dashed #d6d3d1; background: #fffefa; padding: .65rem; box-shadow: 0 1px 2px rgba(0,0,0,.035); }
   .admin-page .consolidated-block + .consolidated-block { margin-top: .55rem; }
-  .admin-page .consolidated-description { margin: -.1rem 0 .35rem; color: #78716c; font-size: .78rem; font-weight: 700; }
-  .admin-page .consolidated-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .42rem 0; font-size: .875rem; }
+  .admin-page .consolidated-block-title,
+  .admin-page .consolidated-distribution-head,
+  .admin-page .consolidated-row,
+  .admin-page .consolidated-resume-row { display: grid; grid-template-columns: minmax(0,1fr) 4.5rem; align-items: center; }
+  .admin-page .consolidated-block-title,
+  .admin-page .consolidated-resume-row { color: #1c1917; font-size: .8rem; font-weight: 950; }
+  .admin-page .consolidated-block-title { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
+  .admin-page .consolidated-block-title span { border-radius: 999px; background: #fff7ed; padding: .18rem .5rem; color: #c2410c; font-size: .78rem; }
+  .admin-page .consolidated-distribution-head { display: none; }
+  .admin-page .consolidated-description { color: #78716c; font-size: .78rem; font-weight: 700; }
+  .admin-page .consolidated-distribution { display: grid; gap: .3rem; }
+  .admin-page .consolidated-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-radius: .55rem; background: #fafaf9; padding: .42rem .5rem; font-size: .875rem; }
+  .admin-page .consolidated-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-page .consolidated-resume { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .admin-page .consolidated-resume-row { display: inline-flex; align-items: center; gap: .32rem; border-radius: 999px; border: 1px solid #fed7aa; background: #fff7ed; color: #c2410c; font-size: .72rem; font-weight: 950; }
+  .admin-page .consolidated-resume-row span,
+  .admin-page .consolidated-resume-row strong { min-width: 0; padding: .24rem .44rem; }
+  .admin-page .consolidated-resume-row strong { padding-left: 0; }
   .admin-page .total-line { font-weight: 950; color: #1c1917; }
   .admin-page .timeline { display: grid; gap: .5rem; }
   .admin-page .timeline-item { display: grid; grid-template-columns: 12px minmax(0,1fr); gap: .75rem; border-radius: 0 1rem 1rem .4rem; border: 1px solid #e4ded4; border-left: 2px dashed #d6d3d1; background: #fffefa; padding: .78rem; }
@@ -175,29 +193,70 @@ const consolidacaoStyles = `
   @media (min-width: 1024px) { .admin-page .report-grid { grid-template-columns: minmax(0,1fr) minmax(320px,.42fr); } .admin-page .admin-send-header { grid-template-columns: minmax(0,1fr) auto; } }
 `;
 
+function mealSummaryLabel(request, fallbackMeal) {
+  const category = request?.mealCategory;
+  if (category === "marmita") return "Marmita";
+  if (category === "buffet") return "Buffer";
+  if (category === "janta") return "Janta";
+  return fallbackMeal || "Outro";
+}
+
+function mealDistributionName(state, request) {
+  if (request.mealCategory === "marmita") return getUserName(state, request.leaderId);
+  return request.sectionName || request.location || getUserName(state, request.leaderId);
+}
+
+function mealGroups(rows) {
+  const order = { marmita: 0, buffet: 1, janta: 2, outro: 3 };
+  return Object.values(rows.reduce((acc, request) => {
+    const key = request.mealCategory || request.mealType || "outro";
+    acc[key] ??= { key, label: mealSummaryLabel(request, request.mealType), total: 0, rows: [] };
+    acc[key].total += Number(request.quantity ?? 0);
+    acc[key].rows.push(request);
+    return acc;
+  }, {})).sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
+}
+
 function ConsolidatedSummary({ requestMealDescription, state, summary }) {
   if (!summary.rows.length) return <div className="empty">Sem pedidos recebidos para enviar ao fornecedor.</div>;
+  const groups = mealGroups(summary.rows);
   return (
-    <>
-      {Object.entries(summary.byMeal).map(([meal, data]) => (
-        <div className="consolidated-block" key={meal}>
-          <div className="consolidated-row total-line"><span>{meal}</span><span>{data.total}</span></div>
+    <div className="consolidated-summary">
+      {groups.map((data) => (
+        <div className="consolidated-block" key={data.key}>
+          <div className="consolidated-block-title"><strong>{data.label}</strong><span>{data.total}</span></div>
           {requestMealDescription(data.rows[0]) ? <div className="consolidated-description">{requestMealDescription(data.rows[0])}</div> : null}
-          {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{meal === "Marmita Campo" ? getUserName(state, request.leaderId) : request.location}</span><strong>{request.quantity}</strong></div>)}
+          <div className="consolidated-distribution">
+            {data.rows.map((request) => (
+              <div className="consolidated-row" key={request.id}>
+                <span>{mealDistributionName(state, request)}</span>
+                <strong>{request.quantity}</strong>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
-      <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeições</span></div>
-    </>
+      <div className="consolidated-resume" aria-label="Resumo por refeicao">
+        {groups.map((data) => (
+          <div className="consolidated-resume-row" key={data.key}>
+            <span>{data.label}</span>
+            <strong>{data.total}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function ConsolidationTimeline({ consolidation, formatDateTime, state }) {
   const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou produção"], ["saiu_entrega", "Saída para entrega registrada"], ["entregue", "Entrega concluída"]];
+  if (consolidation.status === "cancelado_confirmado") steps.push(["cancelado_confirmado", "Cancelado apos confirmacao"]);
   return (
     <div className="timeline">
       {steps.map(([step, label]) => {
         const confirmation = consolidation.confirmations.find((item) => item.step === step);
-        return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : "Aguardando"}</div></div>;
+        const cancelled = step === "cancelado_confirmado" && consolidation.status === "cancelado_confirmado";
+        return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation || cancelled ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : cancelled ? formatDateTime(consolidation.updatedAt) : "Aguardando"}</div></div>;
       })}
     </div>
   );

@@ -14,7 +14,7 @@ export function Dashboard(props) {
   const { formatDate, getConsolidationSummary, icon, state, user } = props;
   const rows = supplierConsolidations(state, user);
   const todayKey = localDateKey();
-  const activeRows = rows.filter((item) => item.status !== "rascunho" && !["saiu_entrega", "entregue"].includes(item.status));
+  const activeRows = rows.filter((item) => item.status !== "rascunho" && !["saiu_entrega", "entregue", "cancelado_confirmado"].includes(item.status));
   const totalToday = activeRows.reduce((sum, item) => sum + getConsolidationSummary(state, item).total, 0);
   const waitingCount = supplierStatusCount(rows, "enviado");
   const readyToExitCount = supplierStatusCount(rows, "confirmado") + supplierStatusCount(rows, "producao");

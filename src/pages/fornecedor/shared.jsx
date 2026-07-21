@@ -84,6 +84,7 @@ export function supplierStatusCount(rows, status) {
 }
 
 export function supplierActionLabel(consolidation, nextSupplierStep) {
+  if (consolidation.status === "cancelado_confirmado") return "Cancelado apos confirmacao";
   const next = nextSupplierStep(consolidation.status);
   return next?.label ?? "Entrega concluida";
 }
@@ -103,19 +104,62 @@ export function foodSummary(summary) {
   return Object.entries(summary.byMeal).map(([meal, data]) => `${data.total} ${meal}`).join(" - ");
 }
 
+export function mealCategoryName(category, fallbackMeal = "Outro") {
+  if (category === "marmita") return "Marmita";
+  if (category === "buffet") return "Buffer";
+  if (category === "janta") return "Janta";
+  return fallbackMeal;
+}
+
+export function mealGroups(rows) {
+  const order = { marmita: 0, buffet: 1, janta: 2, outro: 3 };
+  return Object.values(rows.reduce((acc, request) => {
+    const key = request.mealCategory || request.mealType || "outro";
+    acc[key] ??= { key, label: mealCategoryName(request.mealCategory, request.mealType), total: 0, rows: [] };
+    acc[key].total += Number(request.quantity ?? 0);
+    acc[key].rows.push(request);
+    return acc;
+  }, {})).sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
+}
+
+export function mealSummaryLabel(request, fallbackMeal) {
+  const category = request?.mealCategory;
+  return mealCategoryName(category, fallbackMeal);
+}
+
+export function mealDistributionName(state, request) {
+  if (request.mealCategory === "marmita") return requestResponsibleName(state, request);
+  return request.sectionName || request.location || requestResponsibleName(state, request);
+}
+
 export function ConsolidatedSummary({ requestMealDescription, state, summary }) {
   if (!summary.rows.length) return <div className="empty">Sem pedidos recebidos para enviar ao fornecedor.</div>;
+  const groups = mealGroups(summary.rows);
   return (
-    <>
-      {Object.entries(summary.byMeal).map(([meal, data]) => (
-        <div className="consolidated-block" key={meal}>
-          <div className="consolidated-row total-line"><span>{meal}</span><span>{data.total}</span></div>
+    <div className="consolidated-summary">
+      {groups.map((data) => (
+        <div className="consolidated-block" key={data.key}>
+          <div className="consolidated-block-title"><strong>{data.label}</strong><span>{data.total}</span></div>
           {requestMealDescription(data.rows[0]) ? <div className="consolidated-description">{requestMealDescription(data.rows[0])}</div> : null}
-          {data.rows.map((request) => <div className="consolidated-row" key={request.id}><span>{request.sectionName || request.location || getUserName(state, request.leaderId)}</span><strong>{request.quantity}</strong></div>)}
+          <div className="consolidated-distribution">
+            {data.rows.map((request) => (
+              <div className="consolidated-row" key={request.id}>
+                <span>{mealDistributionName(state, request)}</span>
+                <strong>{request.quantity}</strong>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
-      <div className="consolidated-row total-line"><span>Total geral</span><span>{summary.total} refeicoes</span></div>
-    </>
+      <div className="consolidated-resume" aria-label="Resumo por refeicao">
+        {groups.map((data) => (
+          <div className="consolidated-resume-row" key={data.key}>
+            <span>{data.label}</span>
+            <strong>{data.total}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -125,13 +169,15 @@ export function ConsolidationTimeline({ consolidation, formatDateTime, state }) 
     ["enviado", "Enviado ao fornecedor"],
     ["confirmado", "Fornecedor confirmou recebimento"],
     ...(hasLegacyProduction ? [["producao", "Fornecedor confirmou producao"]] : []),
-    ["saiu_entrega", "Saida registrada"]
+    ["saiu_entrega", "Saida registrada"],
+    ...(consolidation.status === "cancelado_confirmado" ? [["cancelado_confirmado", "Cancelado apos confirmacao"]] : [])
   ];
   return (
     <div className="timeline">
       {steps.map(([step, label]) => {
         const confirmation = consolidation.confirmations.find((item) => item.step === step);
-        return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : "Aguardando"}</div></div>;
+        const cancelled = step === "cancelado_confirmado" && consolidation.status === "cancelado_confirmado";
+        return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation || cancelled ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : cancelled ? formatDateTime(consolidation.updatedAt) : "Aguardando"}</div></div>;
       })}
     </div>
   );

@@ -485,6 +485,13 @@ export function Relatorios(props) {
   const adherence = analytics.requested ? `${Math.round((analytics.consumed / analytics.requested) * 100)}%` : "-";
   const occupancy = analytics.effective ? `${Math.round((analytics.consumed / analytics.effective) * 100)}%` : "-";
   const averageTicket = analytics.consumed ? formatMoney(analytics.value / analytics.consumed) : formatMoney(0);
+  const cancelledConfirmedCount = (state.consolidations ?? []).filter((consolidation) => {
+    if (consolidation.status !== "cancelado_confirmado") return false;
+    if (!currentFilter.start && !currentFilter.end) return true;
+    const start = currentFilter.start || currentFilter.end;
+    const end = currentFilter.end || currentFilter.start;
+    return consolidation.date >= start && consolidation.date <= end;
+  }).length;
 
   return (
     <>
@@ -544,6 +551,7 @@ export function Relatorios(props) {
           { icon, iconName: "box", label: "Marmitas", value: mealTotals["Marmita Campo"] ?? 0 },
           { icon, iconName: "utensils", label: "Almoços", value: mealTotals["Buffer Almoço"] ?? mealTotals["Buffer Almoco"] ?? 0 },
           { icon, iconName: "moon", label: "Jantas", value: mealTotals.Jantar ?? 0 },
+          { icon, iconName: "trash", label: "Cancel. confirm.", value: cancelledConfirmedCount },
         ]}
       />
 

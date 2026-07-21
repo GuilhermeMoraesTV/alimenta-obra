@@ -61,6 +61,7 @@ const supplierPageStyles = `
   .supplier-page .badge { display: inline-flex; min-height: 1.75rem; align-items: center; border-radius: 999px; border: 1px solid #e7e5e4; background: #f5f5f4; padding: 0 .625rem; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #57534e; }
   .supplier-page .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
   .supplier-page .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+  .supplier-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .supplier-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .supplier-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
   .supplier-page .badge.saiu_entrega { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
@@ -168,7 +169,24 @@ const supplierPageStyles = `
   .supplier-page .supplier-order-list-item.selected { border-color: #f97316; background: #fff7ed; }
   .supplier-page .supplier-detail-grid section,
   .supplier-page .supplier-document-body { border-radius: .75rem; border: 1px solid #e7e5e4; background: #fafaf9; padding: .75rem; }
-  .supplier-page .consolidated-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .5rem 0; }
+  .supplier-page .consolidated-summary { display: grid; gap: .65rem; }
+  .supplier-page .consolidated-block { display: grid; gap: .4rem; overflow: hidden; padding: .65rem; }
+  .supplier-page .consolidated-block-title,
+  .supplier-page .consolidated-distribution-head,
+  .supplier-page .consolidated-row,
+  .supplier-page .consolidated-resume-row { display: grid; grid-template-columns: minmax(0,1fr) 4.5rem; align-items: center; }
+  .supplier-page .consolidated-block-title { display: flex; align-items: center; justify-content: space-between; gap: .65rem; color: #1c1917; font-size: .86rem; font-weight: 950; }
+  .supplier-page .consolidated-block-title span { border-radius: 999px; background: #fff7ed; padding: .18rem .5rem; color: #c2410c; font-size: .78rem; }
+  .supplier-page .consolidated-distribution-head { display: none; }
+  .supplier-page .consolidated-description { color: #78716c; font-size: .78rem; font-weight: 700; }
+  .supplier-page .consolidated-distribution { display: grid; gap: .3rem; }
+  .supplier-page .consolidated-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-radius: .55rem; background: #fafaf9; padding: .42rem .5rem; font-size: .875rem; }
+  .supplier-page .consolidated-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .supplier-page .consolidated-resume { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .supplier-page .consolidated-resume-row { display: inline-flex; align-items: center; gap: .32rem; border-radius: 999px; border: 1px solid #fed7aa; background: #fff7ed; color: #c2410c; font-size: .72rem; font-weight: 950; }
+  .supplier-page .consolidated-resume-row span,
+  .supplier-page .consolidated-resume-row strong { min-width: 0; padding: .24rem .44rem; }
+  .supplier-page .consolidated-resume-row strong { padding-left: 0; }
   .supplier-page .total-line { font-weight: 900; }
   .supplier-page .timeline { display: grid; gap: .5rem; }
   .supplier-page .timeline-item { display: grid; grid-template-columns: 12px minmax(0,1fr); gap: .75rem; border-radius: .75rem; border: 1px solid #e7e5e4; background: #fff; padding: .75rem; }

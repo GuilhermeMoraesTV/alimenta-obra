@@ -75,10 +75,10 @@ export function OrderCard(props) {
 export function Orders(props) {
   const { formatDate, formatDateTime, getConsolidationSummary, icon, requestMealDescription, selectedSupplierConsolidationId, state, supplierOrderDate, supplierOrderStatus, STATUS_LABEL, user } = props;
   const rows = supplierConsolidations(state, user).filter((item) => {
-    const matchesStatus = supplierOrderStatus === "todos" || (supplierOrderStatus === "ativos" ? !["saiu_entrega", "entregue", "rascunho"].includes(item.status) : item.status === supplierOrderStatus);
+    const matchesStatus = supplierOrderStatus === "todos" || (supplierOrderStatus === "ativos" ? !["saiu_entrega", "entregue", "rascunho", "cancelado_confirmado"].includes(item.status) : item.status === supplierOrderStatus);
     return matchesStatus && (!supplierOrderDate || item.date === supplierOrderDate);
   });
-  const activeRows = rows.filter((item) => !["saiu_entrega", "entregue", "rascunho"].includes(item.status));
+  const activeRows = rows.filter((item) => !["saiu_entrega", "entregue", "rascunho", "cancelado_confirmado"].includes(item.status));
   const totalMeals = rows.reduce((sum, item) => sum + getConsolidationSummary(state, item).total, 0);
   const waitingCount = supplierStatusCount(rows, "enviado");
   const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? null;
@@ -111,7 +111,7 @@ export function Orders(props) {
           description="Blocos diarios recebidos, consumo real e saida."
           actions={(
             <SupplierFilterMenu icon={icon}>
-              <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">A registrar saida</option><option value="saiu_entrega">Saida registrada</option><option value="entregue">Entregues</option></select>
+              <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">A registrar saida</option><option value="saiu_entrega">Saida registrada</option><option value="entregue">Entregues</option><option value="cancelado_confirmado">Cancelados apos confirmacao</option></select>
               <input type="date" defaultValue={supplierOrderDate} data-supplier-date />
               <button className="btn outline small" data-supplier-clear-filter>Limpar filtros</button>
             </SupplierFilterMenu>

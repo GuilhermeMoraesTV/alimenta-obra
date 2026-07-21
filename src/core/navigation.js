@@ -28,7 +28,8 @@ export const STATUS_LABEL = {
   producao: "Em producao",
   saiu_entrega: "Saiu para entrega",
   entregue: "Entregue",
-  cancelado: "Cancelado"
+  cancelado: "Cancelado",
+  cancelado_confirmado: "Cancelado apos confirmacao"
 };
 
 export function viewLabel(view) {

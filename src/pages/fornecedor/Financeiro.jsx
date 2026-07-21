@@ -3,7 +3,9 @@ import { Icon, SupplierBackButton, SupplierReceiptHeader, statusLabel, supplierC
 
 export function Financeiro(props) {
   const { formatDate, icon, money, requestValue, state, sumQty, user, STATUS_LABEL } = props;
-  const sourceRows = supplierConsolidations(state, user).flatMap((consolidation) => props.getConsolidationSummary(state, consolidation).rows);
+  const sourceRows = supplierConsolidations(state, user)
+    .filter((consolidation) => consolidation.status !== "cancelado_confirmado")
+    .flatMap((consolidation) => props.getConsolidationSummary(state, consolidation).rows);
   const month = state.settings.defaultMealDate.slice(0, 7);
   const rows = sourceRows.filter((request) => request.date.startsWith(month));
   const delivered = rows.filter((request) => request.status === "entregue");

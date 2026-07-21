@@ -188,6 +188,10 @@ function auditDescription(item) {
   }
   if (item.action === "Bloco diario enviado ou atualizado ao fornecedor") return "Admin enviou ou reenviou o bloco ao fornecedor";
   if (item.action === "Bloco diario criado ou atualizado") return "Admin atualizou a composicao do pedido ao fornecedor";
+  if (item.action === "Pedido cancelado apos confirmacao") {
+    const reason = payload.reason ? ` Motivo: ${payload.reason}.` : "";
+    return `Admin cancelou o bloco apos confirmacao e registrou consumo real zero.${reason}`;
+  }
   return auditEntityLabel(item.entity);
 }
 

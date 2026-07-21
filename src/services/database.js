@@ -537,6 +537,14 @@ export async function changeRequestStatus(requestId, status) {
   ensure(null, error);
 }
 
+export async function cancelConfirmedConsolidation(consolidationId, reason) {
+  const { data, error } = await requireSupabase().rpc("cancel_confirmed_consolidation", {
+    p_consolidation_id: consolidationId,
+    p_reason: String(reason ?? "").trim()
+  });
+  return ensure(data, error);
+}
+
 export async function updateMealRequest(requestId, input) {
   const payload = {
     meal_date: input.date,
