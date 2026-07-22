@@ -444,7 +444,8 @@ function renderPrintablePage({ title, subtitle, eyebrow = "", children, footer =
       .print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; gap: 8px; padding: 10px; background: rgba(0,32,96,.94); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
       .print-toolbar button { min-height: 38px; border: 0; border-radius: 4px; background: #0070c0; color: #fff; padding: 0 16px; font-weight: 800; cursor: pointer; }
       .print-toolbar span { display: inline-flex; align-items: center; color: #eaf2ff; font-size: 11px; font-weight: 700; }
-      .document { width: min(${isLandscape ? "297mm" : "210mm"}, calc(100% - 24px)); min-height: ${isLandscape ? "210mm" : "297mm"}; margin: 12px auto; background: #fff; padding: ${showHeader ? "12mm" : "0"}; box-shadow: 0 18px 45px rgba(0,32,96,.16); }
+      .print-canvas { width: 100%; overflow-x: auto; padding-bottom: 24px; }
+      .document { width: ${isLandscape ? "297mm" : "210mm"}; max-width: none; min-height: ${isLandscape ? "210mm" : "297mm"}; margin: 12px auto; background: #fff; padding: ${showHeader ? "12mm" : "0"}; box-shadow: 0 18px 45px rgba(0,32,96,.16); }
       .brand-header { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 18px; align-items: center; padding-bottom: 12px; border-bottom: 5px solid #002060; }
       .brand-mark { display: flex; align-items: center; gap: 12px; }
       .brand-mark img { width: ${isLandscape ? "210px" : "182px"}; max-height: 58px; object-fit: contain; object-position: left center; }
@@ -499,15 +500,18 @@ function renderPrintablePage({ title, subtitle, eyebrow = "", children, footer =
       @media print {
         html, body { background: #fff; }
         .print-toolbar { display: none; }
-        .document { width: 100%; min-height: ${isLandscape ? "210mm" : "297mm"}; margin: 0; padding: ${showHeader ? "12mm" : "0"}; box-shadow: none; background: #fff; }
+        .print-canvas { width: auto; overflow: visible; padding: 0; }
+        .document { width: ${isLandscape ? "297mm" : "210mm"}; min-height: ${isLandscape ? "210mm" : "297mm"}; margin: 0; padding: ${showHeader ? "12mm" : "0"}; box-shadow: none; background: #fff; }
       }
     </style></head><body>
       <div class="print-toolbar"><button onclick="window.print()">Imprimir / salvar PDF</button><span>A página do sistema continua livre na aba anterior.</span></div>
-      <main class="document">
-        ${header}
-        ${children}
-        <footer class="footer">${footer || "Documento gerado pelo AlimentaObra para padronização operacional e rastreabilidade das refeições."}</footer>
-      </main>
+      <div class="print-canvas">
+        <main class="document">
+          ${header}
+          ${children}
+          <footer class="footer">${footer || "Documento gerado pelo AlimentaObra para padronização operacional e rastreabilidade das refeições."}</footer>
+        </main>
+      </div>
     </body></html>`;
 }
 

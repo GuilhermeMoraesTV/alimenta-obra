@@ -1309,6 +1309,13 @@ function addSupplierMealDraft(form) {
   list.insertAdjacentHTML("beforeend", supplierMealDraftHtml(nextIndex));
 }
 
+function keepActiveSettingsTabVisible() {
+  requestAnimationFrame(() => {
+    const activeButton = root.querySelector(".settings-menu [data-settings-tab].is-active");
+    activeButton?.scrollIntoView({ block: "nearest", inline: "center" });
+  });
+}
+
 function bindEvents() {
   root.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1479,6 +1486,7 @@ function bindEvents() {
       settingsMealModalId = null;
       settingsWorkSectionModalId = null;
       render();
+      keepActiveSettingsTabVisible();
     });
   });
   root.querySelector("[data-form='access-invite']")?.addEventListener("submit", handleAccessInviteSubmit);

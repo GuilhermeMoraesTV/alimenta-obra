@@ -768,25 +768,28 @@ const adminDesignStyles = `
     }
 
     .admin-page .admin-receipt-actions {
-      width: auto;
-      max-width: min(100%, 13.5rem);
-      display: flex;
-      flex-wrap: nowrap;
-      justify-self: end;
-      align-self: start;
-      justify-content: flex-end;
+      grid-column: 1 / -1;
+      width: 100%;
+      max-width: none;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      justify-self: stretch;
+      align-self: stretch;
+      justify-content: stretch;
       gap: .35rem;
     }
 
     .admin-page .admin-receipt-actions > *,
     .admin-page .admin-receipt-actions .btn,
-    .admin-page .admin-receipt-actions .admin-filter-menu summary {
-      width: auto;
+    .admin-page .admin-receipt-actions .admin-filter-menu summary,
+    .admin-page .admin-receipt-actions .export-menu > button {
+      width: 100%;
       min-width: 0;
     }
 
     .admin-page .admin-receipt-actions .btn,
-    .admin-page .admin-receipt-actions .admin-filter-menu summary {
+    .admin-page .admin-receipt-actions .admin-filter-menu summary,
+    .admin-page .admin-receipt-actions .export-menu > button {
       min-height: 2.05rem;
       padding-inline: .56rem;
       font-size: .7rem;
@@ -798,8 +801,9 @@ const adminDesignStyles = `
       padding-inline: .68rem;
     }
 
-    .admin-page .admin-home-receipt .admin-receipt-actions {
-      max-width: 10.5rem;
+    .admin-page .admin-receipt-actions .admin-filter-menu[open],
+    .admin-page .admin-receipt-actions .export-menu.open {
+      z-index: 1000;
     }
 
     .admin-page .admin-send-total {

@@ -197,7 +197,7 @@ export function Painel(props) {
       <AdminReceiptHeader
         className="admin-home-receipt"
         kicker={`Lancados hoje - ${formatDate(date)}`}
-        title="Visão geral administrativa"
+        title="Visão geral"
         totalValue={waitingCount}
         totalLabel="pedidos a enviar"
         description="Pedidos registrados hoje, mesmo quando a refeição está agendada para outra data"

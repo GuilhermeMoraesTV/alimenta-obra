@@ -437,6 +437,10 @@ button:disabled {
     gap: .55rem !important;
   }
 
+  .settings-section-grid .settings-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
   .settings-section-grid .settings-stat-icon {
     width: 2rem !important;
     height: 2rem !important;
