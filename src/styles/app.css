@@ -56,6 +56,55 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.meal-link-card-head {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center !important;
+}
+
+.meal-link-save {
+  min-height: 2rem !important;
+  padding-inline: .75rem !important;
+}
+
+.supplier-card-head {
+  grid-template-columns: 44px minmax(0, 1fr) auto auto !important;
+}
+
+.work-section-card-head {
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+}
+
+.settings-helper-note {
+  margin: 0;
+  border-radius: .8rem;
+  border: 1px solid rgba(249, 115, 22, .22);
+  background: rgba(255, 247, 237, .72);
+  padding: .6rem .75rem;
+  color: #9a3412;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+@media (min-width: 1024px) {
+  .settings-shell {
+    display: grid !important;
+    grid-template-columns: 18rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .settings-shell .settings-header,
+  .settings-shell .settings-content {
+    grid-column: 2;
+  }
+
+  .settings-shell .settings-nav-column {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+}
+
 @media (max-width: 767px) {
   html,
   body {
@@ -140,5 +189,590 @@ button:disabled {
   .role-fornecedor button,
   .role-admin button {
     min-height: 2.1rem;
+  }
+
+  .settings-back-row {
+    min-height: 0 !important;
+    margin-top: -.2rem;
+  }
+
+  .settings-shell {
+    gap: .55rem !important;
+  }
+
+  .settings-shell .settings-header {
+    border-radius: 18px !important;
+    padding: .7rem !important;
+    box-shadow: 0 10px 24px rgba(25, 27, 24, .06) !important;
+  }
+
+  .settings-shell .settings-header-main {
+    gap: .65rem !important;
+  }
+
+  .settings-shell .settings-header-copy {
+    gap: .65rem !important;
+  }
+
+  .settings-shell .settings-header-icon {
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+    border-radius: .9rem !important;
+    box-shadow: 0 10px 18px rgba(239, 91, 29, .18) !important;
+  }
+
+  .settings-shell .settings-header-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .settings-shell .compact-kicker {
+    margin-bottom: .1rem !important;
+    font-size: .55rem !important;
+    letter-spacing: .12em !important;
+  }
+
+  .settings-shell .settings-header h1 {
+    font-size: 1.05rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .settings-shell .settings-header p,
+  .settings-shell .settings-header-badge {
+    display: none !important;
+  }
+
+  .settings-shell .settings-nav-column {
+    position: sticky;
+    top: 50px;
+    z-index: 30;
+    width: calc(100vw - 1.3rem) !important;
+    margin-inline: calc(50% - 50vw + .65rem);
+  }
+
+  .settings-shell .settings-nav-card {
+    border-radius: 0 !important;
+    border-width: 1px 0 !important;
+    border-color: rgba(217, 215, 207, .85) !important;
+    background: rgba(242, 241, 236, .92) !important;
+    padding: .4rem .65rem !important;
+    box-shadow: 0 10px 22px rgba(25, 27, 24, .05) !important;
+    backdrop-filter: blur(14px);
+  }
+
+  .settings-shell .settings-nav-title {
+    display: none !important;
+  }
+
+  .settings-shell .settings-menu {
+    display: flex !important;
+    gap: .4rem !important;
+    margin-top: 0 !important;
+    overflow-x: auto;
+    padding-bottom: .1rem;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .settings-shell .settings-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-shell .settings-menu button {
+    flex: 0 0 auto;
+    width: auto !important;
+    min-height: 2.15rem !important;
+    gap: .35rem !important;
+    border: 1px solid rgba(217, 215, 207, .9) !important;
+    border-radius: 999px !important;
+    background: #fffefa !important;
+    padding: 0 .65rem !important;
+    scroll-snap-align: start;
+    white-space: nowrap;
+    font-size: .62rem !important;
+    letter-spacing: .04em !important;
+    box-shadow: none !important;
+  }
+
+  .settings-shell .settings-menu button.is-active {
+    border-color: var(--orange) !important;
+    background: var(--orange) !important;
+    color: white !important;
+    box-shadow: 0 8px 16px rgba(239, 91, 29, .2) !important;
+  }
+
+  .settings-shell .settings-menu button svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .settings-shell .settings-menu-dot {
+    display: none !important;
+  }
+
+  .settings-content,
+  .settings-layout,
+  .settings-section,
+  .settings-section-grid {
+    gap: .65rem !important;
+  }
+
+  .settings-section-head {
+    padding-bottom: .45rem !important;
+  }
+
+  .settings-section-head h2 {
+    font-size: .98rem !important;
+  }
+
+  .settings-section-head p {
+    margin-top: .05rem !important;
+    font-size: .7rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .settings-section-grid .settings-panel,
+  .settings-section-grid .supplier-card,
+  .settings-section-grid .link-supplier-card,
+  .settings-section-grid .work-section-card,
+  .settings-section-grid .meal-catalog-card,
+  .settings-section-grid .user-row,
+  .settings-section-grid .settings-stat {
+    border-radius: 16px !important;
+    padding: .75rem !important;
+    box-shadow: 0 8px 18px rgba(25, 27, 24, .05) !important;
+  }
+
+  .settings-section-grid .settings-panel {
+    gap: .7rem !important;
+  }
+
+  .settings-section-grid .settings-panel-title {
+    margin: -.75rem -.75rem 0 !important;
+    gap: .55rem !important;
+    padding: .65rem .75rem !important;
+  }
+
+  .settings-section-grid .settings-panel-title > span {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: .75rem !important;
+  }
+
+  .settings-section-grid .settings-panel-title h2 {
+    font-size: .9rem !important;
+  }
+
+  .settings-section-grid .settings-panel-title p {
+    display: none !important;
+  }
+
+  .settings-section-grid .form-grid,
+  .settings-section-grid .supplier-info-grid,
+  .settings-section-grid .meal-link-grid,
+  .settings-section-grid .supplier-meal-picker,
+  .settings-section-grid .work-section-list,
+  .settings-section-grid .meal-catalog-list,
+  .settings-section-grid .settings-overview {
+    gap: .5rem !important;
+  }
+
+  .settings-section-grid .field {
+    gap: .3rem !important;
+  }
+
+  .settings-section-grid .field label {
+    font-size: .58rem !important;
+    letter-spacing: .08em !important;
+  }
+
+  .settings-section-grid input,
+  .settings-section-grid select,
+  .settings-section-grid textarea {
+    min-height: 2.35rem !important;
+    border-radius: .75rem !important;
+    padding-inline: .7rem !important;
+    font-size: .78rem !important;
+  }
+
+  .settings-section-grid textarea {
+    min-height: 4.5rem !important;
+    padding-block: .55rem !important;
+  }
+
+  .settings-section-grid .btn {
+    min-height: 2.35rem !important;
+    border-radius: .8rem !important;
+    padding-inline: .8rem !important;
+    font-size: .6rem !important;
+    letter-spacing: .08em !important;
+  }
+
+  .settings-section-grid .btn.small {
+    min-height: 2rem !important;
+    border-radius: .65rem !important;
+    padding-inline: .6rem !important;
+    font-size: .58rem !important;
+  }
+
+  .settings-section-grid .icon-btn {
+    min-height: 2rem !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: .65rem !important;
+    padding: 0 !important;
+  }
+
+  .settings-section-grid .settings-actions {
+    gap: .5rem !important;
+  }
+
+  .settings-section-grid .settings-actions .btn {
+    width: auto !important;
+    flex: 1 1 9rem;
+  }
+
+  .settings-section-grid .settings-stat {
+    grid-template-columns: 2rem minmax(0, 1fr) !important;
+    gap: .55rem !important;
+  }
+
+  .settings-section-grid .settings-stat-icon {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: .75rem !important;
+  }
+
+  .settings-section-grid .settings-stat strong {
+    font-size: 1.05rem !important;
+  }
+
+  .settings-section-grid .settings-stat span {
+    margin-top: .05rem !important;
+    font-size: .58rem !important;
+    letter-spacing: .06em !important;
+  }
+
+  .settings-section-grid .settings-premium-toolbar,
+  .settings-section-grid .work-section-new,
+  .settings-section-grid .meal-catalog-new,
+  .settings-section-grid .supplier-create-meals,
+  .settings-section-grid .invite-link-box {
+    border-radius: 14px !important;
+    padding: .7rem !important;
+  }
+
+  .settings-section-grid .user-row,
+  .settings-section-grid .supplier-card-head {
+    gap: .6rem !important;
+  }
+
+  .settings-section-grid .supplier-card-head {
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto auto !important;
+  }
+
+  .settings-section-grid .supplier-icon {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    border-radius: .85rem !important;
+  }
+
+  .settings-section-grid .supplier-title strong,
+  .settings-section-grid .link-supplier-head strong,
+  .settings-section-grid .meal-catalog-card-title strong,
+  .settings-section-grid .work-section-card strong {
+    font-size: .86rem !important;
+  }
+
+  .settings-section-grid .supplier-title p,
+  .settings-section-grid .link-supplier-head p,
+  .settings-section-grid .meal-catalog-card-title p,
+  .settings-section-grid .work-section-card small {
+    font-size: .68rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .settings-section-grid .settings-premium-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .45rem !important;
+  }
+
+  .settings-section-grid .settings-premium-toolbar .settings-count-pill {
+    padding: .25rem .5rem !important;
+    font-size: .58rem !important;
+  }
+
+  .settings-section-grid .settings-premium-toolbar p {
+    display: none !important;
+  }
+
+  .settings-section-grid .settings-premium-toolbar .btn {
+    width: 100% !important;
+    min-height: 2.1rem !important;
+  }
+
+  .settings-section-grid .supplier-grid,
+  .settings-section-grid .link-supplier-list,
+  .settings-section-grid .work-section-list,
+  .settings-section-grid .meal-catalog-list,
+  .settings-section-grid .user-list {
+    gap: .4rem !important;
+  }
+
+  .settings-section-grid .supplier-card,
+  .settings-section-grid .link-supplier-card,
+  .settings-section-grid .work-section-card,
+  .settings-section-grid .meal-catalog-card,
+  .settings-section-grid .user-row {
+    gap: .42rem !important;
+    border-radius: 12px !important;
+    padding: .55rem !important;
+  }
+
+  .settings-section-grid .supplier-card-head {
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: .45rem !important;
+  }
+
+  .settings-section-grid .supplier-card-head > .meal-status-chip,
+  .settings-section-grid .work-section-card-head > .meal-status-chip {
+    display: none !important;
+  }
+
+  .settings-section-grid .supplier-icon {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+    border-radius: .62rem !important;
+  }
+
+  .settings-section-grid .supplier-icon svg,
+  .settings-section-grid .settings-stat-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .settings-section-grid .supplier-title strong,
+  .settings-section-grid .link-supplier-head strong,
+  .settings-section-grid .meal-catalog-card-title strong,
+  .settings-section-grid .work-section-card strong {
+    font-size: .76rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .settings-section-grid .supplier-title p,
+  .settings-section-grid .link-supplier-head p,
+  .settings-section-grid .meal-catalog-card-title p,
+  .settings-section-grid .work-section-card small {
+    font-size: .6rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .settings-section-grid .supplier-title p {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .settings-section-grid .supplier-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .28rem !important;
+  }
+
+  .settings-section-grid .supplier-card .supplier-info-grid > span:nth-child(n+3) {
+    display: none !important;
+  }
+
+  .settings-section-grid .supplier-info-grid > span,
+  .settings-section-grid .meal-link-card {
+    border-radius: .58rem !important;
+    padding: .36rem .45rem !important;
+  }
+
+  .settings-section-grid .supplier-info-grid small,
+  .settings-section-grid .supplier-info-grid b {
+    line-height: 1.05 !important;
+  }
+
+  .settings-section-grid .supplier-info-grid small {
+    font-size: .52rem !important;
+    letter-spacing: .06em !important;
+  }
+
+  .settings-section-grid .supplier-info-grid b {
+    font-size: .64rem !important;
+  }
+
+  .settings-section-grid .supplier-card > p {
+    display: none !important;
+  }
+
+  .settings-section-grid .meal-status-chip,
+  .settings-section-grid .meal-price-chip {
+    padding: .18rem .42rem !important;
+    font-size: .52rem !important;
+    letter-spacing: .04em !important;
+  }
+
+  .settings-section-grid .link-supplier-head {
+    margin-bottom: .45rem !important;
+    align-items: center !important;
+  }
+
+  .settings-section-grid .meal-link-grid {
+    grid-template-columns: 1fr !important;
+    gap: .35rem !important;
+  }
+
+  .settings-section-grid .meal-link-card {
+    gap: .35rem !important;
+  }
+
+  .settings-section-grid .meal-link-card-head {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    gap: .35rem !important;
+  }
+
+  .settings-section-grid .meal-link-card-head strong,
+  .settings-section-grid .meal-link-card-head small {
+    display: block;
+    line-height: 1.05 !important;
+  }
+
+  .settings-section-grid .meal-link-card-head strong {
+    font-size: .68rem !important;
+  }
+
+  .settings-section-grid .meal-link-card-head small {
+    font-size: .56rem !important;
+  }
+
+  .settings-section-grid .meal-link-save {
+    min-height: 1.65rem !important;
+    padding-inline: .45rem !important;
+    font-size: .54rem !important;
+  }
+
+  .settings-section-grid .meal-link-card .form-grid {
+    grid-template-columns: 5.5rem minmax(0, 1fr) !important;
+    gap: .35rem !important;
+  }
+
+  .settings-section-grid .meal-link-card input,
+  .settings-section-grid .meal-link-card select {
+    min-height: 1.85rem !important;
+    padding-inline: .45rem !important;
+    font-size: .68rem !important;
+  }
+
+  .settings-section-grid .work-section-card .supplier-info-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .settings-section-grid .work-section-card .btn.small,
+  .settings-section-grid .supplier-card .btn.small {
+    min-height: 1.75rem !important;
+    padding-inline: .5rem !important;
+    font-size: .54rem !important;
+  }
+
+  .settings-section-grid .work-section-card-head {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+  }
+
+  .settings-section-grid .meal-catalog-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .settings-section-grid .meal-catalog-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .45rem !important;
+  }
+
+  .settings-section-grid .meal-catalog-toolbar .btn {
+    width: 100% !important;
+    min-height: 2rem !important;
+  }
+
+  .settings-section-grid .meal-catalog-card {
+    min-height: 0 !important;
+  }
+
+  .settings-section-grid .meal-catalog-card-head {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: .45rem !important;
+  }
+
+  .settings-section-grid .meal-catalog-card-head > .grid {
+    grid-template-columns: 1.75rem minmax(0, 1fr) !important;
+    gap: .45rem !important;
+  }
+
+  .settings-section-grid .meal-catalog-card-title strong {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+  }
+
+  .settings-section-grid .meal-catalog-card-title p {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .settings-section-grid .meal-catalog-card-actions {
+    gap: .25rem !important;
+  }
+
+  .settings-section-grid .meal-catalog-card .flex.flex-wrap {
+    gap: .25rem !important;
+  }
+
+  .settings-section-grid .icon-btn {
+    min-height: 1.75rem !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+
+  .settings-section-grid .user-row {
+    grid-template-columns: 1.9rem minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: .5rem !important;
+  }
+
+  .settings-section-grid .user-avatar {
+    width: 1.9rem !important;
+    height: 1.9rem !important;
+    border-radius: .7rem !important;
+    font-size: .58rem !important;
+  }
+
+  .settings-section-grid .user-row-title strong {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: .74rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .settings-section-grid .user-row-title p {
+    display: none !important;
+  }
+
+  .settings-section-grid .user-row-meta {
+    justify-content: flex-end !important;
+    gap: .25rem !important;
+  }
+
+  .settings-section-grid .role-chip {
+    padding: .18rem .42rem !important;
+    font-size: .52rem !important;
+    letter-spacing: .05em !important;
   }
 }

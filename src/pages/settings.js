@@ -94,6 +94,31 @@ export function createSettingsPage(ctx) {
     [&_.settings-modal-panel]:max-h-[92vh] [&_.settings-modal-panel]:w-full [&_.settings-modal-panel]:max-w-2xl [&_.settings-modal-panel]:overflow-auto [&_.settings-modal-panel]:rounded-t-[28px] [&_.settings-modal-panel]:border [&_.settings-modal-panel]:border-white/70 [&_.settings-modal-panel]:bg-white [&_.settings-modal-panel]:p-5 [&_.settings-modal-panel]:shadow-2xl sm:[&_.settings-modal-panel]:rounded-[28px]
     [&_.settings-modal-header]:mb-4 [&_.settings-modal-header]:flex [&_.settings-modal-header]:items-start [&_.settings-modal-header]:justify-between [&_.settings-modal-header]:gap-3 [&_.settings-modal-header]:border-b [&_.settings-modal-header]:border-stone-100 [&_.settings-modal-header]:pb-3
     [&_.settings-modal-close]:grid [&_.settings-modal-close]:h-9 [&_.settings-modal-close]:w-9 [&_.settings-modal-close]:place-items-center [&_.settings-modal-close]:rounded-full [&_.settings-modal-close]:border [&_.settings-modal-close]:border-stone-200 [&_.settings-modal-close]:bg-white [&_.settings-modal-close]:text-lg [&_.settings-modal-close]:font-black [&_.settings-modal-close]:text-stone-500
+    [&_.supplier-modal-panel]:max-w-4xl [&_.supplier-modal-panel]:overflow-hidden [&_.supplier-modal-panel]:bg-[#fffdf8] [&_.supplier-modal-panel]:p-0
+    [&_.supplier-modal-header]:relative [&_.supplier-modal-header]:m-0 [&_.supplier-modal-header]:items-center [&_.supplier-modal-header]:border-b [&_.supplier-modal-header]:border-stone-200/80 [&_.supplier-modal-header]:bg-white [&_.supplier-modal-header]:p-4 sm:[&_.supplier-modal-header]:p-5
+    [&_.supplier-modal-title-wrap]:relative [&_.supplier-modal-title-wrap]:grid [&_.supplier-modal-title-wrap]:min-w-0 [&_.supplier-modal-title-wrap]:grid-cols-[42px_minmax(0,1fr)] [&_.supplier-modal-title-wrap]:items-center [&_.supplier-modal-title-wrap]:gap-3
+    [&_.supplier-modal-emblem]:grid [&_.supplier-modal-emblem]:h-10 [&_.supplier-modal-emblem]:w-10 [&_.supplier-modal-emblem]:place-items-center [&_.supplier-modal-emblem]:rounded-2xl [&_.supplier-modal-emblem]:bg-orange-50 [&_.supplier-modal-emblem]:text-orange-700
+    [&_.supplier-modal-title]:min-w-0 [&_.supplier-modal-title_h2]:break-words [&_.supplier-modal-title_h2]:text-[20px] [&_.supplier-modal-title_h2]:leading-tight sm:[&_.supplier-modal-title_h2]:text-[22px] [&_.supplier-modal-title_p]:mt-0.5 [&_.supplier-modal-title_p]:max-w-2xl [&_.supplier-modal-title_p]:text-xs [&_.supplier-modal-title_p]:font-bold [&_.supplier-modal-title_p]:leading-snug [&_.supplier-modal-title_p]:text-stone-500
+    [&_.supplier-modal-close]:relative [&_.supplier-modal-close]:shrink-0
+    [&_.supplier-company-form]:grid [&_.supplier-company-form]:max-h-[calc(92vh-84px)] [&_.supplier-company-form]:gap-3 [&_.supplier-company-form]:overflow-auto [&_.supplier-company-form]:p-4 sm:[&_.supplier-company-form]:max-h-[calc(92vh-92px)] sm:[&_.supplier-company-form]:p-5
+    [&_.supplier-form-section]:overflow-hidden [&_.supplier-form-section]:rounded-[22px] [&_.supplier-form-section]:border [&_.supplier-form-section]:border-stone-200/80 [&_.supplier-form-section]:bg-white [&_.supplier-form-section]:shadow-[0_14px_34px_rgba(25,27,24,.06)]
+    [&_.supplier-form-section-head]:grid [&_.supplier-form-section-head]:grid-cols-[40px_minmax(0,1fr)] [&_.supplier-form-section-head]:items-center [&_.supplier-form-section-head]:gap-3 [&_.supplier-form-section-head]:border-b [&_.supplier-form-section-head]:border-stone-100 [&_.supplier-form-section-head]:bg-[#fafaf8] [&_.supplier-form-section-head]:px-4 [&_.supplier-form-section-head]:py-3
+    [&_.supplier-form-section-icon]:grid [&_.supplier-form-section-icon]:h-10 [&_.supplier-form-section-icon]:w-10 [&_.supplier-form-section-icon]:place-items-center [&_.supplier-form-section-icon]:rounded-2xl [&_.supplier-form-section-icon]:bg-orange-50 [&_.supplier-form-section-icon]:text-orange-700
+    [&_.supplier-form-section-title]:min-w-0 [&_.supplier-form-section-title_strong]:block [&_.supplier-form-section-title_strong]:break-words [&_.supplier-form-section-title_strong]:text-sm [&_.supplier-form-section-title_strong]:font-black [&_.supplier-form-section-title_p]:mt-0.5 [&_.supplier-form-section-title_p]:text-[11px] [&_.supplier-form-section-title_p]:font-bold [&_.supplier-form-section-title_p]:leading-snug [&_.supplier-form-section-title_p]:text-stone-500
+    [&_.supplier-form-body]:grid [&_.supplier-form-body]:gap-3 [&_.supplier-form-body]:p-4
+    [&_.supplier-form-grid]:grid [&_.supplier-form-grid]:grid-cols-1 [&_.supplier-form-grid]:gap-3 md:[&_.supplier-form-grid]:grid-cols-2
+    md:[&_.supplier-form-grid.three]:grid-cols-3 lg:[&_.supplier-form-grid.contact]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px]
+    [&_.supplier-company-form_.field]:min-w-0 [&_.supplier-company-form_input]:min-w-0 [&_.supplier-company-form_select]:min-w-0 [&_.supplier-company-form_textarea]:min-w-0
+    [&_.supplier-meal-current]:grid [&_.supplier-meal-current]:gap-2
+    [&_.supplier-meal-option]:border-solid [&_.supplier-meal-option]:bg-white
+    [&_.supplier-new-meals-grid]:grid [&_.supplier-new-meals-grid]:gap-3
+    [&_.supplier-new-meals-list]:grid [&_.supplier-new-meals-list]:gap-3
+    [&_.supplier-add-meal-strip]:flex [&_.supplier-add-meal-strip]:flex-col [&_.supplier-add-meal-strip]:gap-3 [&_.supplier-add-meal-strip]:rounded-2xl [&_.supplier-add-meal-strip]:border [&_.supplier-add-meal-strip]:border-dashed [&_.supplier-add-meal-strip]:border-orange-200 [&_.supplier-add-meal-strip]:bg-orange-50/35 [&_.supplier-add-meal-strip]:p-3 sm:[&_.supplier-add-meal-strip]:flex-row sm:[&_.supplier-add-meal-strip]:items-center sm:[&_.supplier-add-meal-strip]:justify-between
+    [&_.supplier-add-meal-strip_strong]:block [&_.supplier-add-meal-strip_strong]:text-sm [&_.supplier-add-meal-strip_strong]:font-black [&_.supplier-add-meal-strip_p]:mt-0.5 [&_.supplier-add-meal-strip_p]:text-xs [&_.supplier-add-meal-strip_p]:font-bold [&_.supplier-add-meal-strip_p]:text-stone-500
+    [&_.supplier-new-meal-card]:grid [&_.supplier-new-meal-card]:gap-3 [&_.supplier-new-meal-card]:rounded-2xl [&_.supplier-new-meal-card]:border [&_.supplier-new-meal-card]:border-orange-200/80 [&_.supplier-new-meal-card]:bg-orange-50/35 [&_.supplier-new-meal-card]:p-3
+    [&_.supplier-new-meal-card-head]:flex [&_.supplier-new-meal-card-head]:items-center [&_.supplier-new-meal-card-head]:justify-between [&_.supplier-new-meal-card-head]:gap-2 [&_.supplier-new-meal-card-head_span]:grid [&_.supplier-new-meal-card-head_span]:h-8 [&_.supplier-new-meal-card-head_span]:w-8 [&_.supplier-new-meal-card-head_span]:place-items-center [&_.supplier-new-meal-card-head_span]:rounded-xl [&_.supplier-new-meal-card-head_span]:bg-white [&_.supplier-new-meal-card-head_span]:text-orange-700 [&_.supplier-new-meal-card-head_strong]:text-xs [&_.supplier-new-meal-card-head_strong]:font-black [&_.supplier-new-meal-card-head_strong]:uppercase [&_.supplier-new-meal-card-head_strong]:tracking-[.1em] [&_.supplier-new-meal-card-head_strong]:text-orange-800
+    [&_.supplier-new-meal-row]:grid [&_.supplier-new-meal-row]:grid-cols-1 [&_.supplier-new-meal-row]:gap-2 md:[&_.supplier-new-meal-row]:grid-cols-[minmax(0,1.1fr)_145px_120px] md:[&_.supplier-new-meal-row_.field:last-child]:col-span-3
+    [&_.supplier-form-footer]:sticky [&_.supplier-form-footer]:bottom-0 [&_.supplier-form-footer]:z-10 [&_.supplier-form-footer]:-mx-4 [&_.supplier-form-footer]:-mb-4 [&_.supplier-form-footer]:flex [&_.supplier-form-footer]:flex-col-reverse [&_.supplier-form-footer]:gap-2 [&_.supplier-form-footer]:border-t [&_.supplier-form-footer]:border-stone-200/80 [&_.supplier-form-footer]:bg-white/95 [&_.supplier-form-footer]:p-4 [&_.supplier-form-footer]:backdrop-blur sm:[&_.supplier-form-footer]:-mx-5 sm:[&_.supplier-form-footer]:-mb-5 sm:[&_.supplier-form-footer]:flex-row sm:[&_.supplier-form-footer]:justify-end sm:[&_.supplier-form-footer]:p-5
     [&_.settings-error-card]:rounded-xl [&_.settings-error-card]:border [&_.settings-error-card]:border-red-200 [&_.settings-error-card]:bg-red-50 [&_.settings-error-card]:px-4 [&_.settings-error-card]:py-3 [&_.settings-error-card]:text-sm [&_.settings-error-card]:font-bold [&_.settings-error-card]:text-red-700
     [&_.supplier-grid]:grid [&_.supplier-grid]:grid-cols-1 [&_.supplier-grid]:gap-3 xl:[&_.supplier-grid]:grid-cols-2
     [&_.supplier-card]:grid [&_.supplier-card]:gap-3 [&_.supplier-card]:rounded-[22px] [&_.supplier-card]:border [&_.supplier-card]:border-stone-200/80 [&_.supplier-card]:bg-white [&_.supplier-card]:p-4 [&_.supplier-card]:shadow-[0_16px_34px_rgba(25,27,24,.07)]
@@ -105,7 +130,6 @@ export function createSettingsPage(ctx) {
     [&_.supplier-meal-picker]:grid [&_.supplier-meal-picker]:grid-cols-1 [&_.supplier-meal-picker]:gap-2 sm:[&_.supplier-meal-picker]:grid-cols-2
     [&_.supplier-meal-option]:grid [&_.supplier-meal-option]:grid-cols-[40px_minmax(0,1fr)] [&_.supplier-meal-option]:items-start [&_.supplier-meal-option]:gap-2 [&_.supplier-meal-option]:rounded-xl [&_.supplier-meal-option]:border [&_.supplier-meal-option]:border-stone-200 [&_.supplier-meal-option]:bg-stone-50/70 [&_.supplier-meal-option]:p-3 [&_.supplier-meal-option_strong]:block [&_.supplier-meal-option_strong]:text-xs [&_.supplier-meal-option_strong]:font-black [&_.supplier-meal-option_small]:mt-0.5 [&_.supplier-meal-option_small]:block [&_.supplier-meal-option_small]:text-[10px] [&_.supplier-meal-option_small]:font-bold [&_.supplier-meal-option_small]:text-stone-500
     [&_.supplier-create-meals]:grid [&_.supplier-create-meals]:gap-2 [&_.supplier-create-meals]:rounded-2xl [&_.supplier-create-meals]:border [&_.supplier-create-meals]:border-orange-200 [&_.supplier-create-meals]:bg-orange-50/40 [&_.supplier-create-meals]:p-3 [&_.supplier-create-meals>label]:text-[10px] [&_.supplier-create-meals>label]:font-black [&_.supplier-create-meals>label]:uppercase [&_.supplier-create-meals>label]:tracking-[.1em] [&_.supplier-create-meals>label]:text-orange-700
-    [&_.supplier-new-meal-row]:grid [&_.supplier-new-meal-row]:gap-2 lg:[&_.supplier-new-meal-row]:grid-cols-[minmax(0,1.1fr)_130px_110px_minmax(0,1fr)]
     [&_.link-supplier-list]:grid [&_.link-supplier-list]:gap-3
     [&_.link-supplier-card]:rounded-[22px] [&_.link-supplier-card]:border [&_.link-supplier-card]:border-stone-200/80 [&_.link-supplier-card]:bg-white [&_.link-supplier-card]:p-4 [&_.link-supplier-card]:shadow-sm
     [&_.link-supplier-head]:mb-3 [&_.link-supplier-head]:flex [&_.link-supplier-head]:items-start [&_.link-supplier-head]:justify-between [&_.link-supplier-head]:gap-3 [&_.link-supplier-head_strong]:block [&_.link-supplier-head_strong]:text-base [&_.link-supplier-head_strong]:font-black [&_.link-supplier-head_p]:mt-1 [&_.link-supplier-head_p]:text-xs [&_.link-supplier-head_p]:font-bold [&_.link-supplier-head_p]:text-stone-500
@@ -137,15 +161,15 @@ export function createSettingsPage(ctx) {
     const activeUsers = (state.users ?? []).filter((item) => item.active !== false).length;
     const navItems = [
       ...(isAdmin ? [["resumo", "dashboard", "Resumo"]] : []),
-      ["conta", "users", "Conta"],
       ...(isAdmin ? [
-        ["convites", "plus", "Convites"],
-        ["usuarios", "users", "Usuarios"],
-        ["fornecedores", "package", "Fornecedores"],
+        ["conta", "users", "Conta"],
         ["vinculos", "utensils", "Vinculos"],
+        ["fornecedores", "package", "Fornecedores"],
+        ["refeicoes", "utensils", "Refeicoes"],
         ["efetivos", "map", "Efetivos"],
-        ["refeicoes", "utensils", "Refeicoes"]
-      ] : canManageCatalog && !isLeader ? [["refeicoes", "utensils", "Refeicoes"]] : [])
+        ["usuarios", "users", "Usuarios"],
+        ["convites", "plus", "Convites"]
+      ] : [["conta", "users", "Conta"], ...(canManageCatalog && !isLeader ? [["refeicoes", "utensils", "Refeicoes"]] : [])])
     ];
     const currentTab = getSettingsActiveTab?.() ?? "resumo";
     const activeTab = navItems.some(([id]) => id === currentTab) ? currentTab : navItems[0][0];
@@ -164,21 +188,21 @@ export function createSettingsPage(ctx) {
       <section class="${settingsPageClass}">
         <div class="settings-back-row">${renderAdminBackButton()}</div>
         <div class="settings-shell">
+          <header class="settings-header">
+            <div class="settings-header-main">
+              <div class="settings-header-copy">
+                <span class="settings-header-icon">${icon("settings", 22)}</span>
+                <div>
+                  <span class="compact-kicker">Configuracoes</span>
+                  <h1>${isAdmin ? "Central administrativa" : isLeader ? "Minha conta" : canManageCatalog ? "Conta e catalogo" : "Minha conta"}</h1>
+                  <p>${isAdmin ? "Organize acessos, fornecedores, refeicoes e efetivos em um unico painel." : isLeader ? "Atualize seus dados de usuario e senha." : canManageCatalog ? "Mantenha dados de acesso, equipes e tipos de alimentacao." : "Atualize seus dados de acesso e as informacoes que aparecem no sistema."}</p>
+                </div>
+              </div>
+              <span class="settings-header-badge">${roleName(user.role)}</span>
+            </div>
+          </header>
           ${renderSettingsNav(navItems, activeTab)}
           <div class="settings-content">
-            <header class="settings-header">
-              <div class="settings-header-main">
-                <div class="settings-header-copy">
-                  <span class="settings-header-icon">${icon("settings", 22)}</span>
-                  <div>
-                    <span class="compact-kicker">Configuracoes</span>
-                    <h1>${isAdmin ? "Central administrativa" : isLeader ? "Minha conta" : canManageCatalog ? "Conta e catalogo" : "Minha conta"}</h1>
-                    <p>${isAdmin ? "Organize acessos, fornecedores, refeicoes e efetivos em um unico painel." : isLeader ? "Atualize seus dados de usuario e senha." : canManageCatalog ? "Mantenha dados de acesso, equipes e tipos de alimentacao." : "Atualize seus dados de acesso e as informacoes que aparecem no sistema."}</p>
-                  </div>
-                </div>
-                <span class="settings-header-badge">${roleName(user.role)}</span>
-              </div>
-            </header>
             <div class="settings-layout">
               <section class="settings-section" data-settings-panel="${activeTab}">
                 <div class="settings-section-head"><div><h2>${section[0]}</h2><p>${section[1]}</p></div></div>
@@ -316,14 +340,11 @@ export function createSettingsPage(ctx) {
 
   function renderUserRow(user, supplierCompanies) {
     const initials = String(user.name ?? user.email ?? "?").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-    const supplierLink = (getState().supplierCompanyUsers ?? []).find((item) => item.userId === user.id && item.active !== false);
-    const supplier = supplierCompanies.find((item) => item.id === supplierLink?.supplierCompanyId);
     return `
       <article class="user-row">
         <span class="user-avatar">${escapeHtml(initials || "?")}</span>
         <div class="user-row-title">
           <strong>${escapeHtml(user.name)}</strong>
-          <p>${escapeHtml(user.email)}${user.team ? ` - ${escapeHtml(user.team)}` : ""}${supplier ? ` - ${escapeHtml(supplier.tradeName || supplier.legalName)}` : ""}</p>
         </div>
         <div class="user-row-meta">
           <span class="role-chip">${roleName(user.role)}</span>
@@ -408,6 +429,7 @@ export function createSettingsPage(ctx) {
             <p>${escapeHtml(supplier.legalName || title)}${supplier.cnpj ? ` - CNPJ ${escapeHtml(supplier.cnpj)}` : ""}</p>
           </div>
           <span class="meal-status-chip ${supplier.active ? "active" : "inactive"}">${supplier.active ? "Ativo" : "Inativo"}</span>
+          <button class="icon-btn settings-card-edit" type="button" data-open-supplier-modal="${supplier.id}" aria-label="Editar cadastro de ${escapeHtml(title)}">${icon("edit", 14)}</button>
         </div>
         <div class="supplier-info-grid">
           <span><small>Refeicoes</small><b>${mealCountLabel}</b></span>
@@ -416,12 +438,12 @@ export function createSettingsPage(ctx) {
           <span><small>E-mail</small><b>${escapeHtml(supplier.email || "Nao informado")}</b></span>
         </div>
         <p class="text-xs font-bold text-stone-500">${escapeHtml(location)}</p>
-        <button class="btn outline small" type="button" data-open-supplier-modal="${supplier.id}">${icon("edit", 14)}Editar cadastro</button>
       </article>`;
   }
 
   function renderSupplierCompanyForm(supplier) {
     const state = getState();
+    const isEditing = Boolean(supplier.id);
     const links = state.supplierMealTypes ?? [];
     const linkedMeals = links
       .filter((item) => item.supplierCompanyId === supplier.id && item.active === true)
@@ -431,41 +453,89 @@ export function createSettingsPage(ctx) {
       }))
       .filter((item) => item.meal);
     return `
-      <form class="meal-catalog-new-form" data-form="supplier-company">
+      <form class="supplier-company-form" data-form="supplier-company">
         <input type="hidden" name="id" value="${supplier.id ?? ""}" />
-        <div class="form-grid"><div class="field"><label>Razao social</label><input name="legalName" value="${escapeHtml(supplier.legalName ?? "")}" required /></div><div class="field"><label>Nome fantasia</label><input name="tradeName" value="${escapeHtml(supplier.tradeName ?? "")}" /></div></div>
-        <div class="form-grid"><div class="field"><label>CNPJ</label><input name="cnpj" value="${escapeHtml(supplier.cnpj ?? "")}" /></div><div class="field"><label>Responsavel</label><input name="contactName" value="${escapeHtml(supplier.contactName ?? "")}" /></div></div>
-        <div class="form-grid"><div class="field"><label>Inscricao estadual</label><input name="stateRegistration" value="${escapeHtml(supplier.stateRegistration ?? "")}" /></div><div class="field"><label>Inscricao municipal</label><input name="municipalRegistration" value="${escapeHtml(supplier.municipalRegistration ?? "")}" /></div></div>
-        <div class="field"><label>Endereco completo</label><input name="addressLine" value="${escapeHtml(supplier.addressLine ?? "")}" /></div>
-        <div class="form-grid"><div class="field"><label>Cidade</label><input name="city" value="${escapeHtml(supplier.city ?? "")}" /></div><div class="field"><label>Estado</label><input name="state" maxlength="2" value="${escapeHtml(supplier.state ?? "")}" /></div></div>
-        <div class="form-grid"><div class="field"><label>CEP</label><input name="zipCode" value="${escapeHtml(supplier.zipCode ?? "")}" /></div><div class="field"><label>Telefone</label><input name="phone" value="${escapeHtml(supplier.phone ?? "")}" /></div></div>
-        <div class="form-grid"><div class="field"><label>E-mail</label><input name="email" type="email" value="${escapeHtml(supplier.email ?? "")}" /></div><div class="field"><label>Status</label><select name="active"><option value="true" ${supplier.active === false ? "" : "selected"}>Ativo</option><option value="false" ${supplier.active === false ? "selected" : ""}>Inativo</option></select></div></div>
-        <div class="field">
-          <label>Refeicoes deste fornecedor</label>
-          ${linkedMeals.length ? `<div class="supplier-meal-picker">${linkedMeals.map(({ meal, link }) => `
-            <div class="supplier-meal-option">
-              <span class="settings-stat-icon">${icon("utensils", 15)}</span>
-              <span><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(link.unitPrice ?? meal.unitPrice)}</small></span>
-            </div>`).join("")}</div>` : `<div class="empty">Este fornecedor ainda nao tem refeicoes vinculadas.</div>`}
-        </div>
-        <div class="supplier-create-meals">
-          <label>Criar refeicoes junto com o fornecedor</label>
-          ${[0, 1, 2].map((index) => `
-            <div class="supplier-new-meal-row">
-              <input name="newMealName" placeholder="Nome da refeicao" />
-              <select name="newMealCategory">
-                <option value="marmita">Marmita</option>
-                <option value="buffet">Buffet</option>
-                <option value="janta">Janta</option>
-                <option value="outro">Outro</option>
-              </select>
-              <input name="newMealUnitPrice" type="number" min="0" step="0.01" placeholder="Preco" />
-              <input name="newMealDescription" placeholder="Composicao / observacao" />
-            </div>`).join("")}
-        </div>
-        <div class="field"><label>Dados bancarios</label><textarea name="bankDetails">${escapeHtml(supplier.bankDetails ?? "")}</textarea></div>
-        <div class="field"><label>Observacoes internas</label><textarea name="notes">${escapeHtml(supplier.notes ?? "")}</textarea></div>
-        <footer class="settings-actions"><button class="btn ${supplier.id ? "outline" : "primary"}" type="submit">${supplier.id ? "Salvar" : "Cadastrar fornecedor"}</button></footer>
+
+        <section class="supplier-form-section">
+          <div class="supplier-form-section-head">
+            <span class="supplier-form-section-icon">${icon("package", 18)}</span>
+            <div class="supplier-form-section-title"><strong>Identificacao empresarial</strong><p>Nome, documento e dados fiscais do fornecedor.</p></div>
+          </div>
+          <div class="supplier-form-body">
+            <div class="supplier-form-grid">
+              <div class="field"><label>Razao social</label><input name="legalName" value="${escapeHtml(supplier.legalName ?? "")}" placeholder="Ex.: Almeida Refeicoes Ltda" required /></div>
+              <div class="field"><label>Nome fantasia</label><input name="tradeName" value="${escapeHtml(supplier.tradeName ?? "")}" placeholder="Ex.: Cozinha Almeida" /></div>
+            </div>
+            <div class="supplier-form-grid three">
+              <div class="field"><label>CNPJ</label><input name="cnpj" value="${escapeHtml(supplier.cnpj ?? "")}" placeholder="00.000.000/0001-00" /></div>
+              <div class="field"><label>Inscricao estadual</label><input name="stateRegistration" value="${escapeHtml(supplier.stateRegistration ?? "")}" /></div>
+              <div class="field"><label>Inscricao municipal</label><input name="municipalRegistration" value="${escapeHtml(supplier.municipalRegistration ?? "")}" /></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="supplier-form-section">
+          <div class="supplier-form-section-head">
+            <span class="supplier-form-section-icon">${icon("users", 18)}</span>
+            <div class="supplier-form-section-title"><strong>Contato e endereco</strong><p>Informacoes usadas pela operacao e pelos documentos.</p></div>
+          </div>
+          <div class="supplier-form-body">
+            <div class="supplier-form-grid contact">
+              <div class="field"><label>Responsavel</label><input name="contactName" value="${escapeHtml(supplier.contactName ?? "")}" placeholder="Nome do contato" /></div>
+              <div class="field"><label>Telefone</label><input name="phone" value="${escapeHtml(supplier.phone ?? "")}" placeholder="(00) 00000-0000" /></div>
+              <div class="field"><label>Status</label><select name="active"><option value="true" ${supplier.active === false ? "" : "selected"}>Ativo</option><option value="false" ${supplier.active === false ? "selected" : ""}>Inativo</option></select></div>
+            </div>
+            <div class="field"><label>E-mail</label><input name="email" type="email" value="${escapeHtml(supplier.email ?? "")}" placeholder="contato@fornecedor.com" /></div>
+            <div class="field"><label>Endereco completo</label><input name="addressLine" value="${escapeHtml(supplier.addressLine ?? "")}" placeholder="Rua, numero, bairro" /></div>
+            <div class="supplier-form-grid three">
+              <div class="field"><label>Cidade</label><input name="city" value="${escapeHtml(supplier.city ?? "")}" /></div>
+              <div class="field"><label>Estado</label><input name="state" maxlength="2" value="${escapeHtml(supplier.state ?? "")}" placeholder="UF" /></div>
+              <div class="field"><label>CEP</label><input name="zipCode" value="${escapeHtml(supplier.zipCode ?? "")}" /></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="supplier-form-section">
+          <div class="supplier-form-section-head">
+            <span class="supplier-form-section-icon">${icon("utensils", 18)}</span>
+            <div class="supplier-form-section-title"><strong>Refeicoes atendidas</strong><p>Veja os vinculos atuais e cadastre novos tipos junto com o fornecedor.</p></div>
+          </div>
+          <div class="supplier-form-body">
+            <div class="supplier-meal-current">
+              <label>Refeicoes deste fornecedor</label>
+              ${linkedMeals.length ? `<div class="supplier-meal-picker">${linkedMeals.map(({ meal, link }) => `
+                <div class="supplier-meal-option">
+                  <span class="settings-stat-icon">${icon("utensils", 15)}</span>
+                  <span><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(link.unitPrice ?? meal.unitPrice)}</small></span>
+                </div>`).join("")}</div>` : `<div class="empty">Este fornecedor ainda nao tem refeicoes vinculadas.</div>`}
+            </div>
+            <div class="supplier-new-meals-grid">
+              <div class="supplier-add-meal-strip">
+                <div><strong>Adicionar nova refeicao</strong><p>Use apenas se este fornecedor tambem precisa criar um novo tipo no catalogo.</p></div>
+                <button class="btn outline small" type="button" data-add-supplier-meal>${icon("plus", 14)}Adicionar refeicao</button>
+              </div>
+              <div class="supplier-new-meals-list" data-supplier-new-meals></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="supplier-form-section">
+          <div class="supplier-form-section-head">
+            <span class="supplier-form-section-icon">${icon("dollar-sign", 18)}</span>
+            <div class="supplier-form-section-title"><strong>Financeiro e observacoes</strong><p>Dados internos para pagamentos, conferencia e historico.</p></div>
+          </div>
+          <div class="supplier-form-body">
+            <div class="supplier-form-grid">
+              <div class="field"><label>Dados bancarios</label><textarea name="bankDetails" placeholder="Banco, agencia, conta, chave Pix">${escapeHtml(supplier.bankDetails ?? "")}</textarea></div>
+              <div class="field"><label>Observacoes internas</label><textarea name="notes" placeholder="Preferencias, restricoes, rotina de entrega">${escapeHtml(supplier.notes ?? "")}</textarea></div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="supplier-form-footer settings-actions">
+          <button class="btn outline" type="button" data-close-supplier-modal>Cancelar</button>
+          <button class="btn primary" type="submit">${isEditing ? `${icon("check", 15)}Salvar fornecedor` : `${icon("plus", 15)}Cadastrar fornecedor`}</button>
+        </footer>
       </form>`;
   }
 
@@ -507,7 +577,7 @@ export function createSettingsPage(ctx) {
                 const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id);
                 const active = supplier.active !== false && link?.active === true;
                 const disabled = supplier.active === false ? "disabled" : "";
-                return `<form class="meal-link-card" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" />${supplier.active === false ? `<input type="hidden" name="active" value="false" />` : ""}<div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)}</small></div><span class="meal-status-chip ${active ? "active" : "inactive"}">${active ? "Ativo" : "Inativo"}</span></div><div class="form-grid"><div class="field"><label>Status</label><select name="active" ${disabled}><option value="true" ${active ? "selected" : ""}>Ativo</option><option value="false" ${active ? "" : "selected"}>Inativo</option></select></div><div class="field"><label>Preco</label><input name="unitPrice" type="number" min="0" step="0.01" value="${link?.unitPrice ?? ""}" placeholder="${money(meal.unitPrice)}" ${disabled} /></div></div><footer class="settings-actions"><button class="btn outline small" type="submit" ${disabled}>Salvar</button></footer></form>`;
+                return `<form class="meal-link-card" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" />${supplier.active === false ? `<input type="hidden" name="active" value="false" />` : ""}<div class="meal-link-card-head"><button class="btn outline small meal-link-save" type="submit" ${disabled}>Vincular</button><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)}</small></div><span class="meal-status-chip ${active ? "active" : "inactive"}">${active ? "Ativo" : "Inativo"}</span></div><div class="form-grid"><div class="field"><label>Status</label><select name="active" ${disabled}><option value="true" ${active ? "selected" : ""}>Ativo</option><option value="false" ${active ? "" : "selected"}>Inativo</option></select></div><div class="field"><label>Preco</label><input name="unitPrice" type="number" min="0" step="0.01" value="${link?.unitPrice ?? ""}" placeholder="${money(meal.unitPrice)}" ${disabled} /></div></div></form>`;
               }).join("") || `<div class="empty">Nenhuma refeicao vinculada a este fornecedor.</div>`}
               </div>
             </article>`).join("")}
@@ -584,21 +654,23 @@ export function createSettingsPage(ctx) {
 
   function renderWorkSectionItem(section, leaders) {
     const leader = leaders.find((item) => item.id === section.leaderId);
+    const adminResponsible = ["escritorio", "canteiro"].includes(section.areaType);
+    const responsibleName = adminResponsible ? "ADMIN" : leader?.name || "Sem fixo";
     return `
       <article class="work-section-card">
         <div class="work-section-card-head">
           <div>
             <strong>${escapeHtml(section.name)}</strong>
-            <small class="block text-stone-500">${areaTypeLabel(section.areaType)}${leader ? ` - ${escapeHtml(leader.name)}` : " - sem encarregado fixo"}</small>
+            <small class="block text-stone-500">${areaTypeLabel(section.areaType)} - ${escapeHtml(responsibleName)}</small>
           </div>
           <span class="meal-status-chip ${section.active ? "active" : "inactive"}">${section.active ? "Ativo" : "Inativo"}</span>
+          <button class="icon-btn settings-card-edit" type="button" data-open-work-section-modal="${section.id}" aria-label="Editar ${escapeHtml(section.name)}">${icon("edit", 14)}</button>
         </div>
         <div class="supplier-info-grid">
           <span><small>Efetivo</small><b>${Number(section.headcount ?? 0)} pessoas</b></span>
           <span><small>Area</small><b>${areaTypeLabel(section.areaType)}</b></span>
-          <span><small>Responsavel</small><b>${escapeHtml(leader?.name || "Sem fixo")}</b></span>
+          <span><small>Responsavel</small><b>${escapeHtml(responsibleName)}</b></span>
         </div>
-        <button class="btn outline small" type="button" data-open-work-section-modal="${section.id}">${icon("edit", 14)}Editar</button>
       </article>`;
   }
 
@@ -616,6 +688,7 @@ export function createSettingsPage(ctx) {
           <div class="field"><label for="work-section-active-${id}">Status</label><select id="work-section-active-${id}" name="active"><option value="true" ${section?.active === false ? "" : "selected"}>Ativo</option><option value="false" ${section?.active === false ? "selected" : ""}>Inativo</option></select></div>
         </div>
         <div class="field"><label for="work-section-area-${id}">Area</label><select id="work-section-area-${id}" name="areaType"><option value="campo" ${section?.areaType === "campo" ? "selected" : ""}>Campo</option><option value="canteiro" ${section?.areaType === "canteiro" ? "selected" : ""}>Canteiro</option><option value="escritorio" ${section?.areaType === "escritorio" ? "selected" : ""}>Escritorio</option><option value="misto" ${section?.areaType === "misto" ? "selected" : ""}>Misto</option></select></div>
+        <p class="settings-helper-note">Escritorio e Canteiro ficam sempre sob responsabilidade do ADMIN.</p>
         <footer class="settings-actions">
           <button class="btn outline" type="button" data-close-work-section-modal>Cancelar</button>
           <button class="btn primary" type="submit">${section?.id ? "Salvar" : "Cadastrar"}</button>
@@ -734,14 +807,17 @@ export function createSettingsPage(ctx) {
     const subtitle = supplier ? "Atualize dados formais, contato e status." : "Cadastre a empresa ou restaurante usado nas operacoes.";
     return `
       <div class="settings-modal-backdrop" data-close-supplier-modal>
-        <section class="settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="supplier-modal-title" onclick="event.stopPropagation()">
-          <header class="settings-modal-header">
-            <div>
-              <span class="compact-kicker">Fornecedor</span>
-              <h2 id="supplier-modal-title">${title}</h2>
-              <p>${subtitle}</p>
+        <section class="settings-modal-panel supplier-modal-panel" role="dialog" aria-modal="true" aria-labelledby="supplier-modal-title" onclick="event.stopPropagation()">
+          <header class="settings-modal-header supplier-modal-header">
+            <div class="supplier-modal-title-wrap">
+              <span class="supplier-modal-emblem">${icon("package", 24)}</span>
+              <div class="supplier-modal-title">
+                <span class="compact-kicker">Cadastro de fornecedor</span>
+                <h2 id="supplier-modal-title">${title}</h2>
+                <p>${subtitle}</p>
+              </div>
             </div>
-            <button class="settings-modal-close" type="button" data-close-supplier-modal aria-label="Fechar">x</button>
+            <button class="settings-modal-close supplier-modal-close" type="button" data-close-supplier-modal aria-label="Fechar">x</button>
           </header>
           ${renderSupplierCompanyForm(supplier ?? {})}
         </section>

@@ -1280,6 +1280,35 @@ function renderConsolidationTimeline(consolidation) {
     </div>`;
 }
 
+function supplierMealDraftHtml(index) {
+  return `
+    <div class="supplier-new-meal-card" data-supplier-meal-draft>
+      <div class="supplier-new-meal-card-head">
+        <div class="flex items-center gap-2"><span>${icon("utensils", 15)}</span><strong data-supplier-meal-title>Nova refeicao ${index}</strong></div>
+        <button class="icon-btn" type="button" data-remove-supplier-meal aria-label="Remover refeicao">${icon("trash", 14)}</button>
+      </div>
+      <div class="supplier-new-meal-row">
+        <div class="field"><label>Nome</label><input name="newMealName" placeholder="Ex.: Marmita executiva" /></div>
+        <div class="field"><label>Categoria</label><select name="newMealCategory"><option value="marmita">Marmita</option><option value="buffet">Buffet</option><option value="janta">Janta</option><option value="outro">Outro</option></select></div>
+        <div class="field"><label>Preco</label><input name="newMealUnitPrice" type="number" min="0" step="0.01" placeholder="0,00" /></div>
+        <div class="field"><label>Composicao / observacao</label><input name="newMealDescription" placeholder="Ex.: arroz, feijao, proteina e salada" /></div>
+      </div>
+    </div>`;
+}
+
+function renumberSupplierMealDrafts(list) {
+  list.querySelectorAll("[data-supplier-meal-title]").forEach((title, index) => {
+    title.textContent = `Nova refeicao ${index + 1}`;
+  });
+}
+
+function addSupplierMealDraft(form) {
+  const list = form?.querySelector("[data-supplier-new-meals]");
+  if (!list) return;
+  const nextIndex = list.querySelectorAll("[data-supplier-meal-draft]").length + 1;
+  list.insertAdjacentHTML("beforeend", supplierMealDraftHtml(nextIndex));
+}
+
 function bindEvents() {
   root.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1503,6 +1532,14 @@ function bindEvents() {
   });
   root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
   root.querySelectorAll("[data-form='supplier-company']").forEach((form) => {
+    form.querySelector("[data-add-supplier-meal]")?.addEventListener("click", () => addSupplierMealDraft(form));
+    form.addEventListener("click", (event) => {
+      const removeButton = event.target.closest("[data-remove-supplier-meal]");
+      if (!removeButton) return;
+      const list = form.querySelector("[data-supplier-new-meals]");
+      removeButton.closest("[data-supplier-meal-draft]")?.remove();
+      if (list) renumberSupplierMealDrafts(list);
+    });
     form.addEventListener("submit", handleSupplierCompanySubmit);
   });
   root.querySelector("[data-form='supplier-company-user']")?.addEventListener("submit", handleSupplierCompanyUserSubmit);
@@ -1913,6 +1950,8 @@ async function handleWorkSectionSubmit(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
   const form = new FormData(formElement);
+  const areaType = String(form.get("areaType") ?? "campo");
+  const adminResponsibleArea = ["escritorio", "canteiro"].includes(areaType);
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
@@ -1920,8 +1959,8 @@ async function handleWorkSectionSubmit(event) {
       id: String(form.get("id") ?? "") || null,
       name: form.get("name"),
       headcount: form.get("headcount"),
-      leaderId: String(form.get("leaderId") ?? "") || null,
-      areaType: String(form.get("areaType") ?? "campo"),
+      leaderId: adminResponsibleArea ? null : String(form.get("leaderId") ?? "") || null,
+      areaType,
       active: form.get("active") === "true"
     });
     if (!form.get("id")) formElement.reset();
