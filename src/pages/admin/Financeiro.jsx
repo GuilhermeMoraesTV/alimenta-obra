@@ -170,6 +170,7 @@ export function Financeiro(props) {
       <style>{baseAdminScreenStyles + financeiroStyles}</style>
       <section className="finance-page">
         <AdminReceiptHeader
+          className="admin-corner-action-receipt"
           kicker="Financeiro"
           title="Financeiro"
           totalValue={money(projected)}

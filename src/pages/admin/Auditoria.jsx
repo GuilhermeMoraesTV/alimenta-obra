@@ -139,6 +139,7 @@ export function Auditoria({ exportMenuOpen, formatDateTime, icon, state }) {
     <>
       <style>{baseAdminScreenStyles + auditoriaStyles}</style>
       <AdminReceiptHeader
+        className="admin-corner-action-receipt"
         kicker="Auditoria"
         title="Eventos do sistema"
         totalValue={auditRows.length}

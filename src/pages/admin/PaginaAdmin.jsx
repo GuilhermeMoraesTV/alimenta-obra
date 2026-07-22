@@ -806,6 +806,23 @@ const adminDesignStyles = `
       z-index: 1000;
     }
 
+    .admin-page .admin-corner-action-receipt .admin-receipt-actions {
+      grid-column: 2;
+      grid-row: 1;
+      width: auto;
+      max-width: 7.8rem;
+      display: flex;
+      justify-self: end;
+      align-self: start;
+      justify-content: flex-end;
+    }
+
+    .admin-page .admin-corner-action-receipt .admin-receipt-actions > *,
+    .admin-page .admin-corner-action-receipt .admin-receipt-actions .btn,
+    .admin-page .admin-corner-action-receipt .admin-receipt-actions .export-menu > button {
+      width: auto;
+    }
+
     .admin-page .admin-send-total {
       margin-top: .22rem;
       gap: .4rem;
@@ -895,6 +912,19 @@ const adminDesignStyles = `
     .admin-page .admin-receipt-actions .export-options {
       left: auto;
       right: 0;
+    }
+
+    .admin-page .admin-filter-menu[open] .admin-filter-popover,
+    .admin-page .export-menu.open .export-options {
+      position: fixed;
+      top: 5.5rem;
+      right: .65rem;
+      left: .65rem;
+      width: auto;
+      min-width: 0;
+      max-width: none;
+      max-height: calc(100vh - 7rem);
+      overflow: auto;
     }
 
     .admin-page .stats-grid,
