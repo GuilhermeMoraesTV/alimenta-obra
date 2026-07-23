@@ -484,6 +484,14 @@ export async function saveSupplierCompanyUser({ supplierCompanyId, userId, activ
   return ensure(data, error);
 }
 
+export async function updateUserActiveStatus({ userId, active }) {
+  const { data, error } = await requireSupabase().rpc("admin_update_user_active_status", {
+    p_user_id: userId,
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
 export async function createAdminManagedUser({ email, password, name, role, supplierCompanyId = null, team = "", active = true }) {
   const { data, error } = await requireSupabase().functions.invoke("admin-create-user", {
     body: {

@@ -134,10 +134,7 @@ const pedidosStyles = `
   @media (max-width: 767px) {
     .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
     .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: auto; }
-    .admin-page .admin-pedidos-receipt .admin-receipt-chip { min-height: 3.15rem; gap: .28rem; padding: .46rem .36rem; }
-    .admin-page .admin-pedidos-receipt .admin-receipt-chip-icon { display: none; }
-    .admin-page .admin-pedidos-receipt .admin-receipt-chip strong { font-size: .9rem; }
-    .admin-page .admin-pedidos-receipt .admin-receipt-chip span:last-child { font-size: 6.7px; line-height: 1.02; letter-spacing: .025em; }
+    .admin-page .admin-pedidos-receipt .admin-receipt-chip { min-width: 0; }
     .admin-page .admin-history-hero .admin-history-actions { width: 100%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
     .admin-page .admin-pedidos-summary { padding-inline: .75rem; }
     .admin-page .admin-history-chip { padding: .55rem; gap: .35rem; }

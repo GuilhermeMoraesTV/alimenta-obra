@@ -58,13 +58,115 @@ button:disabled {
 
 .meal-link-card-head {
   display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .5rem;
   align-items: center !important;
 }
 
 .meal-link-save {
   min-height: 2rem !important;
   padding-inline: .75rem !important;
+}
+
+.settings-stat {
+  display: grid !important;
+  grid-template-columns: 2.25rem minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: .65rem !important;
+  border: 1px dashed #d6d3d1 !important;
+  border-left-width: 2px !important;
+  border-radius: .375rem 1rem 1rem .375rem !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05) !important;
+}
+
+.settings-stat-icon {
+  display: grid !important;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  background: var(--orange-soft) !important;
+  color: var(--orange-strong) !important;
+}
+
+.settings-stat-icon svg {
+  color: var(--orange-strong) !important;
+  stroke: currentColor !important;
+}
+
+.meal-link-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .5rem;
+}
+
+.meal-link-toggle,
+.user-active-toggle {
+  display: inline-grid;
+  grid-template-columns: 2.15rem auto;
+  align-items: center;
+  gap: .45rem;
+  min-height: 2rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 999px;
+  background: #f5f5f4;
+  padding: .18rem .62rem .18rem .22rem;
+  color: #78716c;
+  font-size: .66rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.meal-link-toggle span,
+.user-active-toggle span {
+  position: relative;
+  display: block;
+  width: 2.15rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: #d6d3d1;
+  transition: background .16s ease;
+}
+
+.meal-link-toggle span::after,
+.user-active-toggle span::after {
+  position: absolute;
+  top: .14rem;
+  left: .14rem;
+  width: .92rem;
+  height: .92rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .22);
+  content: "";
+  transition: transform .16s ease;
+}
+
+.meal-link-toggle.is-active,
+.user-active-toggle.is-active {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.meal-link-toggle.is-active span,
+.user-active-toggle.is-active span {
+  background: #ea580c;
+}
+
+.meal-link-toggle.is-active span::after,
+.user-active-toggle.is-active span::after {
+  transform: translateX(.95rem);
+}
+
+.user-active-toggle:disabled {
+  opacity: .52;
+}
+
+.meal-link-price-save {
+  min-width: 6.8rem;
 }
 
 .supplier-card-head {
@@ -435,6 +537,9 @@ button:disabled {
   .settings-section-grid .settings-stat {
     grid-template-columns: 2rem minmax(0, 1fr) !important;
     gap: .55rem !important;
+    border: 1px dashed #d6d3d1 !important;
+    border-left-width: 2px !important;
+    border-radius: .375rem 1rem 1rem .375rem !important;
   }
 
   .settings-section-grid .settings-overview {
@@ -444,7 +549,9 @@ button:disabled {
   .settings-section-grid .settings-stat-icon {
     width: 2rem !important;
     height: 2rem !important;
-    border-radius: .75rem !important;
+    border-radius: 999px !important;
+    background: var(--orange-soft) !important;
+    color: var(--orange-strong) !important;
   }
 
   .settings-section-grid .settings-stat strong {
@@ -635,7 +742,7 @@ button:disabled {
   }
 
   .settings-section-grid .meal-link-card-head {
-    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
     gap: .35rem !important;
   }
 
@@ -653,19 +760,48 @@ button:disabled {
     font-size: .56rem !important;
   }
 
-  .settings-section-grid .meal-link-save {
+  .settings-section-grid .meal-link-toggle,
+  .settings-section-grid .user-active-toggle,
+  .settings-section-grid .meal-link-price-save {
     min-height: 1.65rem !important;
     padding-inline: .45rem !important;
     font-size: .54rem !important;
   }
 
-  .settings-section-grid .meal-link-card .form-grid {
-    grid-template-columns: 5.5rem minmax(0, 1fr) !important;
+  .settings-section-grid .meal-link-card-body {
+    grid-template-columns: minmax(0, 1fr) auto !important;
     gap: .35rem !important;
   }
 
-  .settings-section-grid .meal-link-card input,
-  .settings-section-grid .meal-link-card select {
+  .settings-section-grid .meal-link-toggle,
+  .settings-section-grid .user-active-toggle {
+    grid-template-columns: 1.8rem auto !important;
+  }
+
+  .settings-section-grid .meal-link-toggle span,
+  .settings-section-grid .user-active-toggle span {
+    width: 1.8rem !important;
+    height: 1.02rem !important;
+  }
+
+  .settings-section-grid .meal-link-toggle span::after,
+  .settings-section-grid .user-active-toggle span::after {
+    top: .11rem !important;
+    left: .11rem !important;
+    width: .8rem !important;
+    height: .8rem !important;
+  }
+
+  .settings-section-grid .meal-link-toggle.is-active span::after,
+  .settings-section-grid .user-active-toggle.is-active span::after {
+    transform: translateX(.78rem) !important;
+  }
+
+  .settings-section-grid .meal-link-price-save {
+    min-width: 5.9rem !important;
+  }
+
+  .settings-section-grid .meal-link-card input {
     min-height: 1.85rem !important;
     padding-inline: .45rem !important;
     font-size: .68rem !important;

@@ -2,29 +2,10 @@ import React from "react";
 import { SupplierDailyBlockCard, supplierDailyBlockStyles } from "./DailyBlock.jsx";
 import { ConsolidatedSummary, ConsolidationTimeline, Icon, OriginRequestCards, SupplierFilterMenu, SupplierReceiptHeader, foodSummary, statusLabel, supplierConsolidations, supplierStatusCount } from "./shared.jsx";
 
-function OrderItemsSummary({ requestMealDescription, summary }) {
-  if (!summary.rows.length) return <div className="empty">Sem itens neste pedido.</div>;
-  return (
-    <div className="supplier-order-items-summary">
-      {Object.entries(summary.byMeal).map(([meal, data]) => (
-        <div className="supplier-order-item-line" key={meal}>
-          <span>
-            <strong>{meal}</strong>
-            {requestMealDescription(data.rows[0]) ? <small>{requestMealDescription(data.rows[0])}</small> : null}
-          </span>
-          <b>{data.total}</b>
-        </div>
-      ))}
-      <div className="supplier-order-item-line total-line"><span>Total</span><b>{summary.total} refeicoes</b></div>
-    </div>
-  );
-}
-
 export function OrderCard(props) {
-  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, icon, money, nextSupplierStep, requestMealDescription, STATUS_LABEL } = props;
+  const { consolidation, consolidationValue, formatDate, getConsolidationSummary, icon, money, nextSupplierStep, STATUS_LABEL } = props;
   const summary = getConsolidationSummary(props.state, consolidation);
   const next = nextSupplierStep(consolidation.status);
-  const compositions = Object.entries(summary.byMeal).map(([meal, data]) => [meal, requestMealDescription(data.rows[0])]).filter(([, description]) => description);
   const updatedRows = consolidation.sentAt
     ? summary.rows.filter((request) => request.updatedAt && new Date(request.updatedAt) > new Date(consolidation.sentAt))
     : [];
@@ -53,21 +34,6 @@ export function OrderCard(props) {
         <span>Status<strong>{statusLabel(STATUS_LABEL, consolidation.status)}</strong></span>
       </div>
       {hasAdminUpdate ? <div className="supplier-daily-update-alert"><Icon icon={icon} name="edit" size={15} /><div><strong>Pedido atualizado pelo Admin</strong><span>Revise o pedido antes de confirmar.</span></div></div> : null}
-      <details className="supplier-order-details">
-        <summary>Ver itens, composicao e origem</summary>
-        <div className="supplier-order-details-body">
-          <section className="supplier-order-detail-section">
-            <h3>Resumo do pedido</h3>
-            <OrderItemsSummary requestMealDescription={requestMealDescription} summary={summary} />
-          </section>
-          {compositions.length ? (
-            <section className="supplier-order-detail-section">
-              <h3>Composicao</h3>
-              {compositions.map(([meal, description]) => <p key={meal}><strong>{meal}:</strong> {description}</p>)}
-            </section>
-          ) : null}
-        </div>
-      </details>
     </article>
   );
 }

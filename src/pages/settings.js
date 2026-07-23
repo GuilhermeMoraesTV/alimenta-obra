@@ -320,7 +320,7 @@ export function createSettingsPage(ctx) {
           <button class="btn primary" type="button" data-open-admin-user-modal>${icon("plus", 15)}Novo usuario</button>
         </div>
         <div class="user-list">
-          ${users.map((user) => renderUserRow(user, supplierCompanies)).join("") || `<div class="empty">Nenhum usuario cadastrado.</div>`}
+          ${users.map((user) => renderUserRow(user)).join("") || `<div class="empty">Nenhum usuario cadastrado.</div>`}
         </div>
         ${supplierUsers.length && supplierCompanies.length ? `
           <details class="meal-catalog-edit">
@@ -338,8 +338,11 @@ export function createSettingsPage(ctx) {
       </section>`;
   }
 
-  function renderUserRow(user, supplierCompanies) {
+  function renderUserRow(user) {
+    const state = getState();
     const initials = String(user.name ?? user.email ?? "?").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+    const active = user.active !== false;
+    const isCurrentUser = user.id === state.activeUserId;
     return `
       <article class="user-row">
         <span class="user-avatar">${escapeHtml(initials || "?")}</span>
@@ -348,7 +351,9 @@ export function createSettingsPage(ctx) {
         </div>
         <div class="user-row-meta">
           <span class="role-chip">${roleName(user.role)}</span>
-          <span class="meal-status-chip ${user.active !== false ? "active" : "inactive"}">${user.active !== false ? "Ativo" : "Inativo"}</span>
+          <button class="user-active-toggle ${active ? "is-active" : ""}" type="button" data-user-active-toggle="${user.id}" data-next-active="${active ? "false" : "true"}" aria-pressed="${active}" ${isCurrentUser ? "disabled title=\"Nao e possivel desativar o proprio acesso logado\"" : ""}>
+            <span></span><strong>${active ? "Ativo" : "Inativo"}</strong>
+          </button>
         </div>
       </article>`;
   }
@@ -577,7 +582,7 @@ export function createSettingsPage(ctx) {
                 const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id);
                 const active = supplier.active !== false && link?.active === true;
                 const disabled = supplier.active === false ? "disabled" : "";
-                return `<form class="meal-link-card" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" />${supplier.active === false ? `<input type="hidden" name="active" value="false" />` : ""}<div class="meal-link-card-head"><button class="btn outline small meal-link-save" type="submit" ${disabled}>Vincular</button><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)}</small></div><span class="meal-status-chip ${active ? "active" : "inactive"}">${active ? "Ativo" : "Inativo"}</span></div><div class="form-grid"><div class="field"><label>Status</label><select name="active" ${disabled}><option value="true" ${active ? "selected" : ""}>Ativo</option><option value="false" ${active ? "" : "selected"}>Inativo</option></select></div><div class="field"><label>Preco</label><input name="unitPrice" type="number" min="0" step="0.01" value="${link?.unitPrice ?? ""}" placeholder="${money(meal.unitPrice)}" ${disabled} /></div></div></form>`;
+                return `<form class="meal-link-card ${active ? "is-active" : "is-inactive"}" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" /><input type="hidden" name="active" value="${active ? "true" : "false"}" /><div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)}</small></div><button class="meal-link-toggle ${active ? "is-active" : ""}" type="submit" data-meal-link-toggle value="${active ? "false" : "true"}" aria-pressed="${active}" ${disabled}><span></span><strong>${active ? "Ativo" : "Inativo"}</strong></button></div><div class="meal-link-card-body"><div class="field"><label>Preco</label><input name="unitPrice" type="number" min="0" step="0.01" value="${link?.unitPrice ?? ""}" placeholder="${money(meal.unitPrice)}" ${disabled} /></div><button class="btn outline small meal-link-price-save" type="submit" ${disabled}>Salvar preco</button></div></form>`;
               }).join("") || `<div class="empty">Nenhuma refeicao vinculada a este fornecedor.</div>`}
               </div>
             </article>`).join("")}

@@ -56,6 +56,7 @@ import {
   subscribeToChanges,
   updateCurrentProfile,
   updateDefaultMealUnitPrice,
+  updateUserActiveStatus,
   updateMealRequest,
   updateUserPassword,
   uploadSupplierInvoice,
@@ -138,8 +139,8 @@ const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
 const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
 const appLogoAsset = `${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`;
-const modalBackdropClass = "fixed inset-0 z-50 grid place-items-end bg-stone-950/50 p-0 backdrop-blur-sm sm:place-items-center sm:p-4";
-const modalPanelClass = "max-h-[92vh] w-full max-w-2xl overflow-auto rounded-t-3xl border border-white/70 bg-white p-4 shadow-2xl sm:rounded-3xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
+const modalBackdropClass = "fixed inset-0 z-50 grid place-items-center bg-stone-950/50 p-3 backdrop-blur-sm sm:p-4";
+const modalPanelClass = "max-h-[92vh] w-full max-w-2xl overflow-auto rounded-3xl border border-white/70 bg-white p-4 shadow-2xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
 const modalHeaderClass = "mb-4 flex items-start justify-between gap-3 border-b border-stone-100 pb-3";
 const modalTitleClass = "m-0 text-2xl font-black leading-none tracking-normal text-stone-950";
 const modalKickerClass = "text-[10px] font-black uppercase tracking-[.12em] text-orange-700";
@@ -540,8 +541,8 @@ function renderOperationModal() {
   const confirmedCancelModal = renderConfirmedCancelModal();
   if (confirmedCancelModal) return confirmedCancelModal;
   const request = state.requests.find((item) => item.id === pendingCancelRequestId);
-  if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar cancelamento</span><h2 class="${modalTitleClass} mt-1">Cancelar este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeições para ${formatDate(request.date)} será cancelado e não entrará no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
-  if (operationNotice) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-t-3xl border border-white/70 bg-white p-5 text-center shadow-2xl sm:rounded-3xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-orange-700">${icon("clipboard", 23)}</span><span class="${modalKickerClass} mt-3 block">Operacao registrada</span><h2 class="${modalTitleClass} mt-1">${operationNotice.title}</h2><p class="mt-2 text-sm text-stone-500">${operationNotice.message}</p><button class="${modalButtonPrimaryClass} mt-4 w-full" data-dismiss-operation>Continuar</button></section></div>`;
+  if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar cancelamento</span><h2 class="${modalTitleClass} mt-1">Cancelar este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeições para ${formatDate(request.date)} será cancelado e não entrará no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
+  if (operationNotice) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-orange-700">${icon("clipboard", 23)}</span><span class="${modalKickerClass} mt-3 block">Operacao registrada</span><h2 class="${modalTitleClass} mt-1">${operationNotice.title}</h2><p class="mt-2 text-sm text-stone-500">${operationNotice.message}</p><button class="${modalButtonPrimaryClass} mt-4 w-full" data-dismiss-operation>Continuar</button></section></div>`;
   return "";
 }
 
@@ -1058,7 +1059,7 @@ function renderSupplierNextAction(consolidation) {
   return `<section class="supplier-next-action">
     <span class="supplier-next-icon">${icon(consolidation.status === "saiu_entrega" ? "truck" : "clipboard", 22)}</span>
     <div class="supplier-next-copy"><span class="eyebrow">Próxima ação</span><h2>${supplierActionLabel(consolidation)}</h2><div class="supplier-next-order"><strong>${foods}</strong><span>Pedido ${consolidation.id.slice(0, 8).toUpperCase()}</span><span>${summary.total} refeições</span><span>${money(value)}</span><span>Entrega: ${formatDate(consolidation.date)}</span></div></div>
-    <div class="supplier-next-actions"><button class="btn outline small" data-supplier-select="${consolidation.id}">Detalhes</button>${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div>
+    <div class="supplier-next-actions">${next ? `<button class="btn primary" data-step="${next.step}" data-id="${consolidation.id}">${next.label}</button>` : ""}</div>
   </section>`;
 }
 
@@ -1539,6 +1540,9 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
+  root.querySelectorAll("[data-user-active-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleUserActiveToggle(button));
+  });
   root.querySelectorAll("[data-form='supplier-company']").forEach((form) => {
     form.querySelector("[data-add-supplier-meal]")?.addEventListener("click", () => addSupplierMealDraft(form));
     form.addEventListener("click", (event) => {
@@ -1944,7 +1948,11 @@ async function handleAdminOrderSubmit(event) {
     }, null);
     adminOrderFormOpen = false;
     await refreshData();
-    toast("Pedido administrativo criado.");
+    operationNotice = {
+      title: "Pedido admin criado",
+      message: "O pedido foi registrado e já aparece na lista operacional."
+    };
+    render();
   } catch (error) {
     console.error(error);
     adminOrderError = error.message || "Nao foi possivel criar o pedido administrativo.";
@@ -2094,6 +2102,23 @@ async function handleAdminUserSubmit(event) {
   }
 }
 
+async function handleUserActiveToggle(button) {
+  const userId = button.dataset.userActiveToggle;
+  const active = button.dataset.nextActive === "true";
+  if (!userId) return;
+  button.disabled = true;
+  try {
+    await updateUserActiveStatus({ userId, active });
+    await refreshData();
+    toast(active ? "Usuario ativado." : "Usuario desativado e acesso bloqueado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel alterar o usuario: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function handleSupplierCompanySubmit(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -2193,12 +2218,13 @@ async function handleSupplierMealLinkSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const button = event.submitter;
+  const activeValue = button?.dataset?.mealLinkToggle ? button.value : form.get("active");
   if (button) button.disabled = true;
   try {
     await saveSupplierMealTypeLink({
       supplierCompanyId: form.get("supplierCompanyId"),
       mealTypeId: form.get("mealTypeId"),
-      active: form.get("active") === "true",
+      active: activeValue === "true",
       unitPrice: form.get("unitPrice"),
       notes: form.get("notes")
     });

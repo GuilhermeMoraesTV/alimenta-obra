@@ -38,7 +38,7 @@ export const supplierDailyBlockStyles = `
   .supplier-page .supplier-daily-cancel-note { display: flex; align-items: center; justify-content: space-between; gap: .55rem; border-radius: .75rem; border: 1px solid #fecaca; background: #fef2f2; padding: .55rem .6rem; color: #991b1b; font-size: .72rem; font-weight: 900; }
   .supplier-page .supplier-daily-cancel-note strong { color: #7f1d1d; }
   .supplier-page .supplier-daily-total-line { display: flex; align-items: center; justify-content: space-between; gap: .75rem; font-size: .82rem; font-weight: 950; color: #1c1917; }
-  .supplier-page .supplier-daily-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .4rem; }
+  .supplier-page .supplier-daily-actions { display: grid; grid-template-columns: minmax(0,1fr); gap: .4rem; }
   .supplier-page .supplier-daily-actions .btn { width: 100%; min-height: 2.35rem; }
   @media (max-width: 767px) {
     .supplier-page .supplier-daily-block-list { grid-template-columns: 1fr; }
@@ -115,7 +115,6 @@ export function SupplierDailyBlockCard(props) {
         <div className="supplier-daily-total-line"><span>{isExtra ? "Total do extra" : "Total do dia"}</span><strong>{summary.total} refeicoes</strong></div>
         {isConfirmedCancelled ? <div className="supplier-daily-cancel-note"><span>Consumo real</span><strong>0 refeicoes</strong></div> : null}
         <div className="supplier-daily-actions">
-          <button className="btn outline small" data-supplier-select={consolidation.id}>Detalhes</button>
           {next ? <button className="btn primary small" data-step={next.step} data-id={consolidation.id}><Icon icon={icon} name={next.iconName ?? "check"} size={15} />{next.label}</button> : <span className={`badge ${consolidation.status}`}>{statusLabel(STATUS_LABEL, consolidation.status)}</span>}
         </div>
       </footer>

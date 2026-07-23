@@ -914,17 +914,45 @@ const adminDesignStyles = `
       right: 0;
     }
 
-    .admin-page .admin-filter-menu[open] .admin-filter-popover,
+    .admin-page .export-menu {
+      position: relative;
+    }
+
     .admin-page .export-menu.open .export-options {
-      position: fixed;
-      top: 5.5rem;
-      right: .65rem;
-      left: .65rem;
-      width: auto;
+      position: absolute;
+      top: calc(100% + .35rem);
+      right: 0;
+      left: auto;
+      width: min(14rem, calc(100vw - 1.3rem));
       min-width: 0;
       max-width: none;
-      max-height: calc(100vh - 7rem);
-      overflow: auto;
+      max-height: none;
+      overflow: visible;
+      gap: .4rem;
+      border-radius: .8rem;
+      padding: .55rem;
+    }
+
+    .admin-page .export-menu.open .export-options label {
+      display: grid;
+      gap: .18rem;
+    }
+
+    .admin-page .export-menu.open .export-options label span {
+      font-size: 8.5px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #78716c;
+    }
+
+    .admin-page .export-menu.open .export-options input,
+    .admin-page .export-menu.open .export-options select,
+    .admin-page .export-menu.open .export-options button {
+      min-height: 2rem;
+      border-radius: .55rem;
+      padding-inline: .5rem;
+      font-size: .72rem;
     }
 
     .admin-page .stats-grid,
