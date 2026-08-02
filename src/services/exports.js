@@ -316,24 +316,47 @@ function buildMeasurementModel(state, rows, options = {}) {
 function buildOrdersModel(state, rows, options = {}) {
   const model = buildMeasurementModel(state, rows, options);
   const period = options.periodLabel ?? model.periodLabel;
+  const cancelledStatuses = new Set(["cancelado", "cancelado_confirmado"]);
+  const orderDetailRows = [...rows]
+    .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"))
+    .map((request) => {
+      const cancelled = cancelledStatuses.has(request.status);
+      const consumed = cancelled ? 0 : actualQuantity(state, request);
+      const unitPrice = requestUnitPrice(state, request);
+      return {
+        date: request.date,
+        weekday: weekdayShort(request.date),
+        leader: request.originRole === "admin" ? getUserName(state, request.createdBy) : request.leader || request.leaderName || getUserName(state, request.leaderId),
+        section: request.sectionName || request.location || "Sem equipe",
+        meal: request.mealType || "Refeicao",
+        requested: Number(request.quantity ?? 0),
+        consumed,
+        effective: cancelled ? 0 : requestHeadcount(state, request),
+        unitPrice,
+        value: consumed * unitPrice,
+        status: request.status,
+        notes: request.notes ?? ""
+      };
+    });
   const tableRows = [
     ["Data", "Encarregado", "Equipe/Trecho", "Tipo", "Solic.", "Real.", "Efetivo", "Unitario", "Total", "Status"],
-    ...model.detailRows.map((row) => [row.date, row.leader, row.section, row.meal, row.requested, row.consumed, row.effective || "", row.unitPrice, row.value, row.status])
+    ...orderDetailRows.map((row) => [row.date, row.leader, row.section, row.meal, row.requested, row.consumed, row.effective || "", row.unitPrice, row.value, row.status])
   ];
   const blockRows = [
-    ["Data", "Pedidos", "Solicitadas", "Realizadas", "Encarregados", "Equipes", "Valor"],
-    ...Object.values(model.detailRows.reduce((acc, row) => {
-      acc[row.date] ??= { date: row.date, count: 0, requested: 0, consumed: 0, leaders: new Set(), sections: new Set(), value: 0 };
+    ["Data", "Pedidos", "Cancelados", "Solicitadas", "Realizadas", "Encarregados", "Equipes", "Valor"],
+    ...Object.values(orderDetailRows.reduce((acc, row) => {
+      acc[row.date] ??= { date: row.date, count: 0, cancelled: 0, requested: 0, consumed: 0, leaders: new Set(), sections: new Set(), value: 0 };
       acc[row.date].count += 1;
+      if (cancelledStatuses.has(row.status)) acc[row.date].cancelled += 1;
       acc[row.date].requested += row.requested;
       acc[row.date].consumed += row.consumed;
       acc[row.date].leaders.add(row.leader);
       acc[row.date].sections.add(row.section);
       acc[row.date].value += row.value;
       return acc;
-    }, {})).map((row) => [row.date, row.count, row.requested, row.consumed, row.leaders.size, row.sections.size, row.value])
+    }, {})).map((row) => [row.date, row.count, row.cancelled, row.requested, row.consumed, row.leaders.size, row.sections.size, row.value])
   ];
-  return { ...model, periodLabel: period, tableRows, blockRows };
+  return { ...model, periodLabel: period, orderDetailRows, tableRows, blockRows };
 }
 
 function dailyReportRows(state, report) {
@@ -497,6 +520,10 @@ function renderPrintablePage({ title, subtitle, eyebrow = "", children, footer =
       .kpi-table th { border: 1px solid #b4c7e7; background: #d9d9d9; color: #202124; padding: 6px 7px; text-align: center; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
       .kpi-table td { border: 1px solid #b4c7e7; padding: 6px 7px; background: #fff; }
       .kpi-table tbody tr:nth-child(even) td { background: #f7f9fc; }
+      .kpi-table td.negative { color: #b42318; font-weight: 900; }
+      .kpi-table td.positive { color: #047857; font-weight: 900; }
+      .daily-simple-table { font-size: 11px; }
+      .daily-simple-table th, .daily-simple-table td { padding: 8px 10px; }
       @media print {
         html, body { background: #fff; }
         .print-toolbar { display: none; }
@@ -681,17 +708,51 @@ function renderSupplierRomaneioHtml(state, consolidation, summary) {
 function renderMeasurementPdfHtml(model) {
   const quantity = (value, zero = "00") => Number(value ?? 0) ? Number(value ?? 0) : zero;
   const totalMoney = (value) => Number(value ?? 0) ? money(value) : "-";
+  const chunk = (items, size) => items.reduce((pages, item, index) => {
+    if (index % size === 0) pages.push([]);
+    pages[pages.length - 1].push(item);
+    return pages;
+  }, []);
+  const mealLimitPerPage = model.meals.length > 6 ? 3 : 4;
+  const mealGroups = chunk(model.meals.map((meal, index) => ({ ...meal, index })), mealLimitPerPage);
+  const detailGroups = chunk(model.detailRows, 24);
+  const summaryGroups = chunk(model.sectionSummary, 22);
   const dayRows = model.dayRows.map((day) => `<tr><td>${escapeHtml(day.longDate)}</td></tr>`).join("");
-  const mealTables = model.meals.map((meal, index) => {
+  const coverMealCards = model.mealSummary.map((row) => `<article class="measurement-meal-card"><span>${escapeHtml(row.label)}</span><strong>${row.consumed}</strong><small>${money(row.value)} · solic. ${row.requested}</small></article>`).join("");
+  const coverMealCardsDetailed = model.mealSummary.map((row) => `<article class="measurement-meal-card"><span>${escapeHtml(row.label)}</span><p class="measurement-requested-line">Solicitado: <strong>${row.requested}</strong></p><p>Consumido: ${row.consumed}</p><p>Valor medido: ${money(row.value)}</p></article>`).join("");
+  const renderMealTable = (meal) => {
     const rows = model.dayRows.map((day) => {
-      const item = day.meals[index] ?? {};
+      const item = day.meals[meal.index] ?? {};
       return `<tr><td class="day">${escapeHtml(day.weekday)}</td><td class="number">${quantity(item.consumed)}</td><td class="number">${money(item.unitPrice)}</td><td class="number">${totalMoney(item.value)}</td></tr>`;
     }).join("");
     return `<table class="measurement-table meal-table"><colgroup><col class="day-col" /><col class="qty-col" /><col class="unit-col" /><col class="total-col" /></colgroup><thead><tr><th colspan="4" class="meal-title">${escapeHtml(meal.label)}</th></tr><tr><th>Dia</th><th>Real.</th><th>V. unit.</th><th>Total</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th></th><th class="number">${quantity(meal.quantityTotal, "0")}</th><th></th><th class="number">${money(meal.valueTotal)}</th></tr></tfoot></table>`;
+  };
+  const mealPages = (mealGroups.length ? mealGroups : [[{ label: "Refeicao", index: 0, quantityTotal: 0, valueTotal: 0 }]]).map((group, pageIndex) => {
+    const measurementColumns = `1.05fr repeat(${Math.max(group.length, 1)}, minmax(0, 1.35fr))`;
+    return `<section class="measurement-page calculation-page">
+      <h2 class="measurement-heading">Memoria diaria por refeicao${mealGroups.length > 1 ? ` - grupo ${pageIndex + 1}/${mealGroups.length}` : ""}</h2>
+      <div class="measurement-layout" style="grid-template-columns:${measurementColumns}">
+        <table class="measurement-table date-table"><thead><tr><th>&nbsp;</th></tr><tr><th>DATA</th></tr></thead><tbody>${dayRows}</tbody><tfoot><tr><th>TOTAL</th></tr></tfoot></table>
+        ${group.map(renderMealTable).join("")}
+      </div>
+    </section>`;
   }).join("");
-  const detail = model.detailRows.map((row) => `<tr><td>${formatDate(row.date)}</td><td>${escapeHtml(row.leader)}</td><td>${escapeHtml(row.section)}</td><td>${escapeHtml(row.meal)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.unitPrice)}</td><td class="number">${money(row.value)}</td><td>${escapeHtml(row.status)}</td></tr>`).join("");
-  const sectionSummary = model.sectionSummary.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.value)}</td></tr>`).join("");
-  const measurementColumns = `1.04fr repeat(${Math.max(model.meals.length, 1)}, 1.22fr)`;
+  const detailPages = (detailGroups.length ? detailGroups : [[]]).map((group, pageIndex) => {
+    const detail = group.map((row) => `<tr><td>${formatDate(row.date)}</td><td>${escapeHtml(row.leader)}</td><td>${escapeHtml(row.section)}</td><td>${escapeHtml(row.meal)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.unitPrice)}</td><td class="number">${money(row.value)}</td><td>${escapeHtml(row.status)}</td></tr>`).join("");
+    return `<section class="measurement-page detail-page">
+      <h2 class="measurement-heading">Detalhamento completo da medicao${detailGroups.length > 1 ? ` - pagina ${pageIndex + 1}/${detailGroups.length}` : ""}</h2>
+      <table class="measurement-table detail-table"><thead><tr><th>Data</th><th>Encarregado</th><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Real.</th><th class="number">Efetivo</th><th class="number">Valor unit.</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${detail || "<tr><td colspan=\"10\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
+    </section>`;
+  }).join("");
+  const summaryPages = (summaryGroups.length ? summaryGroups : [[]]).map((group, pageIndex) => {
+    const isLastSummaryPage = pageIndex === (summaryGroups.length ? summaryGroups.length - 1 : 0);
+    const sectionSummary = group.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.value)}</td></tr>`).join("");
+    return `<section class="measurement-page summary-page">
+      <h2 class="measurement-heading">Resumo por equipe/trecho${summaryGroups.length > 1 ? ` - pagina ${pageIndex + 1}/${summaryGroups.length}` : ""}</h2>
+      <table class="measurement-table summary-table"><thead><tr><th>Equipe/Trecho</th><th class="number">Solicitado</th><th class="number">Realizado</th><th class="number">Efetivo</th><th class="number">Total</th></tr></thead><tbody>${sectionSummary || "<tr><td colspan=\"5\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
+      ${isLastSummaryPage ? `<div class="measurement-final-block"><div class="measurement-total"><span>TOTAL</span><strong>${money(model.totalValue)}</strong></div><div class="measurement-signatures"><div class="measurement-signature">Solicitante/Acompanhante</div><div class="measurement-signature">Fornecedor</div></div></div>` : ""}
+    </section>`;
+  }).join("");
 
   return renderPrintablePage({
     title: "Medicao Todo periodo",
@@ -704,6 +765,7 @@ function renderMeasurementPdfHtml(model) {
       .measurement-page { width: 297mm; min-height: 210mm; padding: 15mm 14mm 10mm; break-after: page; page-break-after: always; background: #fff; }
       .measurement-page:last-child { break-after: auto; page-break-after: auto; }
       .cover-page { display: flex; flex-direction: column; }
+      .calculation-page, .detail-page, .summary-page { padding-top: 13mm; }
       .measurement-header { display: grid; grid-template-columns: 29% 42.5% 28.5%; min-height: 31mm; border: 2px solid #000; }
       .measurement-logo-box, .measurement-info-box, .measurement-meta-box { min-width: 0; display: grid; align-items: center; border-right: 2px solid #000; }
       .measurement-meta-box { border-right: 0; grid-template-columns: minmax(0,1fr) 92px; column-gap: 12px; padding: 8px 12px; }
@@ -714,7 +776,19 @@ function renderMeasurementPdfHtml(model) {
       .measurement-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px; padding: 7px 12px 8px; font-size: 9.5pt; line-height: 1.15; }
       .measurement-label { font-weight: 900; }
       .measurement-meta-list { display: grid; gap: 3px; font-size: 9.5pt; line-height: 1.1; }
-      .measurement-layout { display: grid; grid-template-columns: ${measurementColumns}; gap: 6px; margin-top: 8px; align-items: start; }
+      .measurement-cover-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 7mm; }
+      .measurement-cover-card { min-height: 20mm; border: 1.5px solid #0b336a; border-left-width: 5px; background: #f7f9fc; padding: 7px 9px; }
+      .measurement-cover-card span, .measurement-meal-card span { display: block; font-size: 8pt; font-weight: 900; text-transform: uppercase; color: #0b336a; }
+      .measurement-cover-card strong { display: block; margin-top: 5px; font-size: 16pt; line-height: 1; }
+      .measurement-cover-card small { display: block; margin-top: 4px; color: #202124; font-size: 7.5pt; font-weight: 800; line-height: 1.15; }
+      .measurement-meal-summary { margin-top: 6mm; }
+      .measurement-subheading { margin: 0 0 3mm; color: #0b336a; font-size: 11pt; font-weight: 950; text-transform: uppercase; }
+      .measurement-meal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .measurement-meal-card { min-height: 22mm; border: 1px solid #9fb3cc; border-left: 4px solid #0b336a; background: #fff; padding: 7px 9px; break-inside: avoid; }
+      .measurement-meal-card p { margin: 5px 0 0; font-size: 8.5pt; font-weight: 850; color: #202124; }
+      .measurement-meal-card .measurement-requested-line { margin-top: 7px; color: #000; font-size: 10pt; font-weight: 950; }
+      .measurement-meal-card .measurement-requested-line strong { font-size: 15pt; line-height: 1; }
+      .measurement-layout { display: grid; gap: 7px; margin-top: 4mm; align-items: start; }
       .measurement-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; border-radius: 0; font-size: 6.25pt; line-height: 1.1; }
       .measurement-table th, .measurement-table td { border: 1px solid #000; padding: 3px 4px; color: #000; vertical-align: middle; }
       .measurement-table th { background: #b9c2cc; color: #000; text-align: center; font-weight: 900; letter-spacing: 0; text-transform: none; }
@@ -734,10 +808,11 @@ function renderMeasurementPdfHtml(model) {
       .measurement-total span, .measurement-total strong { min-height: 10mm; display: grid; align-items: center; padding: 0 9px; font-size: 14pt; line-height: 1; white-space: nowrap; }
       .measurement-total span { justify-content: center; background: #b9b4b4; border-right: 2px solid #000; }
       .measurement-total strong { justify-content: end; background: #fff; }
-      .measurement-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 18mm; width: 140mm; margin: auto auto 0; padding-bottom: 7mm; text-align: center; font-size: 13pt; font-weight: 950; }
+      .measurement-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 18mm; width: 140mm; margin: 0 auto; padding-bottom: 7mm; text-align: center; font-size: 13pt; font-weight: 950; }
       .measurement-signature { padding-top: 4mm; border-top: 1px solid #000; }
       .detail-page { padding-top: 14mm; }
-      .summary-page { padding-top: 16mm; }
+      .summary-page { display: flex; flex-direction: column; padding-top: 16mm; }
+      .measurement-final-block { margin-top: auto; display: grid; gap: 11mm; justify-items: center; }
       .measurement-heading { margin: 0 0 5mm; font-size: 17pt; line-height: 1; font-weight: 950; letter-spacing: 0; }
       .detail-table { font-size: 7pt; }
       .detail-table th, .detail-table td { height: 17px; padding: 4px 6px; }
@@ -760,14 +835,14 @@ function renderMeasurementPdfHtml(model) {
             <div><span class="measurement-label">Empresa:</span> ${escapeHtml(model.supplierName)}</div>
             <div><span class="measurement-label">Periodo:</span> ${escapeHtml(model.dateRangeLabel ?? model.periodLabel)}</div>
             <div><span class="measurement-label">CNPJ:</span> ${escapeHtml(model.supplierDocument)}</div>
-            <div><span class="measurement-label">QTD. dias:</span> ${model.measuredDays}</div>
+            <div><span class="measurement-label">Quantidade de dias:</span> ${model.measuredDays}</div>
             <div><span class="measurement-label">Escopo:</span> ${escapeHtml(model.scope)}</div>
             <div><span class="measurement-label">Area/Setor:</span> ${escapeHtml(model.area)}</div>
           </div>
         </div>
         <div class="measurement-meta-box">
           <div class="measurement-meta-list">
-            <div><span class="measurement-label">Cod. Forn.:</span> ${escapeHtml(model.supplierCode)}</div>
+            <div><span class="measurement-label">Codigo do fornecedor:</span> ${escapeHtml(model.supplierCode)}</div>
             <div><span class="measurement-label">Medicao:</span> ${escapeHtml(model.periodLabel)}</div>
             <div><span class="measurement-label">Revisao:</span> ${escapeHtml(model.revision)}</div>
             <div><span class="measurement-label">Gerado:</span> ${escapeHtml(model.generatedAt)}</div>
@@ -775,32 +850,33 @@ function renderMeasurementPdfHtml(model) {
           <img class="measurement-system-logo" src="${SYSTEM_LOGO_URL}" alt="AlimentaObra" />
         </div>
       </header>
-      <div class="measurement-layout">
-        <table class="measurement-table date-table"><thead><tr><th>&nbsp;</th></tr><tr><th>DATA</th></tr></thead><tbody>${dayRows}</tbody><tfoot><tr><th>TOTAL</th></tr></tfoot></table>
-        ${mealTables}
+      <div class="measurement-cover-grid">
+        <article class="measurement-cover-card"><span>Valor total medido</span><strong>${money(model.totalValue)}</strong><small>Soma dos valores realizados no periodo.</small></article>
+        <article class="measurement-cover-card"><span>Refeicoes realizadas</span><strong>${model.totalQuantity}</strong><small>Total consumido usado para calculo.</small></article>
+        <article class="measurement-cover-card"><span>Tipos de refeicao apurados</span><strong>${model.meals.length}</strong><small>Itens diferentes considerados na medicao.</small></article>
+        <article class="measurement-cover-card"><span>Dias medidos</span><strong>${model.measuredDays}</strong><small>Quantidade de dias com apuracao no periodo.</small></article>
       </div>
-      <div class="measurement-total"><span>TOTAL</span><strong>${money(model.totalValue)}</strong></div>
-      <div class="measurement-signatures"><div class="measurement-signature">Solicitante/Acompanhante</div><div class="measurement-signature">Fornecedor</div></div>
+      <section class="measurement-meal-summary">
+        <h2 class="measurement-subheading">Resumo por tipo de refeicao</h2>
+        <div class="measurement-meal-grid">${coverMealCardsDetailed || "<article class=\"measurement-meal-card\"><span>Sem movimentacao</span><p class=\"measurement-requested-line\">Solicitado: <strong>0</strong></p><p>Consumido: 0</p><p>Valor medido: R$ 0,00</p></article>"}</div>
+      </section>
     </section>
-    <section class="measurement-page detail-page">
-      <h2 class="measurement-heading">Detalhamento completo da medicao</h2>
-      <table class="measurement-table detail-table"><thead><tr><th>Data</th><th>Encarregado</th><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Real.</th><th class="number">Efetivo</th><th class="number">Valor unit.</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${detail || "<tr><td colspan=\"10\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
-    </section>
-    <section class="measurement-page summary-page">
-      <h2 class="measurement-heading">Resumo por equipe/trecho</h2>
-      <table class="measurement-table summary-table"><thead><tr><th>Equipe/Trecho</th><th class="number">Solicitado</th><th class="number">Realizado</th><th class="number">Efetivo</th><th class="number">Total</th></tr></thead><tbody>${sectionSummary || "<tr><td colspan=\"5\">Sem movimentacao no periodo.</td></tr>"}</tbody></table>
-    </section>`
+    ${mealPages}
+    ${detailPages}
+    ${summaryPages}`
   });
 }
 
 function renderOrdersPdfHtml(state, rows, options = {}) {
   const model = buildOrdersModel(state, rows, options);
-  const blocks = Object.values(model.detailRows.reduce((acc, row) => {
-    acc[row.date] ??= { date: row.date, rows: [], requested: 0, consumed: 0, value: 0, leaders: new Set(), sections: new Set() };
+  const orderRows = model.orderDetailRows ?? model.detailRows;
+  const blocks = Object.values(orderRows.reduce((acc, row) => {
+    acc[row.date] ??= { date: row.date, rows: [], requested: 0, consumed: 0, value: 0, cancelled: 0, leaders: new Set(), sections: new Set() };
     acc[row.date].rows.push(row);
     acc[row.date].requested += row.requested;
     acc[row.date].consumed += row.consumed;
     acc[row.date].value += row.value;
+    if (["cancelado", "cancelado_confirmado"].includes(row.status)) acc[row.date].cancelled += 1;
     acc[row.date].leaders.add(row.leader);
     acc[row.date].sections.add(row.section);
     return acc;
@@ -810,7 +886,7 @@ function renderOrdersPdfHtml(state, rows, options = {}) {
     return `<section class="order-day-block ${index ? "order-day-break" : ""}">
       <header class="order-day-header">
         <div><span>Bloco diario</span><strong>${formatDate(block.date)}</strong></div>
-        <div class="order-day-pills"><b>${block.rows.length} pedidos</b><b>${block.requested} solicitadas</b><b>${block.consumed} realizadas</b><b>${block.leaders.size} encarregados</b><b>${block.sections.size} equipes</b></div>
+        <div class="order-day-pills"><b>${block.rows.length} pedidos</b><b>${block.cancelled} cancelados</b><b>${block.requested} solicitadas</b><b>${block.consumed} realizadas</b><b>${block.leaders.size} encarregados</b><b>${block.sections.size} equipes</b></div>
       </header>
       <table class="orders-table"><thead><tr><th>Data</th><th>Encarregado</th><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Real.</th><th class="number">Efetivo</th><th class="number">Unitario</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table}</tbody><tfoot><tr><th colspan="4">Total do bloco</th><th class="number">${block.requested}</th><th class="number">${block.consumed}</th><th colspan="2"></th><th class="number">${money(block.value)}</th><th></th></tr></tfoot></table>
     </section>`;
@@ -834,7 +910,7 @@ function renderOrdersPdfHtml(state, rows, options = {}) {
       .orders-table tfoot { display: table-row-group; }
       .orders-table tfoot th { background: #002060; color: #fff; }
       @media print { .order-day-block { box-shadow: none; } .order-day-header { break-after: avoid; page-break-after: avoid; } .orders-table { break-before: avoid; page-break-before: avoid; } }
-    </style><section class="metrics"><div class="metric"><span>Periodo</span><strong>${escapeHtml(model.periodLabel)}</strong></div><div class="metric"><span>Pedidos</span><strong>${model.detailRows.length}</strong></div><div class="metric"><span>Blocos</span><strong>${blocks.length}</strong></div></section><section class="metrics"><div class="metric"><span>Solicitado</span><strong>${model.detailRows.reduce((sum, row) => sum + row.requested, 0)}</strong></div><div class="metric"><span>Realizado</span><strong>${model.totalQuantity}</strong></div><div class="metric"><span>Valor total</span><strong>${money(model.totalValue)}</strong></div></section>${blockHtml || "<p class=\"small-note\">Sem pedidos no periodo.</p>"}`
+    </style><section class="metrics"><div class="metric"><span>Periodo</span><strong>${escapeHtml(model.periodLabel)}</strong></div><div class="metric"><span>Pedidos</span><strong>${orderRows.length}</strong></div><div class="metric"><span>Cancelados</span><strong>${orderRows.filter((row) => ["cancelado", "cancelado_confirmado"].includes(row.status)).length}</strong></div></section><section class="metrics"><div class="metric"><span>Solicitado</span><strong>${orderRows.reduce((sum, row) => sum + row.requested, 0)}</strong></div><div class="metric"><span>Realizado</span><strong>${orderRows.reduce((sum, row) => sum + row.consumed, 0)}</strong></div><div class="metric"><span>Valor total</span><strong>${money(orderRows.reduce((sum, row) => sum + row.value, 0))}</strong></div></section>${blockHtml || "<p class=\"small-note\">Sem pedidos no periodo.</p>"}`
   });
 }
 
@@ -856,8 +932,8 @@ function renderGroupedBarSvg(items, keys = [
   const height = 235;
   const left = 52;
   const right = 18;
-  const top = 28;
-  const bottom = 44;
+  const top = 14;
+  const bottom = 58;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
   const safeItems = items.length ? items : [{ label: "Sem dados", requested: 0, consumed: 0, effective: 0 }];
@@ -883,51 +959,72 @@ function renderGroupedBarSvg(items, keys = [
   }).join("");
   const legend = keys.map(([, label, color], index) => {
     const x = width / 2 - 145 + index * 100;
-    return `<rect x="${x}" y="8" width="9" height="9" fill="${color}"/><text x="${x + 13}" y="16" font-size="11" fill="#4b5563">${escapeHtml(label)}</text>`;
+    return `<rect x="${x}" y="${height - 13}" width="9" height="9" fill="${color}"/><text x="${x + 13}" y="${height - 5}" font-size="11" fill="#4b5563">${escapeHtml(label)}</text>`;
   }).join("");
 
   return `<svg class="kpi-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Grafico comparativo de refeicoes">
     <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>
-    ${legend}${grid}
+    ${grid}
     <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="#bfbfbf" stroke-width="1.2"/>
     <text x="14" y="${top + plotHeight / 2}" transform="rotate(-90 14 ${top + plotHeight / 2})" text-anchor="middle" font-size="11" fill="#4b5563">Quantidade</text>
     ${bars}
+    ${legend}
   </svg>`;
 }
 
-function renderOccupancySvg(days) {
+function renderDailyDemandSvg(days) {
   const width = 760;
   const height = 250;
-  const left = 44;
-  const right = 20;
-  const top = 26;
-  const bottom = 44;
+  const left = 54;
+  const right = 28;
+  const top = 48;
+  const bottom = 54;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const safeDays = days.length ? days : [["-", { requested: 0, consumed: 0, effective: 0 }]];
-  const groupWidth = plotWidth / safeDays.length;
-  const barWidth = Math.min(34, Math.max(18, groupWidth * .42));
+  const safeDays = days.length ? days : [["-", { requested: 0, consumed: 0 }]];
+  const values = safeDays.flatMap(([, item]) => [Number(item.requested ?? 0), Number(item.consumed ?? 0)]);
+  const maxValue = Math.max(...values, 1);
+  const y = (value) => top + plotHeight - (Number(value ?? 0) / maxValue) * plotHeight;
+  const x = (index) => safeDays.length === 1 ? left + plotWidth / 2 : left + (plotWidth / (safeDays.length - 1)) * index;
   const grid = [0, .25, .5, .75, 1].map((step) => {
-    const yy = top + plotHeight - (step * plotHeight);
-    return `<line x1="${left}" y1="${yy}" x2="${width - right}" y2="${yy}" stroke="#d9d9d9" stroke-width="1"/><text x="${left - 8}" y="${yy + 4}" text-anchor="end" font-size="10" fill="#6b7280">${Math.round(step * 100)}%</text>`;
+    const yy = top + plotHeight - step * plotHeight;
+    const label = Math.round(maxValue * step);
+    return `<line x1="${left}" y1="${yy}" x2="${width - right}" y2="${yy}" stroke="#e5e7eb" stroke-width="1"/><text x="${left - 9}" y="${yy + 4}" text-anchor="end" font-size="9" fill="#6b7280">${label}</text>`;
   }).join("");
-  const bars = safeDays.map(([date, item], index) => {
-    const denominator = Number(item.effective || item.requested || 0);
-    const raw = denominator ? (Number(item.consumed ?? 0) / denominator) * 100 : 0;
-    const capped = Math.max(0, Math.min(100, raw));
-    const h = (capped / 100) * plotHeight;
-    const x = left + groupWidth * index + (groupWidth - barWidth) / 2;
-    const y = top + plotHeight - h;
+  const requestedPoints = safeDays.map(([, item], index) => `${x(index)},${y(Number(item.requested ?? 0))}`).join(" ");
+  const consumedPoints = safeDays.map(([, item], index) => `${x(index)},${y(Number(item.consumed ?? 0))}`).join(" ");
+  const markers = safeDays.map(([date, item], index) => {
+    const requested = Number(item.requested ?? 0);
+    const consumed = Number(item.consumed ?? 0);
+    const diff = consumed - requested;
+    const xx = x(index);
+    const requestedY = y(requested);
+    const consumedY = y(consumed);
     const label = String(date).includes("-") ? String(date).slice(5).replace("-", "/") : date;
-    return `<rect x="${x}" y="${top}" width="${barWidth}" height="${plotHeight}" fill="#d9d9d9"/><rect x="${x}" y="${y}" width="${barWidth}" height="${h}" fill="#002060"/><text x="${x + barWidth / 2}" y="${Math.max(14, y - 6)}" text-anchor="middle" font-size="10" font-weight="800" fill="#4b5563">${Math.round(raw)}%</text><text x="${x + barWidth / 2}" y="${height - 23}" text-anchor="middle" font-size="10" font-weight="700" fill="#4b5563">${escapeHtml(label)}</text>`;
+    const showValue = Math.abs(diff) >= 10 || requested === maxValue || consumed === maxValue || index === 0 || index === safeDays.length - 1;
+    const diffColor = diff < 0 ? "#b42318" : diff > 0 ? "#047857" : "#475569";
+    const diffLabel = diff ? `${diff > 0 ? "+" : ""}${diff}` : "0";
+    const diffLabelY = Math.min(requestedY, consumedY) - 7 < top - 10 ? Math.max(requestedY, consumedY) + 16 : Math.min(requestedY, consumedY) - 7;
+    return `<line x1="${xx}" y1="${top + plotHeight}" x2="${xx}" y2="${top + plotHeight + 4}" stroke="#94a3b8" stroke-width="1"/>
+      <text x="${xx}" y="${height - 27}" text-anchor="middle" font-size="9" font-weight="800" fill="#4b5563">${escapeHtml(label)}</text>
+      <circle cx="${xx}" cy="${requestedY}" r="3.5" fill="#002060"/>
+      <circle cx="${xx}" cy="${consumedY}" r="3.5" fill="#0070c0"/>
+      ${showValue ? `<text x="${xx}" y="${diffLabelY}" text-anchor="middle" font-size="9" font-weight="900" fill="${diffColor}">${escapeHtml(diffLabel)}</text>` : ""}`;
   }).join("");
-  return `<svg class="kpi-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Taxa de ocupacao diaria">
+  return `<svg class="kpi-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Grafico em linha de refeicoes solicitadas e consumidas">
     <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>
+    <text x="${left}" y="18" font-size="10" font-weight="900" fill="#002060">Quantidade de refeicoes por data</text>
+    <text x="${width - right}" y="18" text-anchor="end" font-size="9" font-weight="800" fill="#6b7280">Rotulos destacam o saldo do dia</text>
     ${grid}
-    <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="#bfbfbf" stroke-width="1.2"/>
-    ${bars}
-    <rect x="${width / 2 - 90}" y="${height - 10}" width="10" height="8" fill="#002060"/><text x="${width / 2 - 76}" y="${height - 3}" font-size="10" fill="#4b5563">Ocupacao</text>
-    <rect x="${width / 2 + 5}" y="${height - 10}" width="10" height="8" fill="#d9d9d9"/><text x="${width / 2 + 19}" y="${height - 3}" font-size="10" fill="#4b5563">Disponibilidade</text>
+    <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="14" y="${top + plotHeight / 2}" transform="rotate(-90 14 ${top + plotHeight / 2})" text-anchor="middle" font-size="10" font-weight="800" fill="#6b7280">Quantidade</text>
+    <polyline points="${requestedPoints}" fill="none" stroke="#002060" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${consumedPoints}" fill="none" stroke="#0070c0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    ${markers}
+    <rect x="${left + 55}" y="${height - 13}" width="10" height="7" fill="#002060"/><text x="${left + 69}" y="${height - 6}" font-size="9" font-weight="800" fill="#4b5563">Solicitado</text>
+    <rect x="${left + 135}" y="${height - 13}" width="10" height="7" fill="#0070c0"/><text x="${left + 149}" y="${height - 6}" font-size="9" font-weight="800" fill="#4b5563">Consumido</text>
+    <rect x="${left + 222}" y="${height - 13}" width="10" height="7" fill="#047857"/><text x="${left + 236}" y="${height - 6}" font-size="9" font-weight="800" fill="#4b5563">Consumido acima do solicitado</text>
+    <rect x="${left + 438}" y="${height - 13}" width="10" height="7" fill="#b42318"/><text x="${left + 452}" y="${height - 6}" font-size="9" font-weight="800" fill="#4b5563">Consumido abaixo do solicitado</text>
   </svg>`;
 }
 
@@ -1018,10 +1115,9 @@ function renderKpiPdfHtml(state, rows, title) {
   const mealChartRows = model.mealSummary.slice(0, 8);
   const sectionChartRows = model.sectionSummary.slice(0, 8);
   const mealItems = model.mealSummary.map((row) => ({ label: row.label, value: row.consumed })).filter((item) => item.value > 0);
-  const occupancy = effective ? `${percent(consumed, effective)}%` : "-";
   const adherence = requested ? `${percent(consumed, requested)}%` : "-";
   const averageCost = consumed ? money(model.totalValue / consumed) : money(0);
-  const subtitle = "Relatorio executivo de refeicoes para reunioes: visao geral, ocupacao, distribuicao e detalhamento por area.";
+  const subtitle = "";
   const pageHeader = renderDocumentHeader({ title, subtitle });
 
   return renderPrintablePage({
@@ -1031,8 +1127,8 @@ function renderKpiPdfHtml(state, rows, title) {
     orientation: "landscape",
     showHeader: false,
     children: `<section class="kpi-report">
-      <section class="report-page">${pageHeader}<div class="page-label">Resumo executivo</div><p class="page-subtitle">Leitura consolidada do periodo filtrado no sistema, seguindo a identidade azul CONSAG.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes planejadas</small></div><div class="kpi-score"><span>Consumido real</span><strong>${consumed}</strong><small>${adherence} do solicitado</small></div><div class="kpi-score"><span>Efetivo</span><strong>${effective || "-"}</strong><small>base informada por area</small></div><div class="kpi-score"><span>Custo total</span><strong>${money(model.totalValue)}</strong><small>${averageCost} por refeicao</small></div></div><article class="kpi-panel"><h2>Comparativo de refeicoes</h2><div class="kpi-panel-body">${renderGroupedBarSvg(mealChartRows)}</div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Diferenca</strong>${consumed - requested} refeicoes entre consumo real e solicitado.</div><div class="kpi-note"><strong>Ocupacao</strong>${occupancy} sobre o efetivo informado no periodo.</div><div class="kpi-note"><strong>Registros</strong>${model.detailRows.length} pedidos considerados no filtro atual.</div></div></section>
-      <section class="report-page">${pageHeader}<div class="page-label">Ocupacao diaria</div><p class="page-subtitle">Analise diaria do periodo selecionado.</p><article class="kpi-panel"><h2>Taxa de ocupacao diaria</h2><div class="kpi-panel-body">${renderOccupancySvg(byDay)}</div></article></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Resumo executivo</div><p class="page-subtitle">Leitura consolidada do periodo filtrado no sistema, seguindo a identidade azul CONSAG.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes planejadas</small></div><div class="kpi-score"><span>Consumido real</span><strong>${consumed}</strong><small>${adherence} do solicitado</small></div><div class="kpi-score"><span>Efetivo</span><strong>${effective || "-"}</strong><small>base informada por area</small></div><div class="kpi-score"><span>Custo total</span><strong>${money(model.totalValue)}</strong><small>${averageCost} por refeicao</small></div></div><article class="kpi-panel"><h2>Comparativo de refeicoes</h2><div class="kpi-panel-body">${renderGroupedBarSvg(mealChartRows)}</div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Diferenca</strong>${consumed - requested} refeicoes entre consumo real e solicitado.</div><div class="kpi-note"><strong>Aderencia</strong>${adherence} entre consumo real e solicitado.</div><div class="kpi-note"><strong>Registros</strong>${model.detailRows.length} pedidos considerados no filtro atual.</div></div></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Evolucao diaria</div><p class="page-subtitle">A linha escura mostra o total solicitado; a linha clara mostra o consumido. Os rotulos destacam onde faltou ou sobrou refeicao.</p><article class="kpi-panel"><h2>Solicitado x consumido por dia</h2><div class="kpi-panel-body">${renderDailyDemandSvg(byDay)}</div></article></section>
       <section class="report-page">${pageHeader}<div class="page-label">Distribuicao e status</div><p class="page-subtitle">Composicao por tipo de refeicao e status dos pedidos no periodo selecionado.</p><div class="kpi-two"><article class="kpi-panel"><h2>Distribuicao por refeicao</h2><div class="kpi-panel-body">${renderDonutSvg(mealItems, String(consumed || requested))}</div></article><article class="kpi-panel"><h2>Status dos pedidos</h2><div class="kpi-panel-body">${renderDonutSvg(byStatus, String(model.detailRows.length))}</div></article></div></section>
       <section class="report-page">${pageHeader}<div class="page-label">Areas e trechos</div><p class="page-subtitle">Ranking operacional para identificar concentracao de consumo, diferencas e custo por frente.</p><article class="kpi-panel"><h2>Top equipes / trechos por consumo</h2><div class="kpi-panel-body">${renderHorizontalRankingSvg(sectionChartRows)}</div></article><article class="kpi-panel"><h2>Detalhamento por equipe / trecho</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Equipe / trecho</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Efetivo</th><th class="number">Dif.</th><th class="number">Custo</th></tr></thead><tbody>${sectionRows || "<tr><td colspan=\"6\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article></section>
       <section class="report-page">${pageHeader}<div class="page-label">Detalhamento por refeicao</div><p class="page-subtitle">Composicao completa por tipo de refeicao para conferencia em reuniao e rastreabilidade do periodo.</p><article class="kpi-panel"><h2>Composicao por tipo de refeicao</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Tipo</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Efetivo</th><th class="number">Custo</th></tr></thead><tbody>${mealRows || "<tr><td colspan=\"5\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Fonte</strong>Pedidos, consumo real, efetivo por equipe/trecho e precos cadastrados no AlimentaObra.</div><div class="kpi-note"><strong>Leitura</strong>O consumo real prevalece quando o fornecedor/admin informou medicao final.</div><div class="kpi-note"><strong>Marca</strong>Cores e hierarquia visual seguem a base azul da CONSAG.</div></div></section>
@@ -1045,12 +1141,38 @@ function renderDailyReportPdfHtml(report) {
     const request = item.request ?? item;
     return `<tr><td>${escapeHtml(request.sectionName ?? request.location ?? "")}</td><td>${escapeHtml(request.mealType ?? item.meal ?? "")}</td><td class="number">${Number(item.requested ?? request.quantity ?? 0)}</td><td class="number">${Number(item.consumed ?? request.actualQuantity ?? request.quantity ?? 0)}</td><td class="number">${Number(item.effective ?? request.headcount ?? 0) || "-"}</td><td>${escapeHtml(item.status ?? request.status ?? "")}</td></tr>`;
   }).join("");
+  const sourceRows = report?.items ?? report?.rows ?? [];
   const itemCount = (report?.items ?? report?.rows ?? []).length;
   const totals = report?.totals ?? {};
+  const requested = Number(totals.requested ?? 0);
+  const consumed = Number(totals.consumed ?? 0);
+  const balance = consumed - requested;
+  const balanceLabel = balance < 0 ? `${Math.abs(balance)} refeicoes abaixo do solicitado` : balance > 0 ? `${balance} refeicoes acima do solicitado` : "Consumo igual ao solicitado";
+  const mealSummary = Object.values(sourceRows.reduce((acc, item) => {
+    const request = item.request ?? item;
+    const label = request.mealType ?? item.meal ?? "Refeicao";
+    acc[label] ??= { label, requested: 0, consumed: 0 };
+    acc[label].requested += Number(item.requested ?? request.quantity ?? 0);
+    acc[label].consumed += Number(item.consumed ?? request.actualQuantity ?? request.quantity ?? 0);
+    return acc;
+  }, {})).map((item) => `<article class="daily-cover-meal"><span>${escapeHtml(item.label)}</span><strong>${item.consumed}</strong><small>Consumido</small><p>Solicitado: ${item.requested}</p></article>`).join("");
   return renderPrintablePage({
     title: "Relatorio diario",
     subtitle: `Relatorio automatico referente a ${formatDate(report.date)}.`,
-    children: `<section class="metrics"><div class="metric"><span>Data</span><strong>${formatDate(report.date)}</strong></div><div class="metric"><span>Solicitado</span><strong>${Number(totals.requested ?? 0)}</strong></div><div class="metric"><span>Consumido</span><strong>${Number(totals.consumed ?? 0)}</strong></div></section><section class="metrics"><div class="metric"><span>Efetivo</span><strong>${Number(totals.headcount ?? 0) || "-"}</strong></div><div class="metric"><span>Custo</span><strong>${money(totals.cost ?? 0)}</strong></div><div class="metric"><span>Registros</span><strong>${itemCount}</strong></div></section><h2 class="section-title">Detalhamento operacional</h2><table><thead><tr><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Efetivo</th><th>Status</th></tr></thead><tbody>${rows || "<tr><td colspan=\"6\">Sem movimentacao no dia.</td></tr>"}</tbody></table>`
+    children: `<style>
+      .daily-cover-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 14px; }
+      .daily-cover-card { min-height: 78px; border: 1px solid #b4c7e7; border-left: 5px solid #002060; border-radius: 4px; background: #f7f9fc; padding: 10px; }
+      .daily-cover-card span, .daily-cover-meal span { display: block; color: #002060; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+      .daily-cover-card strong { display: block; margin-top: 7px; color: #202124; font-size: 22px; line-height: 1; font-weight: 950; }
+      .daily-cover-card small { display: block; margin-top: 6px; color: #4b5563; font-size: 10px; font-weight: 800; line-height: 1.25; }
+      .daily-cover-section { margin: 10px 0 16px; }
+      .daily-cover-section h2 { margin: 0 0 8px; color: #002060; font-size: 14px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+      .daily-cover-meals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .daily-cover-meal { border: 1px solid #b4c7e7; border-left: 4px solid #0070c0; border-radius: 4px; background: #fff; padding: 9px; }
+      .daily-cover-meal strong { display: inline-block; margin-top: 7px; color: #202124; font-size: 21px; line-height: 1; font-weight: 950; }
+      .daily-cover-meal small { margin-left: 6px; color: #4b5563; font-size: 10px; font-weight: 850; }
+      .daily-cover-meal p { margin: 6px 0 0; color: #202124; font-size: 11px; font-weight: 850; }
+    </style><section class="daily-cover-grid"><article class="daily-cover-card"><span>Data do relatorio</span><strong>${formatDate(report.date)}</strong><small>Periodo operacional consolidado.</small></article><article class="daily-cover-card"><span>Refeicoes solicitadas</span><strong>${requested}</strong><small>Total pedido para o dia.</small></article><article class="daily-cover-card"><span>Refeicoes consumidas</span><strong>${consumed}</strong><small>Total realizado considerado no relatorio.</small></article><article class="daily-cover-card"><span>Saldo do dia</span><strong>${balance >= 0 ? "+" : ""}${balance}</strong><small>${escapeHtml(balanceLabel)}</small></article></section><section class="daily-cover-grid"><article class="daily-cover-card"><span>Efetivo informado</span><strong>${Number(totals.headcount ?? 0) || "-"}</strong><small>Base operacional registrada para o dia.</small></article><article class="daily-cover-card"><span>Custo total</span><strong>${money(totals.cost ?? 0)}</strong><small>Valor calculado com os consumos informados.</small></article><article class="daily-cover-card"><span>Registros considerados</span><strong>${itemCount}</strong><small>Linhas de pedidos ou medicoes no relatorio.</small></article><article class="daily-cover-card"><span>Conferencia</span><strong>${itemCount ? "OK" : "-"}</strong><small>${itemCount ? "Ha dados para detalhamento." : "Sem movimentacao no dia."}</small></article></section><section class="daily-cover-section"><h2>Conferencia por tipo de refeicao</h2><div class="daily-cover-meals">${mealSummary || "<article class=\"daily-cover-meal\"><span>Sem movimentacao</span><strong>0</strong><small>Consumido</small><p>Solicitado: 0</p></article>"}</div></section><h2 class="section-title">Detalhamento operacional</h2><table><thead><tr><th>Equipe/Trecho</th><th>Tipo</th><th class="number">Solicitado</th><th class="number">Consumido</th><th class="number">Efetivo</th><th>Status</th></tr></thead><tbody>${rows || "<tr><td colspan=\"6\">Sem movimentacao no dia.</td></tr>"}</tbody></table>`
   });
 }
 
@@ -1059,12 +1181,14 @@ function renderFinancialPdfHtml(state, rows, title) {
   const sortedRows = [...rows].sort((a, b) => b.date.localeCompare(a.date));
   const total = sortedRows.reduce((sum, request) => sum + Number(request.quantity) * unitPrice(request), 0);
   const delivered = sortedRows.filter((request) => request.status === "entregue").reduce((sum, request) => sum + Number(request.quantity) * unitPrice(request), 0);
+  const requested = sortedRows.reduce((sum, request) => sum + Number(request.quantity ?? 0), 0);
+  const consumed = sortedRows.reduce((sum, request) => sum + actualQuantity(state, request), 0);
   const table = sortedRows.map((request) => `<tr><td>${formatDate(request.date)}</td><td>${escapeHtml(request.mealType)}</td><td class="number">${Number(request.quantity ?? 0)}</td><td class="number">${money(unitPrice(request))}</td><td class="number">${money(Number(request.quantity) * unitPrice(request))}</td><td>${escapeHtml(request.status)}</td></tr>`).join("");
 
   return renderPrintablePage({
     title,
     subtitle: "Relatório financeiro de refeições com totais previstos, entregues e em aberto.",
-    children: `<section class="metrics"><div class="metric"><span>Total previsto</span><strong>${money(total)}</strong></div><div class="metric"><span>Entregue</span><strong>${money(delivered)}</strong></div><div class="metric"><span>Em aberto</span><strong>${money(total - delivered)}</strong></div></section><h2 class="section-title">Movimentações</h2><table><thead><tr><th>Data</th><th>Tipo</th><th class="number">Qtd.</th><th class="number">Unitário</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table}</tbody></table>`
+    children: `<section class="metrics"><div class="metric"><span>Total previsto</span><strong>${money(total)}</strong></div><div class="metric"><span>Entregue</span><strong>${money(delivered)}</strong></div><div class="metric"><span>Em aberto</span><strong>${money(total - delivered)}</strong></div></section><section class="metrics"><div class="metric"><span>Refeicoes solicitadas</span><strong>${requested}</strong></div><div class="metric"><span>Refeicoes consumidas</span><strong>${consumed}</strong></div><div class="metric"><span>Saldo operacional</span><strong>${consumed - requested >= 0 ? "+" : ""}${consumed - requested}</strong></div></section><h2 class="section-title">Movimentacoes</h2><table><thead><tr><th>Data</th><th>Tipo</th><th class="number">Quantidade</th><th class="number">Valor unitario</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table}</tbody></table>`
   });
 }
 
@@ -1109,7 +1233,7 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
     orientation: "landscape",
     showHeader: false,
     children: `<section class="kpi-report">
-      <section class="report-page">${pageHeader}<div class="page-label">Resumo financeiro</div><p class="page-subtitle">Leitura consolidada dos custos de refeicoes no periodo selecionado.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Total previsto</span><strong>${money(total)}</strong><small>${consumed} refeicoes consumidas</small></div><div class="kpi-score"><span>Concluido</span><strong>${money(delivered)}</strong><small>${percent(delivered, total)}% do valor total</small></div><div class="kpi-score"><span>Em aberto</span><strong>${money(open)}</strong><small>${percent(open, total)}% do valor total</small></div><div class="kpi-score"><span>Ticket medio</span><strong>${money(averageTicket)}</strong><small>por refeicao consumida</small></div></div><div class="kpi-two"><article class="kpi-panel"><h2>Composicao por refeicao</h2><div class="kpi-panel-body">${renderValueBarSvg(byMeal.slice(0, 7), "value", money)}</div></article><article class="kpi-panel"><h2>Status financeiro</h2><div class="kpi-panel-body">${renderDonutSvg(statusItems.map((item) => ({ label: item.label, value: Math.round(item.value) })), "Total")}</div></article></div><div class="kpi-note-grid"><div class="kpi-note"><strong>Solicitado</strong>${requested} refeicoes solicitadas no periodo.</div><div class="kpi-note"><strong>Consumido</strong>${consumed} refeicoes usadas no calculo financeiro.</div><div class="kpi-note"><strong>Fonte</strong>Pedidos, consumo real e preco unitario cadastrados no sistema.</div></div></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Resumo financeiro</div><p class="page-subtitle">Leitura consolidada dos custos de refeicoes no periodo selecionado, com solicitado e consumido em destaque.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Total previsto</span><strong>${money(total)}</strong><small>valor financeiro do periodo</small></div><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes pedidas</small></div><div class="kpi-score"><span>Consumido</span><strong>${consumed}</strong><small>refeicoes realizadas</small></div><div class="kpi-score"><span>Saldo operacional</span><strong>${consumed - requested >= 0 ? "+" : ""}${consumed - requested}</strong><small>consumido menos solicitado</small></div></div><div class="kpi-two"><article class="kpi-panel"><h2>Composicao por refeicao</h2><div class="kpi-panel-body">${renderValueBarSvg(byMeal.slice(0, 7), "value", money)}</div></article><article class="kpi-panel"><h2>Status financeiro</h2><div class="kpi-panel-body">${renderDonutSvg(statusItems.map((item) => ({ label: item.label, value: Math.round(item.value) })), "Total")}</div></article></div><div class="kpi-note-grid"><div class="kpi-note"><strong>Concluido</strong>${money(delivered)} ja entregue ou fechado no periodo.</div><div class="kpi-note"><strong>Em aberto</strong>${money(open)} ainda pendente no periodo.</div><div class="kpi-note"><strong>Ticket medio</strong>${money(averageTicket)} por refeicao consumida.</div></div></section>
       <section class="report-page">${pageHeader}<div class="page-label">Evolucao e frentes</div><p class="page-subtitle">Acompanhamento dos valores por data e ranking das frentes com maior impacto financeiro.</p><div class="kpi-two"><article class="kpi-panel"><h2>Evolucao por dia</h2><div class="kpi-panel-body">${renderValueBarSvg(byDay, "value", money, 18)}</div></article><article class="kpi-panel"><h2>Top equipes / trechos por custo</h2><div class="kpi-panel-body">${renderValueBarSvg(bySection.slice(0, 8), "value", money)}</div></article></div></section>
       <section class="report-page">${pageHeader}<div class="page-label">Movimentacoes</div><p class="page-subtitle">Detalhamento financeiro das movimentacoes consideradas no periodo.</p><article class="kpi-panel"><h2>Movimentacoes do periodo</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Data</th><th>Tipo</th><th>Equipe/Trecho</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Unitario</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table || "<tr><td colspan=\"8\">Sem movimentacao no periodo.</td></tr>"}</tbody></table></div></article>${sortedRows.length > 24 ? `<p class="small-note">Mostrando as 24 movimentacoes mais recentes. Use a medicao em Excel para conferencia completa linha a linha.</p>` : ""}</section>
     </section>`
@@ -1270,12 +1394,12 @@ function buildOrdersDetailSheet(model) {
     rightEnd: 12,
     title: "Relatorio de Pedidos",
     leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
-    rightLines: ["AlimentaObra", `Registros: ${model.detailRows.length}`, "", ""]
+    rightLines: ["AlimentaObra", `Registros: ${(model.orderDetailRows ?? model.detailRows).length}`, "", ""]
   });
   ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status", "Observacoes"].forEach((label, index) => {
     setStyledCell(rows, 6, index + 1, label, 5);
   });
-  model.detailRows.forEach((item, index) => {
+  (model.orderDetailRows ?? model.detailRows).forEach((item, index) => {
     const row = index + 7;
     setStyledCell(rows, row, 1, longDate(item.date), 8);
     setStyledCell(rows, row, 2, item.weekday, 8);
@@ -1286,14 +1410,15 @@ function buildOrdersDetailSheet(model) {
     setStyledCell(rows, row, 11, item.status, 4);
     setStyledCell(rows, row, 12, item.notes, 4);
   });
-  ensureRangeStyle(rows, 1, 1, Math.max(6, model.detailRows.length + 6), 12, 4);
+  const rowCount = (model.orderDetailRows ?? model.detailRows).length;
+  ensureRangeStyle(rows, 1, 1, Math.max(6, rowCount + 6), 12, 4);
   return {
     name: "Pedidos",
     rows,
     columnWidths: [34, 12, 28, 30, 24, 12, 12, 12, 14, 14, 16, 34],
-    rowHeights: standardHeaderRowHeights(Math.max(6, model.detailRows.length + 6)),
+    rowHeights: standardHeaderRowHeights(Math.max(6, rowCount + 6)),
     freezeRows: 6,
-    autoFilter: `A6:L${Math.max(6, model.detailRows.length + 6)}`,
+    autoFilter: `A6:L${Math.max(6, rowCount + 6)}`,
     merges: ["A1:C4", "D1:I1", "J1:L1", "D2:I2", "J2:L2", "D3:I3", "J3:L3", "D4:I4", "J4:L4"],
     pageSetup: true
   };
@@ -1301,9 +1426,11 @@ function buildOrdersDetailSheet(model) {
 
 function buildOrdersDailySheet(model) {
   const rows = [];
-  const blocks = Object.values(model.detailRows.reduce((acc, row) => {
-    acc[row.date] ??= { date: row.date, count: 0, requested: 0, consumed: 0, effective: 0, leaders: new Set(), sections: new Set(), value: 0 };
+  const orderRows = model.orderDetailRows ?? model.detailRows;
+  const blocks = Object.values(orderRows.reduce((acc, row) => {
+    acc[row.date] ??= { date: row.date, count: 0, cancelled: 0, requested: 0, consumed: 0, effective: 0, leaders: new Set(), sections: new Set(), value: 0 };
     acc[row.date].count += 1;
+    if (["cancelado", "cancelado_confirmado"].includes(row.status)) acc[row.date].cancelled += 1;
     acc[row.date].requested += row.requested;
     acc[row.date].consumed += row.consumed;
     acc[row.date].effective += Number(row.effective || 0);
@@ -1317,12 +1444,12 @@ function buildOrdersDailySheet(model) {
     titleStart: 4,
     titleEnd: 7,
     rightStart: 8,
-    rightEnd: 9,
+    rightEnd: 10,
     title: "Resumo Diario de Pedidos",
     leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
     rightLines: ["AlimentaObra", `Dias: ${blocks.length}`, "", ""]
   });
-  ["Data", "Dia", "Pedidos", "Solicitadas", "Realizadas", "Efetivo", "Encarregados", "Equipes", "Valor total"].forEach((label, index) => {
+  ["Data", "Dia", "Pedidos", "Cancelados", "Solicitadas", "Realizadas", "Efetivo", "Encarregados", "Equipes", "Valor total"].forEach((label, index) => {
     setStyledCell(rows, 6, index + 1, label, 5);
   });
   blocks.forEach((item, index) => {
@@ -1330,22 +1457,23 @@ function buildOrdersDailySheet(model) {
     setStyledCell(rows, row, 1, longDate(item.date), 8);
     setStyledCell(rows, row, 2, weekdayShort(item.date), 8);
     setStyledCell(rows, row, 3, item.count, 4);
-    setStyledCell(rows, row, 4, item.requested, 4);
-    setStyledCell(rows, row, 5, item.consumed, 4);
-    setStyledCell(rows, row, 6, item.effective, 4);
-    setStyledCell(rows, row, 7, item.leaders.size, 4);
-    setStyledCell(rows, row, 8, item.sections.size, 4);
-    setStyledCell(rows, row, 9, item.value, 10);
+    setStyledCell(rows, row, 4, item.cancelled, 4);
+    setStyledCell(rows, row, 5, item.requested, 4);
+    setStyledCell(rows, row, 6, item.consumed, 4);
+    setStyledCell(rows, row, 7, item.effective, 4);
+    setStyledCell(rows, row, 8, item.leaders.size, 4);
+    setStyledCell(rows, row, 9, item.sections.size, 4);
+    setStyledCell(rows, row, 10, item.value, 10);
   });
-  ensureRangeStyle(rows, 1, 1, Math.max(6, blocks.length + 6), 9, 4);
+  ensureRangeStyle(rows, 1, 1, Math.max(6, blocks.length + 6), 10, 4);
   return {
     name: "Resumo diario",
     rows,
-    columnWidths: [34, 10, 12, 14, 14, 12, 16, 14, 16],
+    columnWidths: [34, 10, 12, 12, 14, 14, 12, 16, 14, 16],
     rowHeights: standardHeaderRowHeights(Math.max(6, blocks.length + 6)),
     freezeRows: 6,
-    autoFilter: `A6:I${Math.max(6, blocks.length + 6)}`,
-    merges: ["A1:C4", "D1:G1", "H1:I1", "D2:G2", "H2:I2", "D3:G3", "H3:I3", "D4:G4", "H4:I4"],
+    autoFilter: `A6:J${Math.max(6, blocks.length + 6)}`,
+    merges: ["A1:C4", "D1:G1", "H1:J1", "D2:G2", "H2:J2", "D3:G3", "H3:J3", "D4:G4", "H4:J4"],
     pageSetup: true
   };
 }

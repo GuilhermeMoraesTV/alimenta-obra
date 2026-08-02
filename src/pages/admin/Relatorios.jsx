@@ -32,6 +32,52 @@ const baseAdminScreenStyles = `
   .admin-page .export-menu { position: relative; }
   .admin-page .admin-filter-popover,
   .admin-page .export-options { position: absolute; right: 0; z-index: 20; margin-top: .5rem; display: grid; min-width: 10rem; gap: .5rem; border-radius: 1rem; border: 1px solid #e7e5e4; background: #fff; padding: .75rem; box-shadow: 0 25px 50px rgba(0,0,0,.18); }
+  .admin-page .finance-hero-actions .admin-filter-popover,
+  .admin-page .finance-hero-actions .export-options,
+  .admin-page .admin-receipt-actions .admin-filter-popover,
+  .admin-page .admin-receipt-actions .export-options {
+    min-width: 11.5rem;
+    width: 11.5rem;
+    gap: .4rem;
+    border-radius: .75rem;
+    padding: .55rem;
+    box-shadow: 0 16px 34px rgba(25,27,24,.2);
+  }
+  .admin-page .finance-hero-actions .export-options label {
+    display: grid;
+    gap: .18rem;
+  }
+  .admin-page .admin-receipt-actions .export-options label,
+  .admin-page .admin-receipt-actions .admin-filter-popover label {
+    display: grid;
+    gap: .18rem;
+  }
+  .admin-page .finance-hero-actions .export-options label span,
+  .admin-page .admin-receipt-actions .export-options label span,
+  .admin-page .admin-receipt-actions .admin-filter-popover label span {
+    color: #78716c;
+    font-size: 8.5px;
+    font-weight: 950;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .admin-page .finance-hero-actions .admin-filter-popover input,
+  .admin-page .finance-hero-actions .admin-filter-popover select,
+  .admin-page .finance-hero-actions .admin-filter-popover button,
+  .admin-page .finance-hero-actions .export-options input,
+  .admin-page .finance-hero-actions .export-options select,
+  .admin-page .finance-hero-actions .export-options button,
+  .admin-page .admin-receipt-actions .admin-filter-popover input,
+  .admin-page .admin-receipt-actions .admin-filter-popover select,
+  .admin-page .admin-receipt-actions .admin-filter-popover button,
+  .admin-page .admin-receipt-actions .export-options input,
+  .admin-page .admin-receipt-actions .export-options select,
+  .admin-page .admin-receipt-actions .export-options button {
+    min-height: 1.9rem;
+    border-radius: .5rem;
+    padding-inline: .5rem;
+    font-size: .72rem;
+  }
 `;
 
 const relatoriosHeroStyles = `
@@ -196,8 +242,7 @@ function requestHeadcount(state, request) {
 }
 
 function requestUnitPrice(state, request) {
-  const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === request.supplierCompanyId && item.mealTypeId === request.mealTypeId);
-  return Number(link?.unitPrice ?? request.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
+  return Number(state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? request.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }
 
 function summarizeRows(state, rows, statusLabels = {}) {
@@ -408,7 +453,7 @@ function MeasurementExportMenu({ currentFilter, exportMenuOpen, icon, isAllPerio
         <div className="export-options">
           <label>
             <span>Periodo</span>
-            <select data-report-range value={currentFilter.range} onChange={() => {}}>
+            <select data-report-range defaultValue={currentFilter.range}>
               <option value="all">Todo periodo</option>
               <option value="day">Dia</option>
               <option value="week">Semana</option>
@@ -418,12 +463,13 @@ function MeasurementExportMenu({ currentFilter, exportMenuOpen, icon, isAllPerio
           </label>
           <label>
             <span>Inicio</span>
-            <input type="date" value={currentFilter.start || ""} data-report-start disabled={isAllPeriod} onChange={() => {}} />
+            <input type="date" defaultValue={currentFilter.start || ""} data-report-start disabled={isAllPeriod} />
           </label>
           <label>
             <span>Fim</span>
-            <input type="date" value={currentFilter.end || currentFilter.start || ""} data-report-end disabled={!isCustomPeriod} onChange={() => {}} />
+            <input type="date" defaultValue={currentFilter.end || currentFilter.start || ""} data-report-end disabled={!isCustomPeriod} />
           </label>
+          <button type="button" data-report-apply>Definir</button>
           <button type="button" data-export="pdf"><Icon icon={icon} name="clipboard" size={14} />PDF</button>
           <button type="button" data-export="xlsx"><Icon icon={icon} name="chart" size={14} />Excel</button>
         </div>
@@ -507,28 +553,28 @@ export function Relatorios(props) {
           <>
             <AdminBackButton icon={icon} />
             <AdminFilterMenu icon={icon}>
-              <select data-report-range value={currentFilter.range} onChange={() => {}}>
+              <select data-report-range defaultValue={currentFilter.range}>
                 <option value="all">Todo periodo</option>
                 <option value="day">Dia</option>
                 <option value="week">Semana</option>
                 <option value="month">Mes</option>
                 <option value="custom">Período personalizado</option>
               </select>
-              <input type="date" value={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} onChange={() => {}} />
-              <input type="date" value={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} onChange={() => {}} />
-              <select data-report-supplier value={currentFilter.supplierCompanyId || ""} onChange={() => {}} aria-label="Fornecedor">
+              <input type="date" defaultValue={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} />
+              <input type="date" defaultValue={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} />
+              <select data-report-supplier defaultValue={currentFilter.supplierCompanyId || ""} aria-label="Fornecedor">
                 <option value="">Todos fornecedores</option>
                 {(state.supplierCompanies ?? []).map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.tradeName || supplier.legalName}</option>)}
               </select>
-              <select data-report-meal value={currentFilter.mealTypeId || ""} onChange={() => {}} aria-label="Tipo de refeicao">
+              <select data-report-meal defaultValue={currentFilter.mealTypeId || ""} aria-label="Tipo de refeicao">
                 <option value="">Todas refeicoes</option>
                 {(state.mealCatalog ?? state.mealTypes ?? []).map((meal) => <option value={meal.id} key={meal.id}>{meal.label}</option>)}
               </select>
-              <select data-report-team value={currentFilter.teamId || ""} onChange={() => {}} aria-label="Efetivo ou local">
+              <select data-report-team defaultValue={currentFilter.teamId || ""} aria-label="Efetivo ou local">
                 <option value="">Todos locais</option>
                 {(state.workSections ?? []).map((section) => <option value={section.id} key={section.id}>{section.name}</option>)}
               </select>
-              <select data-report-origin value={currentFilter.originRole || ""} onChange={() => {}} aria-label="Origem do pedido">
+              <select data-report-origin defaultValue={currentFilter.originRole || ""} aria-label="Origem do pedido">
                 <option value="">Todas origens</option>
                 <option value="admin">Admin</option>
                 <option value="encarregado">Encarregado</option>

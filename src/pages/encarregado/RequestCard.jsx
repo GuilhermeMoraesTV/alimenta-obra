@@ -42,7 +42,7 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
         {editable ? (
           <div className="grid grid-cols-2 gap-2 sm:flex">
             <button className={iconButtonClass} data-edit-request={request.id} aria-label="Editar pedido"><Icon icon={icon} name="edit" size={15} />Editar</button>
-            <button className={`${iconButtonClass} border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100`} data-cancel-request={request.id} aria-label="Cancelar pedido"><Icon icon={icon} name="trash" size={15} />Cancelar</button>
+            <button className={`${iconButtonClass} border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100`} data-cancel-request={request.id} aria-label="Excluir pedido"><Icon icon={icon} name="trash" size={15} />Excluir</button>
           </div>
         ) : (
           <span className="inline-flex items-center gap-1 text-stone-500"><Icon icon={icon} name="clock" size={14} />Edição encerrada</span>

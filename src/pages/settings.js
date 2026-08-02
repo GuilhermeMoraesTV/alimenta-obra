@@ -4,6 +4,7 @@ export function createSettingsPage(ctx) {
     getGeneratedInviteLink,
     getSettingsMealModalId,
     getSettingsSupplierModalId,
+    getSettingsUserModalId,
     getSettingsWorkSectionModalId,
     getState,
     getSettingsUserModalError,
@@ -57,7 +58,7 @@ export function createSettingsPage(ctx) {
     [&_.work-section-card-head]:grid [&_.work-section-card-head]:grid-cols-[minmax(0,1fr)_auto] [&_.work-section-card-head]:items-start [&_.work-section-card-head]:gap-2 [&_.work-section-card_strong]:truncate [&_.work-section-card_strong]:text-sm [&_.work-section-card_small]:text-xs [&_.work-section-actions]:grid [&_.work-section-actions]:grid-cols-2 [&_.work-section-actions]:gap-2
     lg:[&_.meal-catalog-panel]:col-span-2 [&_.meal-catalog-panel]:gap-3 [&_.meal-catalog-panel_.settings-panel-title]:py-2.5 [&_.meal-catalog-panel_.settings-panel-title>span]:h-8 [&_.meal-catalog-panel_.settings-panel-title>span]:w-8 [&_.meal-catalog-panel_h2]:text-base [&_.meal-catalog-panel_p]:text-xs
     [&_.meal-catalog-toolbar]:flex [&_.meal-catalog-toolbar]:items-center [&_.meal-catalog-toolbar]:justify-between [&_.meal-catalog-toolbar]:gap-3
-    [&_.meal-catalog-list]:grid [&_.meal-catalog-list]:grid-cols-2 [&_.meal-catalog-list]:gap-2 sm:[&_.meal-catalog-list]:grid-cols-2 xl:[&_.meal-catalog-list]:grid-cols-3
+    [&_.meal-catalog-list]:grid [&_.meal-catalog-list]:grid-cols-2 [&_.meal-catalog-list]:gap-2 sm:[&_.meal-catalog-list]:grid-cols-2
     [&_.meal-catalog-card]:grid [&_.meal-catalog-card]:min-w-0 [&_.meal-catalog-card]:gap-2 [&_.meal-catalog-card]:rounded-r-xl [&_.meal-catalog-card]:rounded-l-md [&_.meal-catalog-card]:border [&_.meal-catalog-card]:border-l-2 [&_.meal-catalog-card]:border-dashed [&_.meal-catalog-card]:border-stone-200 [&_.meal-catalog-card]:bg-[#fffefa] [&_.meal-catalog-card]:p-3 [&_.meal-catalog-card]:shadow-sm
     [&_.meal-catalog-card-head]:grid [&_.meal-catalog-card-head]:grid-cols-[minmax(0,1fr)_auto] [&_.meal-catalog-card-head]:items-start [&_.meal-catalog-card-head]:gap-2 [&_.meal-catalog-card-title]:min-w-0 [&_.meal-catalog-card-title_strong]:block [&_.meal-catalog-card-title_strong]:truncate [&_.meal-catalog-card-title_strong]:text-sm [&_.meal-catalog-card-title_strong]:font-black [&_.meal-catalog-card-title_p]:mt-1 [&_.meal-catalog-card-title_p]:line-clamp-2 [&_.meal-catalog-card-title_p]:text-xs [&_.meal-catalog-card-actions]:flex [&_.meal-catalog-card-actions]:gap-1
     [&_.meal-price-chip]:inline-flex [&_.meal-price-chip]:w-max [&_.meal-price-chip]:items-center [&_.meal-price-chip]:rounded-full [&_.meal-price-chip]:border [&_.meal-price-chip]:border-orange-200 [&_.meal-price-chip]:bg-orange-50 [&_.meal-price-chip]:px-2 [&_.meal-price-chip]:py-1 [&_.meal-price-chip]:text-[10px] [&_.meal-price-chip]:font-black [&_.meal-price-chip]:text-orange-700
@@ -76,7 +77,7 @@ export function createSettingsPage(ctx) {
     [&_.settings-section-head_h2]:text-base [&_.settings-section-head_h2]:font-black [&_.settings-section-head_p]:mt-1 [&_.settings-section-head_p]:text-xs [&_.settings-section-head_p]:font-bold [&_.settings-section-head_p]:text-stone-500
     [&_.settings-section-grid]:grid [&_.settings-section-grid]:gap-3
     [&_.settings-section-grid>.settings-panel-wide]:lg:col-span-2
-    [&_.meal-catalog-list]:grid-cols-1 md:[&_.meal-catalog-list]:grid-cols-2 xl:[&_.meal-catalog-list]:grid-cols-3
+    [&_.meal-catalog-list]:grid-cols-1 md:[&_.meal-catalog-list]:grid-cols-2
     [&_.meal-catalog-card]:rounded-2xl [&_.meal-catalog-card]:border-solid [&_.meal-catalog-card]:border-stone-200/80 [&_.meal-catalog-card]:bg-white
     [&_.settings-actions]:flex-wrap [&_.settings-actions_.btn]:w-full sm:[&_.settings-actions_.btn]:w-auto
     [&_.settings-panel-title]:items-center [&_.settings-panel-title]:justify-start [&_.settings-panel-title>div]:min-w-0
@@ -85,11 +86,16 @@ export function createSettingsPage(ctx) {
     [&_.settings-premium-toolbar]:flex [&_.settings-premium-toolbar]:flex-col [&_.settings-premium-toolbar]:gap-3 [&_.settings-premium-toolbar]:rounded-2xl [&_.settings-premium-toolbar]:border [&_.settings-premium-toolbar]:border-stone-200/80 [&_.settings-premium-toolbar]:bg-[#fffefa] [&_.settings-premium-toolbar]:p-4 sm:[&_.settings-premium-toolbar]:flex-row sm:[&_.settings-premium-toolbar]:items-center sm:[&_.settings-premium-toolbar]:justify-between
     [&_.settings-count-pill]:inline-flex [&_.settings-count-pill]:w-max [&_.settings-count-pill]:items-center [&_.settings-count-pill]:rounded-full [&_.settings-count-pill]:border [&_.settings-count-pill]:border-orange-200 [&_.settings-count-pill]:bg-orange-50 [&_.settings-count-pill]:px-3 [&_.settings-count-pill]:py-1 [&_.settings-count-pill]:text-[10px] [&_.settings-count-pill]:font-black [&_.settings-count-pill]:uppercase [&_.settings-count-pill]:tracking-[.1em] [&_.settings-count-pill]:text-orange-700
     [&_.user-list]:grid [&_.user-list]:gap-2
-    [&_.user-row]:grid [&_.user-row]:gap-3 [&_.user-row]:rounded-2xl [&_.user-row]:border [&_.user-row]:border-stone-200/80 [&_.user-row]:bg-white [&_.user-row]:p-3 [&_.user-row]:shadow-sm sm:[&_.user-row]:grid-cols-[44px_minmax(0,1fr)_auto] sm:[&_.user-row]:items-center
+    [&_.user-row]:grid [&_.user-row]:gap-3 [&_.user-row]:rounded-2xl [&_.user-row]:border [&_.user-row]:border-stone-200/80 [&_.user-row]:bg-white [&_.user-row]:p-3 [&_.user-row]:shadow-sm sm:[&_.user-row]:grid-cols-[44px_minmax(0,1fr)_auto_auto] sm:[&_.user-row]:items-center
     [&_.user-avatar]:grid [&_.user-avatar]:h-11 [&_.user-avatar]:w-11 [&_.user-avatar]:place-items-center [&_.user-avatar]:rounded-2xl [&_.user-avatar]:bg-stone-950 [&_.user-avatar]:text-sm [&_.user-avatar]:font-black [&_.user-avatar]:text-white
     [&_.user-row-title]:min-w-0 [&_.user-row-title_strong]:block [&_.user-row-title_strong]:truncate [&_.user-row-title_strong]:text-sm [&_.user-row-title_strong]:font-black [&_.user-row-title_p]:mt-1 [&_.user-row-title_p]:truncate [&_.user-row-title_p]:text-xs [&_.user-row-title_p]:font-bold [&_.user-row-title_p]:text-stone-500
     [&_.user-row-meta]:flex [&_.user-row-meta]:flex-wrap [&_.user-row-meta]:gap-1.5 sm:[&_.user-row-meta]:justify-end
+    [&_.user-row-actions]:flex [&_.user-row-actions]:gap-1.5 sm:[&_.user-row-actions]:justify-end
     [&_.role-chip]:inline-flex [&_.role-chip]:items-center [&_.role-chip]:rounded-full [&_.role-chip]:border [&_.role-chip]:border-stone-200 [&_.role-chip]:bg-stone-50 [&_.role-chip]:px-2.5 [&_.role-chip]:py-1 [&_.role-chip]:text-[10px] [&_.role-chip]:font-black [&_.role-chip]:uppercase [&_.role-chip]:tracking-[.08em] [&_.role-chip]:text-stone-600
+    [&_.team-checkbox-grid]:grid [&_.team-checkbox-grid]:grid-cols-1 [&_.team-checkbox-grid]:gap-2 sm:[&_.team-checkbox-grid]:grid-cols-2
+    [&_.team-checkbox]:grid [&_.team-checkbox]:cursor-pointer [&_.team-checkbox]:grid-cols-[18px_minmax(0,1fr)] [&_.team-checkbox]:items-start [&_.team-checkbox]:gap-2 [&_.team-checkbox]:rounded-xl [&_.team-checkbox]:border [&_.team-checkbox]:border-stone-200 [&_.team-checkbox]:bg-stone-50/70 [&_.team-checkbox]:p-3 [&_.team-checkbox_strong]:block [&_.team-checkbox_strong]:text-xs [&_.team-checkbox_strong]:font-black [&_.team-checkbox_small]:mt-0.5 [&_.team-checkbox_small]:block [&_.team-checkbox_small]:text-[10px] [&_.team-checkbox_small]:font-bold [&_.team-checkbox_small]:text-stone-500
+    [&_.team-select-menu]:relative [&_.team-select-menu_summary]:flex [&_.team-select-menu_summary]:min-h-11 [&_.team-select-menu_summary]:cursor-pointer [&_.team-select-menu_summary]:items-center [&_.team-select-menu_summary]:justify-between [&_.team-select-menu_summary]:gap-2 [&_.team-select-menu_summary]:rounded-xl [&_.team-select-menu_summary]:border [&_.team-select-menu_summary]:border-stone-300 [&_.team-select-menu_summary]:bg-white [&_.team-select-menu_summary]:px-3 [&_.team-select-menu_summary]:text-sm [&_.team-select-menu_summary]:font-extrabold [&_.team-select-menu_summary]:text-stone-900
+    [&_.team-select-list]:mt-2 [&_.team-select-list]:grid [&_.team-select-list]:max-h-52 [&_.team-select-list]:gap-1.5 [&_.team-select-list]:overflow-auto [&_.team-select-list]:rounded-xl [&_.team-select-list]:border [&_.team-select-list]:border-stone-200 [&_.team-select-list]:bg-white [&_.team-select-list]:p-2 [&_.team-select-row]:grid [&_.team-select-row]:cursor-pointer [&_.team-select-row]:grid-cols-[18px_minmax(0,1fr)] [&_.team-select-row]:items-center [&_.team-select-row]:gap-2 [&_.team-select-row]:rounded-lg [&_.team-select-row]:px-2 [&_.team-select-row]:py-2 [&_.team-select-row]:text-xs [&_.team-select-row]:font-bold [&_.team-select-row]:text-stone-700 hover:[&_.team-select-row]:bg-stone-50
     [&_.settings-modal-backdrop]:fixed [&_.settings-modal-backdrop]:inset-0 [&_.settings-modal-backdrop]:z-50 [&_.settings-modal-backdrop]:grid [&_.settings-modal-backdrop]:place-items-end [&_.settings-modal-backdrop]:bg-stone-950/45 [&_.settings-modal-backdrop]:p-0 [&_.settings-modal-backdrop]:backdrop-blur-sm sm:[&_.settings-modal-backdrop]:place-items-center sm:[&_.settings-modal-backdrop]:p-4
     [&_.settings-modal-panel]:max-h-[92vh] [&_.settings-modal-panel]:w-full [&_.settings-modal-panel]:max-w-2xl [&_.settings-modal-panel]:overflow-auto [&_.settings-modal-panel]:rounded-t-[28px] [&_.settings-modal-panel]:border [&_.settings-modal-panel]:border-white/70 [&_.settings-modal-panel]:bg-white [&_.settings-modal-panel]:p-5 [&_.settings-modal-panel]:shadow-2xl sm:[&_.settings-modal-panel]:rounded-[28px]
     [&_.settings-modal-header]:mb-4 [&_.settings-modal-header]:flex [&_.settings-modal-header]:items-start [&_.settings-modal-header]:justify-between [&_.settings-modal-header]:gap-3 [&_.settings-modal-header]:border-b [&_.settings-modal-header]:border-stone-100 [&_.settings-modal-header]:pb-3
@@ -109,35 +115,26 @@ export function createSettingsPage(ctx) {
     [&_.supplier-form-grid]:grid [&_.supplier-form-grid]:grid-cols-1 [&_.supplier-form-grid]:gap-3 md:[&_.supplier-form-grid]:grid-cols-2
     md:[&_.supplier-form-grid.three]:grid-cols-3 lg:[&_.supplier-form-grid.contact]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px]
     [&_.supplier-company-form_.field]:min-w-0 [&_.supplier-company-form_input]:min-w-0 [&_.supplier-company-form_select]:min-w-0 [&_.supplier-company-form_textarea]:min-w-0
-    [&_.supplier-meal-current]:grid [&_.supplier-meal-current]:gap-2
-    [&_.supplier-meal-option]:border-solid [&_.supplier-meal-option]:bg-white
-    [&_.supplier-new-meals-grid]:grid [&_.supplier-new-meals-grid]:gap-3
-    [&_.supplier-new-meals-list]:grid [&_.supplier-new-meals-list]:gap-3
-    [&_.supplier-add-meal-strip]:flex [&_.supplier-add-meal-strip]:flex-col [&_.supplier-add-meal-strip]:gap-3 [&_.supplier-add-meal-strip]:rounded-2xl [&_.supplier-add-meal-strip]:border [&_.supplier-add-meal-strip]:border-dashed [&_.supplier-add-meal-strip]:border-orange-200 [&_.supplier-add-meal-strip]:bg-orange-50/35 [&_.supplier-add-meal-strip]:p-3 sm:[&_.supplier-add-meal-strip]:flex-row sm:[&_.supplier-add-meal-strip]:items-center sm:[&_.supplier-add-meal-strip]:justify-between
-    [&_.supplier-add-meal-strip_strong]:block [&_.supplier-add-meal-strip_strong]:text-sm [&_.supplier-add-meal-strip_strong]:font-black [&_.supplier-add-meal-strip_p]:mt-0.5 [&_.supplier-add-meal-strip_p]:text-xs [&_.supplier-add-meal-strip_p]:font-bold [&_.supplier-add-meal-strip_p]:text-stone-500
-    [&_.supplier-new-meal-card]:grid [&_.supplier-new-meal-card]:gap-3 [&_.supplier-new-meal-card]:rounded-2xl [&_.supplier-new-meal-card]:border [&_.supplier-new-meal-card]:border-orange-200/80 [&_.supplier-new-meal-card]:bg-orange-50/35 [&_.supplier-new-meal-card]:p-3
-    [&_.supplier-new-meal-card-head]:flex [&_.supplier-new-meal-card-head]:items-center [&_.supplier-new-meal-card-head]:justify-between [&_.supplier-new-meal-card-head]:gap-2 [&_.supplier-new-meal-card-head_span]:grid [&_.supplier-new-meal-card-head_span]:h-8 [&_.supplier-new-meal-card-head_span]:w-8 [&_.supplier-new-meal-card-head_span]:place-items-center [&_.supplier-new-meal-card-head_span]:rounded-xl [&_.supplier-new-meal-card-head_span]:bg-white [&_.supplier-new-meal-card-head_span]:text-orange-700 [&_.supplier-new-meal-card-head_strong]:text-xs [&_.supplier-new-meal-card-head_strong]:font-black [&_.supplier-new-meal-card-head_strong]:uppercase [&_.supplier-new-meal-card-head_strong]:tracking-[.1em] [&_.supplier-new-meal-card-head_strong]:text-orange-800
-    [&_.supplier-new-meal-row]:grid [&_.supplier-new-meal-row]:grid-cols-1 [&_.supplier-new-meal-row]:gap-2 md:[&_.supplier-new-meal-row]:grid-cols-[minmax(0,1.1fr)_145px_120px] md:[&_.supplier-new-meal-row_.field:last-child]:col-span-3
     [&_.supplier-form-footer]:sticky [&_.supplier-form-footer]:bottom-0 [&_.supplier-form-footer]:z-10 [&_.supplier-form-footer]:-mx-4 [&_.supplier-form-footer]:-mb-4 [&_.supplier-form-footer]:flex [&_.supplier-form-footer]:flex-col-reverse [&_.supplier-form-footer]:gap-2 [&_.supplier-form-footer]:border-t [&_.supplier-form-footer]:border-stone-200/80 [&_.supplier-form-footer]:bg-white/95 [&_.supplier-form-footer]:p-4 [&_.supplier-form-footer]:backdrop-blur sm:[&_.supplier-form-footer]:-mx-5 sm:[&_.supplier-form-footer]:-mb-5 sm:[&_.supplier-form-footer]:flex-row sm:[&_.supplier-form-footer]:justify-end sm:[&_.supplier-form-footer]:p-5
     [&_.settings-error-card]:rounded-xl [&_.settings-error-card]:border [&_.settings-error-card]:border-red-200 [&_.settings-error-card]:bg-red-50 [&_.settings-error-card]:px-4 [&_.settings-error-card]:py-3 [&_.settings-error-card]:text-sm [&_.settings-error-card]:font-bold [&_.settings-error-card]:text-red-700
     [&_.supplier-grid]:grid [&_.supplier-grid]:grid-cols-1 [&_.supplier-grid]:gap-3 xl:[&_.supplier-grid]:grid-cols-2
     [&_.supplier-card]:grid [&_.supplier-card]:gap-3 [&_.supplier-card]:rounded-[22px] [&_.supplier-card]:border [&_.supplier-card]:border-stone-200/80 [&_.supplier-card]:bg-white [&_.supplier-card]:p-4 [&_.supplier-card]:shadow-[0_16px_34px_rgba(25,27,24,.07)]
-    [&_.supplier-card-head]:grid [&_.supplier-card-head]:grid-cols-[44px_minmax(0,1fr)_auto] [&_.supplier-card-head]:items-start [&_.supplier-card-head]:gap-3
+    [&_.supplier-card-head]:grid [&_.supplier-card-head]:grid-cols-[44px_minmax(0,1fr)_auto_auto] [&_.supplier-card-head]:items-start [&_.supplier-card-head]:gap-3
     [&_.supplier-icon]:grid [&_.supplier-icon]:h-11 [&_.supplier-icon]:w-11 [&_.supplier-icon]:place-items-center [&_.supplier-icon]:rounded-2xl [&_.supplier-icon]:bg-stone-950 [&_.supplier-icon]:text-white
     [&_.supplier-title]:min-w-0 [&_.supplier-title_strong]:block [&_.supplier-title_strong]:truncate [&_.supplier-title_strong]:text-base [&_.supplier-title_strong]:font-black [&_.supplier-title_p]:mt-1 [&_.supplier-title_p]:line-clamp-2 [&_.supplier-title_p]:text-xs [&_.supplier-title_p]:font-bold [&_.supplier-title_p]:text-stone-500
     [&_.supplier-info-grid]:grid [&_.supplier-info-grid]:grid-cols-1 [&_.supplier-info-grid]:gap-2 md:[&_.supplier-info-grid]:grid-cols-2 2xl:[&_.supplier-info-grid]:grid-cols-3
     [&_.supplier-info-grid>span]:min-w-0 [&_.supplier-info-grid>span]:rounded-xl [&_.supplier-info-grid>span]:border [&_.supplier-info-grid>span]:border-stone-200 [&_.supplier-info-grid>span]:bg-stone-50 [&_.supplier-info-grid>span]:p-2 [&_.supplier-info-grid_small]:block [&_.supplier-info-grid_small]:text-[9px] [&_.supplier-info-grid_small]:font-black [&_.supplier-info-grid_small]:uppercase [&_.supplier-info-grid_small]:tracking-[.08em] [&_.supplier-info-grid_small]:text-stone-400 [&_.supplier-info-grid_b]:mt-0.5 [&_.supplier-info-grid_b]:block [&_.supplier-info-grid_b]:whitespace-normal [&_.supplier-info-grid_b]:break-words [&_.supplier-info-grid_b]:text-xs [&_.supplier-info-grid_b]:font-black [&_.supplier-info-grid_b]:leading-snug [&_.supplier-info-grid_b]:text-stone-800
-    [&_.supplier-meal-picker]:grid [&_.supplier-meal-picker]:grid-cols-1 [&_.supplier-meal-picker]:gap-2 sm:[&_.supplier-meal-picker]:grid-cols-2
-    [&_.supplier-meal-option]:grid [&_.supplier-meal-option]:grid-cols-[40px_minmax(0,1fr)] [&_.supplier-meal-option]:items-start [&_.supplier-meal-option]:gap-2 [&_.supplier-meal-option]:rounded-xl [&_.supplier-meal-option]:border [&_.supplier-meal-option]:border-stone-200 [&_.supplier-meal-option]:bg-stone-50/70 [&_.supplier-meal-option]:p-3 [&_.supplier-meal-option_strong]:block [&_.supplier-meal-option_strong]:text-xs [&_.supplier-meal-option_strong]:font-black [&_.supplier-meal-option_small]:mt-0.5 [&_.supplier-meal-option_small]:block [&_.supplier-meal-option_small]:text-[10px] [&_.supplier-meal-option_small]:font-bold [&_.supplier-meal-option_small]:text-stone-500
     [&_.supplier-create-meals]:grid [&_.supplier-create-meals]:gap-2 [&_.supplier-create-meals]:rounded-2xl [&_.supplier-create-meals]:border [&_.supplier-create-meals]:border-orange-200 [&_.supplier-create-meals]:bg-orange-50/40 [&_.supplier-create-meals]:p-3 [&_.supplier-create-meals>label]:text-[10px] [&_.supplier-create-meals>label]:font-black [&_.supplier-create-meals>label]:uppercase [&_.supplier-create-meals>label]:tracking-[.1em] [&_.supplier-create-meals>label]:text-orange-700
     [&_.link-supplier-list]:grid [&_.link-supplier-list]:gap-3
     [&_.link-supplier-card]:rounded-[22px] [&_.link-supplier-card]:border [&_.link-supplier-card]:border-stone-200/80 [&_.link-supplier-card]:bg-white [&_.link-supplier-card]:p-4 [&_.link-supplier-card]:shadow-sm
     [&_.link-supplier-head]:mb-3 [&_.link-supplier-head]:flex [&_.link-supplier-head]:items-start [&_.link-supplier-head]:justify-between [&_.link-supplier-head]:gap-3 [&_.link-supplier-head_strong]:block [&_.link-supplier-head_strong]:text-base [&_.link-supplier-head_strong]:font-black [&_.link-supplier-head_p]:mt-1 [&_.link-supplier-head_p]:text-xs [&_.link-supplier-head_p]:font-bold [&_.link-supplier-head_p]:text-stone-500
     [&_.meal-link-grid]:grid [&_.meal-link-grid]:grid-cols-1 [&_.meal-link-grid]:gap-2 md:[&_.meal-link-grid]:grid-cols-2 xl:[&_.meal-link-grid]:grid-cols-3
     [&_.meal-link-card]:grid [&_.meal-link-card]:gap-2 [&_.meal-link-card]:rounded-2xl [&_.meal-link-card]:border [&_.meal-link-card]:border-stone-200 [&_.meal-link-card]:bg-[#fffefa] [&_.meal-link-card]:p-3
+    [&_.meal-link-card.is-drop-target]:border-orange-400 [&_.meal-link-card.is-drop-target]:bg-orange-50
     [&_.meal-link-card-head]:flex [&_.meal-link-card-head]:items-start [&_.meal-link-card-head]:justify-between [&_.meal-link-card-head]:gap-2 [&_.meal-link-card-head_strong]:block [&_.meal-link-card-head_strong]:text-sm [&_.meal-link-card-head_strong]:font-black [&_.meal-link-card-head_small]:mt-1 [&_.meal-link-card-head_small]:block [&_.meal-link-card-head_small]:text-xs [&_.meal-link-card-head_small]:font-bold [&_.meal-link-card-head_small]:text-stone-500
     [&_.work-section-list]:grid-cols-1 md:[&_.work-section-list]:grid-cols-2 xl:[&_.work-section-list]:grid-cols-3
     [&_.work-section-card]:rounded-[22px] [&_.work-section-card]:border-solid [&_.work-section-card]:bg-white [&_.work-section-card]:p-4 [&_.work-section-card]:shadow-[0_12px_28px_rgba(25,27,24,.06)] [&_.work-section-card_strong]:whitespace-normal [&_.work-section-card_strong]:break-words [&_.work-section-card_small]:leading-snug [&_.work-section-card_.supplier-info-grid]:grid-cols-1
+    [&_.settings-card-actions]:flex [&_.settings-card-actions]:gap-1.5
     [&_.meal-catalog-card]:p-4 [&_.meal-catalog-list]:gap-3
   `;
 
@@ -303,8 +300,6 @@ export function createSettingsPage(ctx) {
 
   function renderAdminUsersPanel() {
     const state = getState();
-    const supplierCompanies = state.supplierCompanies ?? [];
-    const supplierUsers = state.users.filter((item) => item.role === "fornecedor");
     const users = [...(state.users ?? [])].sort((a, b) => roleName(a.role).localeCompare(roleName(b.role)) || String(a.name ?? "").localeCompare(String(b.name ?? "")));
     return `
       <section class="settings-panel settings-panel-wide">
@@ -317,24 +312,12 @@ export function createSettingsPage(ctx) {
             <span class="settings-count-pill">${users.length} acessos</span>
             <p class="mt-2">Consulte status, perfil e vinculo sem abrir um formulario gigante.</p>
           </div>
-          <button class="btn primary" type="button" data-open-admin-user-modal>${icon("plus", 15)}Novo usuario</button>
+          <button class="btn primary" type="button" data-open-admin-user-modal="new">${icon("plus", 15)}Novo usuario</button>
         </div>
         <div class="user-list">
           ${users.map((user) => renderUserRow(user)).join("") || `<div class="empty">Nenhum usuario cadastrado.</div>`}
         </div>
-        ${supplierUsers.length && supplierCompanies.length ? `
-          <details class="meal-catalog-edit">
-            <summary>${icon("package", 14)}Vincular login de fornecedor</summary>
-            <form class="meal-catalog-item" data-form="supplier-company-user">
-              <div class="form-grid">
-                <div class="field"><label for="supplier-link-user">Login fornecedor</label><select id="supplier-link-user" name="userId">${supplierUsers.map((user) => `<option value="${user.id}">${escapeHtml(user.name)} - ${escapeHtml(user.email)}</option>`).join("")}</select></div>
-                <div class="field"><label for="supplier-link-company">Empresa fornecedora</label><select id="supplier-link-company" name="supplierCompanyId">${supplierCompanies.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("")}</select></div>
-              </div>
-              <div class="form-grid"><div class="field"><label for="supplier-link-active">Status</label><select id="supplier-link-active" name="active"><option value="true">Ativo</option><option value="false">Inativo</option></select></div></div>
-              <footer class="settings-actions"><button class="btn outline" type="submit">Vincular login</button></footer>
-            </form>
-          </details>` : ""}
-        ${getSettingsUserModalOpen?.() ? renderAdminUserModal(supplierCompanies) : ""}
+        ${getSettingsUserModalOpen?.() ? renderAdminUserModal((state.users ?? []).find((item) => item.id === getSettingsUserModalId?.())) : ""}
       </section>`;
   }
 
@@ -342,12 +325,15 @@ export function createSettingsPage(ctx) {
     const state = getState();
     const initials = String(user.name ?? user.email ?? "?").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
     const active = user.active !== false;
-    const isCurrentUser = user.id === state.activeUserId;
+    const isCurrentUser = user.id === state.authenticatedUserId;
+    const linkedTeams = (state.workSections ?? []).filter((section) => section.leaderId === user.id);
+    const teamLabel = linkedTeams.length ? linkedTeams.map((section) => section.name).join(", ") : user.team || user.email || "Sem vinculo";
     return `
       <article class="user-row">
         <span class="user-avatar">${escapeHtml(initials || "?")}</span>
         <div class="user-row-title">
           <strong>${escapeHtml(user.name)}</strong>
+          <p>${escapeHtml(teamLabel)}</p>
         </div>
         <div class="user-row-meta">
           <span class="role-chip">${roleName(user.role)}</span>
@@ -355,42 +341,59 @@ export function createSettingsPage(ctx) {
             <span></span><strong>${active ? "Ativo" : "Inativo"}</strong>
           </button>
         </div>
+        <div class="user-row-actions">
+          <button class="icon-btn" type="button" data-open-admin-user-modal="${user.id}" aria-label="Editar ${escapeHtml(user.name)}">${icon("edit", 14)}</button>
+          <button class="icon-btn danger" type="button" data-delete-admin-user="${user.id}" aria-label="Excluir ${escapeHtml(user.name)}" ${isCurrentUser ? "disabled title=\"Nao e possivel excluir o proprio acesso logado\"" : ""}>${icon("trash", 14)}</button>
+        </div>
       </article>`;
   }
 
-  function renderAdminUserModal(supplierCompanies) {
+  function renderAdminUserModal(user = null) {
+    const state = getState();
     const error = getSettingsUserModalError?.();
+    const isEditing = Boolean(user?.id);
+    const role = user?.role === "admin" ? "admin" : user?.role === "fornecedor" ? "fornecedor" : "encarregado";
+    const roleField = role === "fornecedor"
+      ? `<input type="hidden" name="role" value="fornecedor" /><input id="admin-user-role" value="Fornecedor" disabled readonly />`
+      : `<select id="admin-user-role" name="role"><option value="encarregado" ${role === "encarregado" ? "selected" : ""}>Encarregado</option><option value="admin" ${role === "admin" ? "selected" : ""}>Administrador</option></select>`;
+    const selectedTeamIds = new Set((state.workSections ?? []).filter((section) => section.leaderId === user?.id).map((section) => section.id));
+    const selectedTeamNames = (state.workSections ?? []).filter((section) => selectedTeamIds.has(section.id)).map((section) => section.name);
+    const teamSummary = selectedTeamNames.length ? selectedTeamNames.join(", ") : "Selecionar equipes";
+    const teamOptions = (state.workSections ?? []).map((section) => `
+      <label class="team-select-row">
+        <input type="checkbox" name="teamIds" value="${section.id}" ${selectedTeamIds.has(section.id) ? "checked" : ""} />
+        <span>${escapeHtml(section.name)} - ${Number(section.headcount ?? 0)} pessoas - ${areaTypeLabel(section.areaType)}</span>
+      </label>`).join("");
     return `
       <div class="settings-modal-backdrop" data-close-admin-user-modal>
         <section class="settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-user-title" onclick="event.stopPropagation()">
           <header class="settings-modal-header">
             <div>
-              <span class="compact-kicker">Novo acesso</span>
-              <h2 id="admin-user-title">Criar usuario</h2>
-              <p>Defina login, senha inicial, perfil e vinculo operacional.</p>
+              <span class="compact-kicker">${isEditing ? "Editar acesso" : "Novo acesso"}</span>
+              <h2 id="admin-user-title">${isEditing ? "Editar usuario" : "Criar usuario"}</h2>
+              <p>Defina login, perfil e equipes vinculadas ao efetivo.</p>
             </div>
             <button class="settings-modal-close" type="button" data-close-admin-user-modal aria-label="Fechar">x</button>
           </header>
           <form class="grid gap-3" data-form="admin-user">
+            <input type="hidden" name="id" value="${user?.id ?? ""}" />
             ${error ? `<div class="settings-error-card">${escapeHtml(error)}</div>` : ""}
             <div class="form-grid">
-              <div class="field"><label for="admin-user-name">Nome</label><input id="admin-user-name" name="name" required /></div>
-              <div class="field"><label for="admin-user-email">Login / e-mail</label><input id="admin-user-email" name="email" type="email" required /></div>
+              <div class="field"><label for="admin-user-name">Nome</label><input id="admin-user-name" name="name" value="${escapeHtml(user?.name ?? "")}" required /></div>
+              <div class="field"><label for="admin-user-email">Login / e-mail</label><input id="admin-user-email" name="email" type="email" value="${escapeHtml(user?.email ?? "")}" required /></div>
             </div>
             <div class="form-grid">
-              <div class="field"><label for="admin-user-password">Senha inicial</label><input id="admin-user-password" name="password" type="password" minlength="8" required /></div>
-              <div class="field"><label for="admin-user-role">Perfil</label><select id="admin-user-role" name="role"><option value="encarregado">Encarregado</option><option value="admin">Administrador</option><option value="fornecedor">Fornecedor</option></select></div>
+              <div class="field"><label for="admin-user-password">${isEditing ? "Nova senha" : "Senha inicial"}</label><input id="admin-user-password" name="password" type="password" minlength="8" ${isEditing ? "placeholder=\"Deixe em branco para manter\"" : "required"} /></div>
+              <div class="field"><label for="admin-user-role">Perfil</label>${roleField}</div>
             </div>
+            <div class="field"><label for="admin-user-team">Identificacao interna</label><input id="admin-user-team" name="team" value="${escapeHtml(user?.team ?? "")}" placeholder="Ex.: Frente Norte, Administrativo" /></div>
+            <div class="field"><label>Equipes vinculadas <span class="optional-label">Opcional</span></label>${teamOptions ? `<details class="team-select-menu"><summary><span>${escapeHtml(teamSummary)}</span><span>${icon("arrow", 13)}</span></summary><div class="team-select-list">${teamOptions}</div></details>` : `<div class="empty">Cadastre um efetivo antes de vincular.</div>`}</div>
             <div class="form-grid">
-              <div class="field"><label for="admin-user-team">Equipe / empresa</label><input id="admin-user-team" name="team" placeholder="Ex.: Frente Norte ou Restaurante Central" /></div>
-              <div class="field"><label for="admin-user-supplier">Fornecedor vinculado</label><select id="admin-user-supplier" name="supplierCompanyId"><option value="">Sem vinculo</option>${supplierCompanies.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("")}</select></div>
-            </div>
-            <div class="form-grid">
-              <div class="field"><label for="admin-user-active">Status</label><select id="admin-user-active" name="active"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+              <div class="field"><label for="admin-user-active">Status</label><select id="admin-user-active" name="active"><option value="true" ${user?.active === false ? "" : "selected"}>Ativo</option><option value="false" ${user?.active === false ? "selected" : ""}>Inativo</option></select></div>
             </div>
             <footer class="settings-actions">
               <button class="btn outline" type="button" data-close-admin-user-modal>Cancelar</button>
-              <button class="btn primary" type="submit">${icon("plus", 15)}Criar usuario</button>
+              <button class="btn primary" type="submit">${isEditing ? `${icon("check", 15)}Salvar usuario` : `${icon("plus", 15)}Criar usuario`}</button>
             </footer>
           </form>
         </section>
@@ -434,7 +437,10 @@ export function createSettingsPage(ctx) {
             <p>${escapeHtml(supplier.legalName || title)}${supplier.cnpj ? ` - CNPJ ${escapeHtml(supplier.cnpj)}` : ""}</p>
           </div>
           <span class="meal-status-chip ${supplier.active ? "active" : "inactive"}">${supplier.active ? "Ativo" : "Inativo"}</span>
-          <button class="icon-btn settings-card-edit" type="button" data-open-supplier-modal="${supplier.id}" aria-label="Editar cadastro de ${escapeHtml(title)}">${icon("edit", 14)}</button>
+          <div class="settings-card-actions">
+            <button class="icon-btn settings-card-edit" type="button" data-open-supplier-modal="${supplier.id}" aria-label="Editar cadastro de ${escapeHtml(title)}">${icon("edit", 14)}</button>
+            <button class="icon-btn danger" type="button" data-delete-supplier-company="${supplier.id}" aria-label="Excluir ${escapeHtml(title)}">${icon("trash", 14)}</button>
+          </div>
         </div>
         <div class="supplier-info-grid">
           <span><small>Refeicoes</small><b>${mealCountLabel}</b></span>
@@ -449,14 +455,8 @@ export function createSettingsPage(ctx) {
   function renderSupplierCompanyForm(supplier) {
     const state = getState();
     const isEditing = Boolean(supplier.id);
-    const links = state.supplierMealTypes ?? [];
-    const linkedMeals = links
-      .filter((item) => item.supplierCompanyId === supplier.id && item.active === true)
-      .map((link) => ({
-        link,
-        meal: state.mealCatalog?.find((meal) => meal.id === link.mealTypeId)
-      }))
-      .filter((item) => item.meal);
+    const hasLinkedLogin = isEditing && (state.supplierCompanyUsers ?? []).some((link) => link.supplierCompanyId === supplier.id && link.active !== false);
+    const shouldShowLoginFields = !isEditing || !hasLinkedLogin;
     return `
       <form class="supplier-company-form" data-form="supplier-company">
         <input type="hidden" name="id" value="${supplier.id ?? ""}" />
@@ -500,42 +500,23 @@ export function createSettingsPage(ctx) {
           </div>
         </section>
 
+        ${shouldShowLoginFields ? `
         <section class="supplier-form-section">
           <div class="supplier-form-section-head">
-            <span class="supplier-form-section-icon">${icon("utensils", 18)}</span>
-            <div class="supplier-form-section-title"><strong>Refeicoes atendidas</strong><p>Veja os vinculos atuais e cadastre novos tipos junto com o fornecedor.</p></div>
-          </div>
-          <div class="supplier-form-body">
-            <div class="supplier-meal-current">
-              <label>Refeicoes deste fornecedor</label>
-              ${linkedMeals.length ? `<div class="supplier-meal-picker">${linkedMeals.map(({ meal, link }) => `
-                <div class="supplier-meal-option">
-                  <span class="settings-stat-icon">${icon("utensils", 15)}</span>
-                  <span><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(link.unitPrice ?? meal.unitPrice)}</small></span>
-                </div>`).join("")}</div>` : `<div class="empty">Este fornecedor ainda nao tem refeicoes vinculadas.</div>`}
-            </div>
-            <div class="supplier-new-meals-grid">
-              <div class="supplier-add-meal-strip">
-                <div><strong>Adicionar nova refeicao</strong><p>Use apenas se este fornecedor tambem precisa criar um novo tipo no catalogo.</p></div>
-                <button class="btn outline small" type="button" data-add-supplier-meal>${icon("plus", 14)}Adicionar refeicao</button>
-              </div>
-              <div class="supplier-new-meals-list" data-supplier-new-meals></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="supplier-form-section">
-          <div class="supplier-form-section-head">
-            <span class="supplier-form-section-icon">${icon("dollar-sign", 18)}</span>
-            <div class="supplier-form-section-title"><strong>Financeiro e observacoes</strong><p>Dados internos para pagamentos, conferencia e historico.</p></div>
+            <span class="supplier-form-section-icon">${icon("key", 18)}</span>
+            <div class="supplier-form-section-title"><strong>Login do fornecedor</strong><p>${isEditing ? "Crie o login que faltava para esta empresa." : "O usuario do fornecedor sera criado junto com a empresa."}</p></div>
           </div>
           <div class="supplier-form-body">
             <div class="supplier-form-grid">
-              <div class="field"><label>Dados bancarios</label><textarea name="bankDetails" placeholder="Banco, agencia, conta, chave Pix">${escapeHtml(supplier.bankDetails ?? "")}</textarea></div>
-              <div class="field"><label>Observacoes internas</label><textarea name="notes" placeholder="Preferencias, restricoes, rotina de entrega">${escapeHtml(supplier.notes ?? "")}</textarea></div>
+              <div class="field"><label>Nome do usuario</label><input name="loginName" placeholder="Ex.: Responsavel Cozinha Almeida" ${shouldShowLoginFields ? "required" : ""} /></div>
+              <div class="field"><label>Login / e-mail</label><input name="loginEmail" type="email" placeholder="acesso@fornecedor.com" ${shouldShowLoginFields ? "required" : ""} /></div>
             </div>
+            <div class="field"><label>Senha inicial</label><input name="loginPassword" type="password" minlength="8" ${shouldShowLoginFields ? "required" : ""} /></div>
           </div>
-        </section>
+        </section>` : ""}
+
+        <input type="hidden" name="bankDetails" value="${escapeHtml(supplier.bankDetails ?? "")}" />
+        <input type="hidden" name="notes" value="${escapeHtml(supplier.notes ?? "")}" />
 
         <footer class="supplier-form-footer settings-actions">
           <button class="btn outline" type="button" data-close-supplier-modal>Cancelar</button>
@@ -547,7 +528,7 @@ export function createSettingsPage(ctx) {
   function renderSupplierMealLinksPanel() {
     const state = getState();
     const suppliers = state.supplierCompanies ?? [];
-    const meals = state.mealCatalog ?? [];
+    const meals = (state.mealCatalog ?? []).filter((meal) => meal.active === true);
     if (!suppliers.length || !meals.length) {
       return `
         <section class="settings-panel settings-panel-wide">
@@ -572,17 +553,18 @@ export function createSettingsPage(ctx) {
         </div>
         <div class="link-supplier-list">
           ${suppliers.map((supplier) => `
-            <article class="link-supplier-card">
+            <article class="link-supplier-card" data-drop-supplier="${supplier.id}">
               <div class="link-supplier-head">
                 <div><strong>${escapeHtml(supplier.tradeName || supplier.legalName)}</strong><p>${supplier.active ? "Disponivel para novos pedidos" : "Inativo: fica apenas no historico"}</p></div>
                 <span class="meal-status-chip ${supplier.active ? "active" : "inactive"}">${supplier.active ? "Ativo" : "Inativo"}</span>
               </div>
               <div class="meal-link-grid">
-              ${meals.filter((meal) => state.supplierMealTypes?.some((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id)).map((meal) => {
+              ${meals.map((meal) => {
                 const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id);
                 const active = supplier.active !== false && link?.active === true;
                 const disabled = supplier.active === false ? "disabled" : "";
-                return `<form class="meal-link-card ${active ? "is-active" : "is-inactive"}" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" /><input type="hidden" name="active" value="${active ? "true" : "false"}" /><div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)}</small></div><button class="meal-link-toggle ${active ? "is-active" : ""}" type="submit" data-meal-link-toggle value="${active ? "false" : "true"}" aria-pressed="${active}" ${disabled}><span></span><strong>${active ? "Ativo" : "Inativo"}</strong></button></div><div class="meal-link-card-body"><div class="field"><label>Preco</label><input name="unitPrice" type="number" min="0" step="0.01" value="${link?.unitPrice ?? ""}" placeholder="${money(meal.unitPrice)}" ${disabled} /></div><button class="btn outline small meal-link-price-save" type="submit" ${disabled}>Salvar preco</button></div></form>`;
+                const price = link?.unitPrice ?? meal.unitPrice;
+                return `<form class="meal-link-card ${active ? "is-active" : "is-inactive"}" draggable="true" data-drag-meal="${meal.id}" data-form="supplier-meal-link" data-drop-supplier="${supplier.id}" data-drop-meal="${meal.id}"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" /><input type="hidden" name="active" value="${active ? "true" : "false"}" /><div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(price)}</small></div><button class="meal-link-toggle ${active ? "is-active" : ""}" type="button" data-meal-link-toggle value="${active ? "false" : "true"}" aria-pressed="${active}" ${disabled}><span></span><strong>${active ? "Ativo" : "Inativo"}</strong></button></div></form>`;
               }).join("") || `<div class="empty">Nenhuma refeicao vinculada a este fornecedor.</div>`}
               </div>
             </article>`).join("")}
@@ -658,9 +640,14 @@ export function createSettingsPage(ctx) {
   }
 
   function renderWorkSectionItem(section, leaders) {
+    const state = getState();
     const leader = leaders.find((item) => item.id === section.leaderId);
     const adminResponsible = ["escritorio", "canteiro"].includes(section.areaType);
     const responsibleName = adminResponsible ? "ADMIN" : leader?.name || "Sem fixo";
+    const linkedMealCount = (state.sectionMealTypes ?? [])
+      .filter((item) => item.sectionId === section.id && item.active !== false)
+      .length;
+    const mealAccessLabel = linkedMealCount ? `${linkedMealCount} tipos` : "Todas ativas";
     return `
       <article class="work-section-card">
         <div class="work-section-card-head">
@@ -669,12 +656,15 @@ export function createSettingsPage(ctx) {
             <small class="block text-stone-500">${areaTypeLabel(section.areaType)} - ${escapeHtml(responsibleName)}</small>
           </div>
           <span class="meal-status-chip ${section.active ? "active" : "inactive"}">${section.active ? "Ativo" : "Inativo"}</span>
-          <button class="icon-btn settings-card-edit" type="button" data-open-work-section-modal="${section.id}" aria-label="Editar ${escapeHtml(section.name)}">${icon("edit", 14)}</button>
+          <div class="settings-card-actions">
+            <button class="icon-btn settings-card-edit" type="button" data-open-work-section-modal="${section.id}" aria-label="Editar ${escapeHtml(section.name)}">${icon("edit", 14)}</button>
+            <button class="icon-btn danger" type="button" data-delete-work-section="${section.id}" aria-label="Excluir ${escapeHtml(section.name)}">${icon("trash", 14)}</button>
+          </div>
         </div>
         <div class="supplier-info-grid">
           <span><small>Efetivo</small><b>${Number(section.headcount ?? 0)} pessoas</b></span>
-          <span><small>Area</small><b>${areaTypeLabel(section.areaType)}</b></span>
-          <span><small>Responsavel</small><b>${escapeHtml(responsibleName)}</b></span>
+          <span><small>Refeicoes</small><b>${escapeHtml(mealAccessLabel)}</b></span>
+          <span><small>Pedidos</small><b>${section.active ? "Liberado" : "Bloqueado"}</b></span>
         </div>
       </article>`;
   }
@@ -733,6 +723,9 @@ export function createSettingsPage(ctx) {
             </div>
           </div>
           <div class="meal-catalog-card-actions">
+            <button class="meal-active-toggle ${meal.active ? "is-active" : ""}" type="button" data-meal-active-toggle="${meal.id}" data-next-active="${meal.active ? "false" : "true"}" aria-pressed="${meal.active}">
+              <span></span><strong>${meal.active ? "Ativo" : "Inativo"}</strong>
+            </button>
             <button class="icon-btn" type="button" data-open-meal-modal="${meal.id}" aria-label="Editar ${escapeHtml(meal.label)}">${icon("edit", 15)}</button>
             <button class="icon-btn danger" type="button" data-delete-meal-type="${meal.id}" aria-label="Excluir ${escapeHtml(meal.label)}">${icon("trash", 15)}</button>
           </div>
@@ -748,6 +741,13 @@ export function createSettingsPage(ctx) {
   function renderMealCatalogForm(meal = null) {
     const state = getState();
     const id = meal?.id ?? "new";
+    const supplierOptions = (state.supplierCompanies ?? [])
+      .filter((supplier) => supplier.active !== false)
+      .map((supplier) => {
+        const linked = meal?.id && state.supplierMealTypes?.some((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id && item.active === true);
+        return `<label class="team-checkbox"><input type="checkbox" name="supplierCompanyIds" value="${supplier.id}" ${linked ? "checked" : ""} /><span><strong>${escapeHtml(supplier.tradeName || supplier.legalName)}</strong><small>${escapeHtml(supplier.city || supplier.email || "Fornecedor ativo")}</small></span></label>`;
+      })
+      .join("");
     return `
       <form class="meal-catalog-new-form" data-form="meal-catalog">
         <input type="hidden" name="id" value="${meal?.id ?? ""}" />
@@ -758,7 +758,7 @@ export function createSettingsPage(ctx) {
           </div>
           <div class="field">
             <label for="meal-price-${id}">Preco unitario</label>
-            <input id="meal-price-${id}" name="unitPrice" type="number" min="0" step="0.01" value="${Number(meal?.unitPrice ?? state.settings.defaultMealUnitPrice ?? 0)}" required />
+            <input id="meal-price-${id}" name="unitPrice" type="text" inputmode="decimal" data-currency-input value="${money(Number(meal?.unitPrice ?? state.settings.defaultMealUnitPrice ?? 0))}" required />
           </div>
         </div>
         <div class="form-grid">
@@ -783,6 +783,7 @@ export function createSettingsPage(ctx) {
           <label for="meal-description-${id}">O que vem nessa marmita</label>
           <textarea id="meal-description-${id}" name="description" placeholder="Ex.: arroz, feijao, frango grelhado, salada e farofa">${escapeHtml(meal?.description ?? "")}</textarea>
         </div>
+        <div class="field"><label>Fornecedores desta refeicao <span class="optional-label">Opcional</span></label><div class="team-checkbox-grid">${supplierOptions || `<div class="empty">Cadastre um fornecedor antes de vincular.</div>`}</div></div>
         <footer class="settings-actions">
           <button class="btn outline" type="button" data-close-meal-modal>Cancelar</button>
           <button class="btn primary" type="submit">${meal?.id ? "Salvar" : `${icon("plus", 15)}Cadastrar`}</button>

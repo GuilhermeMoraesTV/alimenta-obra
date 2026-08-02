@@ -33,6 +33,7 @@ import {
   confirmSupplierStep,
   createAccessInvite,
   createAdminManagedUser,
+  deleteAdminManagedUser,
   createDeliveryAddress,
   createMealRequest,
   fetchApplicationData,
@@ -55,6 +56,7 @@ import {
   signUp,
   subscribeToChanges,
   updateCurrentProfile,
+  updateAdminManagedUser,
   updateDefaultMealUnitPrice,
   updateUserActiveStatus,
   updateMealRequest,
@@ -77,16 +79,20 @@ let exportMenuOpen = null;
 let generatedInviteLink = "";
 let settingsActiveTab = "resumo";
 let settingsUserModalOpen = false;
+let settingsUserModalId = null;
 let settingsUserModalError = "";
 let settingsSupplierModalId = null;
 let settingsMealModalId = null;
 let settingsWorkSectionModalId = null;
+let draggedMealTypeId = "";
 let pendingCancelRequestId = null;
 let pendingConfirmedCancelConsolidationId = null;
+let pendingDeleteConfirmation = null;
 let operationNotice = null;
 let requestFormError = "";
 let adminOrderFormOpen = false;
 let adminOrderError = "";
+let adminOrderCartItems = [];
 let adminConsumptionWeekOffset = 0;
 let adminRequestDateFilter = "";
 let reportFilter = {
@@ -109,6 +115,17 @@ function localDateKey(value = new Date()) {
   return offsetDate.toISOString().slice(0, 10);
 }
 
+function parseCurrencyInput(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return 0;
+  const cleaned = raw.replace(/[^\d,.-]/g, "");
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 function previousLocalDateKey(dateKey = localDateKey()) {
   const date = new Date(`${dateKey}T12:00:00`);
   date.setDate(date.getDate() - 1);
@@ -117,6 +134,39 @@ function previousLocalDateKey(dateKey = localDateKey()) {
 
 function minimumMealDate() {
   return state.settings.defaultMealDate || localDateKey();
+}
+
+function adminOrderSuppliers() {
+  const activeSuppliers = getSupplierCompanies(state, { includeInactive: false });
+  const activeMealIds = new Set((state.mealTypes ?? []).map((meal) => meal.id));
+  if (!(state.supplierMealTypes ?? []).length) return [];
+  return activeSuppliers.filter((supplier) => (state.supplierMealTypes ?? []).some((link) =>
+    link.supplierCompanyId === supplier.id
+    && link.active === true
+    && activeMealIds.has(link.mealTypeId)
+  ));
+}
+
+function adminOrderMeals(sectionId = "", supplierCompanyId = "") {
+  const sectionMeals = getMealsForSection(state, sectionId);
+  if (!supplierCompanyId) return sectionMeals;
+  return sectionMeals.filter((meal) => (state.supplierMealTypes ?? []).some((link) =>
+    link.supplierCompanyId === supplierCompanyId
+    && link.mealTypeId === meal.id
+    && link.active === true
+  ));
+}
+
+function adminOrderCartItemLabel(item) {
+  const meal = state.mealTypes.find((row) => row.id === item.mealTypeId);
+  const section = state.workSections.find((row) => row.id === item.teamId);
+  const supplier = getSupplierCompanies(state).find((row) => row.id === item.supplierCompanyId);
+  return {
+    meal: meal?.label ?? "Refeicao",
+    section: section?.name ?? "Sem efetivo",
+    supplier: supplier?.tradeName || supplier?.legalName || "Fornecedor",
+    quantity: Number(item.quantity ?? 0)
+  };
 }
 
 function areaTypeLabel(value) {
@@ -139,8 +189,8 @@ const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
 const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
 const appLogoAsset = `${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`;
-const modalBackdropClass = "fixed inset-0 z-50 grid place-items-center bg-stone-950/50 p-3 backdrop-blur-sm sm:p-4";
-const modalPanelClass = "max-h-[92vh] w-full max-w-2xl overflow-auto rounded-3xl border border-white/70 bg-white p-4 shadow-2xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
+const modalBackdropClass = "app-modal-backdrop fixed inset-0 z-50 grid place-items-center bg-stone-950/50 p-3 backdrop-blur-sm sm:p-4";
+const modalPanelClass = "app-modal-panel max-h-[92vh] w-full max-w-2xl overflow-auto rounded-3xl border border-white/70 bg-white p-4 shadow-2xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
 const modalHeaderClass = "mb-4 flex items-start justify-between gap-3 border-b border-stone-100 pb-3";
 const modalTitleClass = "m-0 text-2xl font-black leading-none tracking-normal text-stone-950";
 const modalKickerClass = "text-[10px] font-black uppercase tracking-[.12em] text-orange-700";
@@ -435,6 +485,7 @@ const pageRegistry = createPageRegistry({
     getSettingsSupplierModalId: () => settingsSupplierModalId,
     getSettingsWorkSectionModalId: () => settingsWorkSectionModalId,
     getSettingsUserModalError: () => settingsUserModalError,
+    getSettingsUserModalId: () => settingsUserModalId,
     getSettingsUserModalOpen: () => settingsUserModalOpen,
     getState: () => state,
     icon,
@@ -491,16 +542,22 @@ function renderAdminOrderModal() {
   const user = getActiveUser(state);
   if (!adminOrderFormOpen || user?.role !== "admin") return "";
   const sections = getActiveWorkSections(state);
+  const suppliers = adminOrderSuppliers();
+  const selectedSupplierId = suppliers[0]?.id ?? "";
   const selectedSectionId = sections[0]?.id ?? "";
-  const meals = getMealsForSection(state, selectedSectionId);
-  const selectedMeal = meals[0] ?? state.mealTypes[0];
-  const suppliers = selectedMeal ? getSuppliersForMeal(state, selectedMeal.id, { includeInactive: false }) : [];
+  const meals = adminOrderMeals(selectedSectionId, selectedSupplierId);
+  const selectedMeal = meals[0] ?? null;
   const fallbackLocationId = selectedMeal?.locations?.[0]?.id ?? "";
+  const canCreate = sections.length && suppliers.length && meals.length;
   const sectionOptions = sections.map((section) => `<option value="${section.id}">${escapeHtml(section.name)} - ${areaTypeLabel(section.areaType)}</option>`).join("") || `<option value="">Nenhum efetivo ativo</option>`;
+  const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor com refeicao vinculada</option>`;
   const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
-  const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor ativo para essa refeicao</option>`;
+  const cartRows = adminOrderCartItems.map((item, index) => {
+    const label = adminOrderCartItemLabel(item);
+    return `<div class="grid gap-2 rounded-xl border border-orange-100 bg-orange-50/45 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div><strong class="block text-sm">${escapeHtml(label.meal)} - ${label.quantity} refeicoes</strong><small class="text-xs font-bold text-stone-500">${escapeHtml(label.supplier)} - ${escapeHtml(label.section)} - ${formatDate(item.date)}</small></div><button class="${modalButtonOutlineClass} min-h-9 px-3 text-xs" type="button" data-remove-admin-order-item="${index}">${icon("trash", 14)}Remover</button></div>`;
+  }).join("");
 
-  return `<div class="${modalBackdropClass}" data-close-admin-order-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="admin-order-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Pedido administrativo</span><h2 class="${modalTitleClass}" id="admin-order-title">Fazer pedido</h2><p class="mt-1 text-sm text-stone-500">Use para buffet, canteiro, escritorio ou ajustes criados diretamente pelo Admin.</p></div><button class="${modalCloseClass}" type="button" data-close-admin-order-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="admin-order"><input type="hidden" name="originRole" value="admin" /><input type="hidden" name="leaderId" value="" /><input type="hidden" name="locationId" value="${fallbackLocationId}" />${adminOrderError ? `<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">${escapeHtml(adminOrderError)}</div>` : ""}<div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-date">Data da refeicao</label><input class="${modalInputClass}" id="admin-order-date" name="date" type="date" min="${minimumMealDate()}" value="${minimumMealDate()}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-quantity">Quantidade solicitada</label><input class="${modalInputClass}" id="admin-order-quantity" name="quantity" type="number" min="1" value="10" required /></div></div><div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-team">Efetivo / local</label><select class="${modalInputClass}" id="admin-order-team" name="teamId" data-admin-order-team required>${sectionOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="admin-order-meal" name="mealTypeId" data-admin-order-meal required>${mealOptions}</select></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-supplier">Fornecedor vinculado</label><select class="${modalInputClass}" id="admin-order-supplier" name="supplierCompanyId" required>${supplierOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="admin-order-notes" name="notes" placeholder="Ex.: buffet para escritorio, reforco de equipe ou evento interno"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-admin-order-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit" ${sections.length && meals.length && suppliers.length ? "" : "disabled"}>Salvar pedido admin</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-admin-order-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="admin-order-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Pedido administrativo</span><h2 class="${modalTitleClass}" id="admin-order-title">Fazer pedido</h2><p class="mt-1 text-sm text-stone-500">Escolha o fornecedor; a lista de refeicoes mostra somente o que ele atende.</p></div><button class="${modalCloseClass}" type="button" data-close-admin-order-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="admin-order"><input type="hidden" name="originRole" value="admin" /><input type="hidden" name="leaderId" value="" /><input type="hidden" name="locationId" value="${fallbackLocationId}" />${adminOrderError ? `<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">${escapeHtml(adminOrderError)}</div>` : ""}<div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-date">Data da refeicao</label><input class="${modalInputClass}" id="admin-order-date" name="date" type="date" min="${minimumMealDate()}" value="${minimumMealDate()}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-quantity">Quantidade solicitada</label><input class="${modalInputClass}" id="admin-order-quantity" name="quantity" type="number" min="1" value="10" required /></div></div><div class="grid gap-3 sm:grid-cols-3"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-supplier">Fornecedor</label><select class="${modalInputClass}" id="admin-order-supplier" name="supplierCompanyId" data-admin-order-supplier required>${supplierOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-team">Efetivo / local</label><select class="${modalInputClass}" id="admin-order-team" name="teamId" data-admin-order-team required>${sectionOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="admin-order-meal" name="mealTypeId" data-admin-order-meal required>${mealOptions}</select></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="admin-order-notes" name="notes" placeholder="Ex.: buffet para escritorio, reforco de equipe ou evento interno"></textarea></div>${adminOrderCartItems.length ? `<section class="grid gap-2 rounded-2xl border border-orange-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><strong class="text-sm font-black text-stone-950">Carrinho de pedidos</strong><span class="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black uppercase text-orange-700">${adminOrderCartItems.length} itens</span></div>${cartRows}</section>` : ""}<footer class="grid gap-2 border-t border-stone-100 pt-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"><button class="${modalButtonOutlineClass}" type="button" data-close-admin-order-modal>Cancelar</button><button class="${modalButtonOutlineClass}" type="button" data-add-admin-order-item ${canCreate ? "" : "disabled"}>${icon("plus", 15)}Adicionar ao carrinho</button><button class="${modalButtonPrimaryClass}" type="submit" ${canCreate || adminOrderCartItems.length ? "" : "disabled"}>${adminOrderCartItems.length ? `Criar ${adminOrderCartItems.length} pedidos` : "Salvar pedido"}</button></footer></form></section></div>`;
 }
 
 function renderActualsModal() {
@@ -532,7 +589,56 @@ function renderConfirmedCancelModal() {
   const user = getActiveUser(state);
   if (!consolidation || user?.role !== "admin") return "";
   const summary = getConsolidationSummary(state, consolidation);
-  return `<div class="${modalBackdropClass}" data-close-confirmed-cancel-modal><section class="${modalPanelClass} max-w-lg" role="dialog" aria-modal="true" aria-labelledby="confirmed-cancel-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Cancelamento pos-confirmacao</span><h2 class="${modalTitleClass}" id="confirmed-cancel-title">Cancelar pedido confirmado?</h2><p class="mt-1 text-sm text-stone-500">O pedido original continua no historico. O consumo real deste bloco sera registrado como zero.</p></div><button class="${modalCloseClass}" type="button" data-close-confirmed-cancel-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="confirmed-cancel"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800"><div class="flex items-center justify-between gap-3"><span>Pedido original</span><strong>${summary.total} refeicoes</strong></div><div class="mt-1 flex items-center justify-between gap-3"><span>Consumo real</span><strong>0 refeicoes</strong></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="confirmed-cancel-reason">Motivo obrigatorio</label><textarea class="${modalInputClass} min-h-24 py-2" id="confirmed-cancel-reason" name="reason" minlength="5" required placeholder="Ex.: obra paralisada, equipe dispensada, pedido feito em duplicidade"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-confirmed-cancel-modal>Voltar</button><button class="${modalButtonDangerClass}" type="submit">Cancelar apos confirmacao</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-confirmed-cancel-modal><section class="${modalPanelClass} max-w-lg" role="dialog" aria-modal="true" aria-labelledby="confirmed-cancel-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Cancelamento de envio</span><h2 class="${modalTitleClass}" id="confirmed-cancel-title">Cancelar envio ao fornecedor?</h2><p class="mt-1 text-sm text-stone-500">O pedido original continua no historico. O consumo real deste bloco sera registrado como zero.</p></div><button class="${modalCloseClass}" type="button" data-close-confirmed-cancel-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="confirmed-cancel"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800"><div class="flex items-center justify-between gap-3"><span>Pedido original</span><strong>${summary.total} refeicoes</strong></div><div class="mt-1 flex items-center justify-between gap-3"><span>Consumo real</span><strong>0 refeicoes</strong></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="confirmed-cancel-reason">Motivo obrigatorio</label><textarea class="${modalInputClass} min-h-24 py-2" id="confirmed-cancel-reason" name="reason" minlength="5" required placeholder="Ex.: obra paralisada, equipe dispensada, pedido feito em duplicidade"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-confirmed-cancel-modal>Voltar</button><button class="${modalButtonDangerClass}" type="submit">Cancelar envio</button></footer></form></section></div>`;
+}
+
+function deleteConfirmationContent() {
+  if (!pendingDeleteConfirmation) return null;
+  const { id, type } = pendingDeleteConfirmation;
+  if (type === "work-section") {
+    const section = state.workSections.find((item) => item.id === id);
+    if (!section) return null;
+    return {
+      title: "Excluir efetivo?",
+      message: `O efetivo ${section.name} deixara de aparecer para novos pedidos.`,
+      confirmLabel: "Excluir efetivo"
+    };
+  }
+  if (type === "meal-type") {
+    const meal = state.mealCatalog.find((item) => item.id === id);
+    if (!meal) return null;
+    return {
+      title: "Excluir refeicao?",
+      message: `A refeicao ${meal.label} deixara de aparecer em novos pedidos e vinculos.`,
+      confirmLabel: "Excluir refeicao"
+    };
+  }
+  if (type === "admin-user") {
+    const user = state.users.find((item) => item.id === id);
+    if (!user) return null;
+    return {
+      title: "Excluir usuario permanentemente?",
+      message: `O usuario ${user.name} sera removido do sistema e o login ficara bloqueado.`,
+      confirmLabel: "Excluir usuario"
+    };
+  }
+  if (type === "supplier-company") {
+    const supplier = state.supplierCompanies.find((item) => item.id === id);
+    if (!supplier) return null;
+    const title = supplier.tradeName || supplier.legalName || "fornecedor";
+    return {
+      title: "Excluir fornecedor?",
+      message: `O fornecedor ${title} sera removido dos novos pedidos e seus logins vinculados serao bloqueados.`,
+      confirmLabel: "Excluir fornecedor"
+    };
+  }
+  return null;
+}
+
+function renderDeleteConfirmationModal() {
+  const content = deleteConfirmationContent();
+  if (!content) return "";
+  return `<div class="${modalBackdropClass}" data-dismiss-delete-confirmation><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title" onclick="event.stopPropagation()"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar exclusao</span><h2 class="${modalTitleClass} mt-1" id="delete-confirm-title">${escapeHtml(content.title)}</h2><p class="mt-2 text-sm text-stone-500">${escapeHtml(content.message)}</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" type="button" data-dismiss-delete-confirmation>Voltar</button><button class="${modalButtonDangerClass}" type="button" data-confirm-delete>${escapeHtml(content.confirmLabel)}</button></div></section></div>`;
 }
 
 function renderOperationModal() {
@@ -540,8 +646,10 @@ function renderOperationModal() {
   if (actualsModal) return actualsModal;
   const confirmedCancelModal = renderConfirmedCancelModal();
   if (confirmedCancelModal) return confirmedCancelModal;
+  const deleteConfirmationModal = renderDeleteConfirmationModal();
+  if (deleteConfirmationModal) return deleteConfirmationModal;
   const request = state.requests.find((item) => item.id === pendingCancelRequestId);
-  if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar cancelamento</span><h2 class="${modalTitleClass} mt-1">Cancelar este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeições para ${formatDate(request.date)} será cancelado e não entrará no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Cancelar pedido</button></div></section></div>`;
+  if (request) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-700">${icon("trash", 23)}</span><span class="${modalKickerClass} mt-3 block">Confirmar exclusao</span><h2 class="${modalTitleClass} mt-1">Excluir este pedido?</h2><p class="mt-2 text-sm text-stone-500">O pedido de ${request.quantity} refeições para ${formatDate(request.date)} sera removido da operacao e nao entrara no envio ao fornecedor.</p><div class="mt-4 grid grid-cols-2 gap-2"><button class="${modalButtonOutlineClass}" data-dismiss-operation>Voltar</button><button class="${modalButtonDangerClass}" data-confirm-cancel="${request.id}">Excluir pedido</button></div></section></div>`;
   if (operationNotice) return `<div class="${modalBackdropClass}"><section class="w-full max-w-md rounded-3xl border border-white/70 bg-white p-5 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-orange-700">${icon("clipboard", 23)}</span><span class="${modalKickerClass} mt-3 block">Operacao registrada</span><h2 class="${modalTitleClass} mt-1">${operationNotice.title}</h2><p class="mt-2 text-sm text-stone-500">${operationNotice.message}</p><button class="${modalButtonPrimaryClass} mt-4 w-full" data-dismiss-operation>Continuar</button></section></div>`;
   return "";
 }
@@ -718,6 +826,21 @@ function getReportPeriodLabel() {
   if (filter.range === "all") return "Todo período";
   if (filter.start === filter.end) return formatDate(filter.start);
   return `${formatDate(filter.start)} a ${formatDate(filter.end)}`;
+}
+
+function applyReportFilterFromControls(scope = root, { shouldRender = true } = {}) {
+  const valueOf = (selector, fallback = "") => scope.querySelector(selector)?.value ?? fallback;
+  reportFilter = normalizeReportFilter({
+    ...reportFilter,
+    range: valueOf("[data-report-range]", reportFilter.range),
+    start: valueOf("[data-report-start]", reportFilter.start),
+    end: valueOf("[data-report-end]", reportFilter.end),
+    supplierCompanyId: valueOf("[data-report-supplier]", reportFilter.supplierCompanyId ?? ""),
+    mealTypeId: valueOf("[data-report-meal]", reportFilter.mealTypeId ?? ""),
+    teamId: valueOf("[data-report-team]", reportFilter.teamId ?? ""),
+    originRole: valueOf("[data-report-origin]", reportFilter.originRole ?? "")
+  });
+  if (shouldRender) render();
 }
 
 function auditEntityLabel(entity) {
@@ -1281,35 +1404,6 @@ function renderConsolidationTimeline(consolidation) {
     </div>`;
 }
 
-function supplierMealDraftHtml(index) {
-  return `
-    <div class="supplier-new-meal-card" data-supplier-meal-draft>
-      <div class="supplier-new-meal-card-head">
-        <div class="flex items-center gap-2"><span>${icon("utensils", 15)}</span><strong data-supplier-meal-title>Nova refeicao ${index}</strong></div>
-        <button class="icon-btn" type="button" data-remove-supplier-meal aria-label="Remover refeicao">${icon("trash", 14)}</button>
-      </div>
-      <div class="supplier-new-meal-row">
-        <div class="field"><label>Nome</label><input name="newMealName" placeholder="Ex.: Marmita executiva" /></div>
-        <div class="field"><label>Categoria</label><select name="newMealCategory"><option value="marmita">Marmita</option><option value="buffet">Buffet</option><option value="janta">Janta</option><option value="outro">Outro</option></select></div>
-        <div class="field"><label>Preco</label><input name="newMealUnitPrice" type="number" min="0" step="0.01" placeholder="0,00" /></div>
-        <div class="field"><label>Composicao / observacao</label><input name="newMealDescription" placeholder="Ex.: arroz, feijao, proteina e salada" /></div>
-      </div>
-    </div>`;
-}
-
-function renumberSupplierMealDrafts(list) {
-  list.querySelectorAll("[data-supplier-meal-title]").forEach((title, index) => {
-    title.textContent = `Nova refeicao ${index + 1}`;
-  });
-}
-
-function addSupplierMealDraft(form) {
-  const list = form?.querySelector("[data-supplier-new-meals]");
-  if (!list) return;
-  const nextIndex = list.querySelectorAll("[data-supplier-meal-draft]").length + 1;
-  list.insertAdjacentHTML("beforeend", supplierMealDraftHtml(nextIndex));
-}
-
 function keepActiveSettingsTabVisible() {
   requestAnimationFrame(() => {
     const activeButton = root.querySelector(".settings-menu [data-settings-tab].is-active");
@@ -1367,6 +1461,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       adminOrderFormOpen = true;
       adminOrderError = "";
+      adminOrderCartItems = [];
       render();
     });
   });
@@ -1374,11 +1469,19 @@ function bindEvents() {
     button.addEventListener("click", () => {
       adminOrderFormOpen = false;
       adminOrderError = "";
+      adminOrderCartItems = [];
       render();
     });
   });
   root.querySelector("[data-form='admin-order']")?.addEventListener("submit", handleAdminOrderSubmit);
-  root.querySelectorAll("[data-admin-order-team], [data-admin-order-meal]").forEach((control) => {
+  root.querySelector("[data-add-admin-order-item]")?.addEventListener("click", handleAdminOrderAddItem);
+  root.querySelectorAll("[data-remove-admin-order-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      adminOrderCartItems = adminOrderCartItems.filter((_, index) => index !== Number(button.dataset.removeAdminOrderItem));
+      render();
+    });
+  });
+  root.querySelectorAll("[data-admin-order-team], [data-admin-order-meal], [data-admin-order-supplier]").forEach((control) => {
     control.addEventListener("change", updateAdminOrderOptions);
   });
   root.querySelectorAll("[data-filter-date], [data-filter-leader], [data-filter-meal]").forEach((control) => {
@@ -1424,6 +1527,9 @@ function bindEvents() {
       render();
     });
   });
+  root.querySelectorAll("[data-report-apply]").forEach((button) => {
+    button.addEventListener("click", () => applyReportFilterFromControls(button.closest(".export-options") ?? root));
+  });
   root.querySelectorAll("[data-cancel-request]").forEach((button) => {
     button.addEventListener("click", () => cancelRequest(button.dataset.cancelRequest));
   });
@@ -1435,6 +1541,14 @@ function bindEvents() {
       render();
     });
   });
+  root.querySelectorAll("[data-dismiss-delete-confirmation]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("fixed")) return;
+      pendingDeleteConfirmation = null;
+      render();
+    });
+  });
+  root.querySelector("[data-confirm-delete]")?.addEventListener("click", handleConfirmedDelete);
   root.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => {
     const requestId = pendingCancelRequestId;
     pendingCancelRequestId = null;
@@ -1482,6 +1596,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       settingsActiveTab = button.dataset.settingsTab || "conta";
       settingsUserModalOpen = false;
+      settingsUserModalId = null;
       settingsUserModalError = "";
       settingsSupplierModalId = null;
       settingsMealModalId = null;
@@ -1491,14 +1606,19 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='access-invite']")?.addEventListener("submit", handleAccessInviteSubmit);
-  root.querySelector("[data-open-admin-user-modal]")?.addEventListener("click", () => {
-    settingsUserModalOpen = true;
-    settingsUserModalError = "";
-    render();
+  root.querySelectorAll("[data-open-admin-user-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsUserModalOpen = true;
+      settingsUserModalId = button.dataset.openAdminUserModal === "new" ? null : button.dataset.openAdminUserModal;
+      settingsUserModalError = "";
+      render();
+    });
   });
   root.querySelectorAll("[data-close-admin-user-modal]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
       settingsUserModalOpen = false;
+      settingsUserModalId = null;
       settingsUserModalError = "";
       render();
     });
@@ -1510,7 +1630,8 @@ function bindEvents() {
     });
   });
   root.querySelectorAll("[data-close-supplier-modal]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
       settingsSupplierModalId = null;
       render();
     });
@@ -1522,7 +1643,8 @@ function bindEvents() {
     });
   });
   root.querySelectorAll("[data-close-meal-modal]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
       settingsMealModalId = null;
       render();
     });
@@ -1534,33 +1656,73 @@ function bindEvents() {
     });
   });
   root.querySelectorAll("[data-close-work-section-modal]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
       settingsWorkSectionModalId = null;
       render();
     });
   });
   root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
+  root.querySelectorAll("[data-delete-admin-user]").forEach((button) => {
+    button.addEventListener("click", () => handleAdminUserDelete(button));
+  });
   root.querySelectorAll("[data-user-active-toggle]").forEach((button) => {
     button.addEventListener("click", () => handleUserActiveToggle(button));
   });
-  root.querySelectorAll("[data-form='supplier-company']").forEach((form) => {
-    form.querySelector("[data-add-supplier-meal]")?.addEventListener("click", () => addSupplierMealDraft(form));
-    form.addEventListener("click", (event) => {
-      const removeButton = event.target.closest("[data-remove-supplier-meal]");
-      if (!removeButton) return;
-      const list = form.querySelector("[data-supplier-new-meals]");
-      removeButton.closest("[data-supplier-meal-draft]")?.remove();
-      if (list) renumberSupplierMealDrafts(list);
+  root.querySelectorAll("[data-currency-input]").forEach((input) => {
+    input.addEventListener("focus", () => {
+      const amount = parseCurrencyInput(input.value);
+      input.value = amount ? String(amount).replace(".", ",") : "";
+      input.select();
     });
+    input.addEventListener("blur", () => {
+      input.value = money(parseCurrencyInput(input.value));
+    });
+  });
+  root.querySelectorAll("[data-form='supplier-company']").forEach((form) => {
     form.addEventListener("submit", handleSupplierCompanySubmit);
   });
-  root.querySelector("[data-form='supplier-company-user']")?.addEventListener("submit", handleSupplierCompanyUserSubmit);
+  root.querySelectorAll("[data-delete-supplier-company]").forEach((button) => {
+    button.addEventListener("click", () => handleSupplierCompanyDelete(button));
+  });
   root.querySelectorAll("[data-form='supplier-meal-link']").forEach((form) => {
     form.addEventListener("submit", handleSupplierMealLinkSubmit);
+  });
+  root.querySelectorAll("[data-drag-meal]").forEach((item) => {
+    item.addEventListener("dragstart", (event) => {
+      draggedMealTypeId = item.dataset.dragMeal || "";
+      event.dataTransfer?.setData("text/plain", draggedMealTypeId);
+    });
+    item.addEventListener("dragend", () => {
+      draggedMealTypeId = "";
+    });
+  });
+  root.querySelectorAll("[data-drop-supplier]").forEach((target) => {
+    target.addEventListener("dragover", (event) => {
+      if (!draggedMealTypeId) return;
+      event.preventDefault();
+      target.classList.add("is-drop-target");
+    });
+    target.addEventListener("dragleave", () => target.classList.remove("is-drop-target"));
+    target.addEventListener("drop", (event) => {
+      event.preventDefault();
+      target.classList.remove("is-drop-target");
+      handleSupplierMealDrop(target, event.dataTransfer?.getData("text/plain") || draggedMealTypeId);
+      draggedMealTypeId = "";
+    });
+  });
+  root.querySelectorAll("[data-meal-link-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleSupplierMealLinkToggle(button));
+  });
+  root.querySelectorAll("[data-meal-active-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleMealCatalogActiveToggle(button));
   });
   root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
   root.querySelectorAll("[data-form='work-section']").forEach((form) => {
     form.addEventListener("submit", handleWorkSectionSubmit);
+  });
+  root.querySelectorAll("[data-delete-work-section]").forEach((button) => {
+    button.addEventListener("click", () => handleWorkSectionDelete(button));
   });
   root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
     form.addEventListener("submit", handleMealCatalogSubmit);
@@ -1632,6 +1794,10 @@ function bindEvents() {
   });
   root.querySelectorAll("[data-export]").forEach((button) => {
     button.addEventListener("click", () => {
+      const exportOptions = button.closest(".export-options");
+      if (exportOptions?.querySelector("[data-report-range]")) {
+        applyReportFilterFromControls(exportOptions, { shouldRender: false });
+      }
       exportMenuOpen = null;
       handleExport(button.dataset.export);
     });
@@ -1909,20 +2075,52 @@ async function handleMealPriceSettingsSubmit(event) {
 function updateAdminOrderOptions() {
   const teamSelect = root.querySelector("[data-admin-order-team]");
   const mealSelect = root.querySelector("[data-admin-order-meal]");
-  const supplierSelect = root.querySelector("#admin-order-supplier");
+  const supplierSelect = root.querySelector("[data-admin-order-supplier]");
   const locationInput = root.querySelector("[data-form='admin-order'] input[name='locationId']");
   const teamId = teamSelect?.value ?? "";
+  const supplierId = supplierSelect?.value ?? "";
   const selectedMealId = mealSelect?.value ?? "";
-  const meals = getMealsForSection(state, teamId);
+  const meals = adminOrderMeals(teamId, supplierId);
   if (mealSelect) {
     const nextMealId = meals.some((meal) => meal.id === selectedMealId) ? selectedMealId : meals[0]?.id ?? "";
     mealSelect.innerHTML = meals.map((meal) => `<option value="${meal.id}" ${meal.id === nextMealId ? "selected" : ""}>${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
   }
-  const meal = state.mealTypes.find((item) => item.id === mealSelect?.value);
+  const meal = meals.find((item) => item.id === mealSelect?.value);
   if (locationInput) locationInput.value = meal?.locations?.[0]?.id ?? "";
-  if (supplierSelect) {
-    const suppliers = meal ? getSuppliersForMeal(state, meal.id, { includeInactive: false }) : [];
-    supplierSelect.innerHTML = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor ativo para essa refeicao</option>`;
+}
+
+function adminOrderItemFromForm(form) {
+  return {
+    date: String(form.get("date") ?? ""),
+    mealTypeId: String(form.get("mealTypeId") ?? ""),
+    locationId: String(form.get("locationId") ?? ""),
+    teamId: String(form.get("teamId") ?? ""),
+    supplierCompanyId: String(form.get("supplierCompanyId") ?? ""),
+    quantity: Number(form.get("quantity") ?? 0),
+    notes: String(form.get("notes") ?? "")
+  };
+}
+
+function validateAdminOrderItem(item) {
+  assertMealDateIsNotPast(item.date);
+  if (!item.supplierCompanyId) throw new Error("Selecione um fornecedor.");
+  if (!item.mealTypeId) throw new Error("Selecione uma refeicao vinculada ao fornecedor.");
+  if (!item.teamId) throw new Error("Selecione o efetivo/local.");
+  if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new Error("Informe uma quantidade valida.");
+}
+
+function handleAdminOrderAddItem(event) {
+  const formElement = event.currentTarget.closest("[data-form='admin-order']");
+  if (!formElement) return;
+  adminOrderError = "";
+  try {
+    const item = adminOrderItemFromForm(new FormData(formElement));
+    validateAdminOrderItem(item);
+    adminOrderCartItems = [...adminOrderCartItems, item];
+    render();
+  } catch (error) {
+    adminOrderError = error.message || "Nao foi possivel adicionar o pedido.";
+    render();
   }
 }
 
@@ -1933,32 +2131,36 @@ async function handleAdminOrderSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
-    assertMealDateIsNotPast(form.get("date"));
-    await createMealRequest({
-      date: form.get("date"),
-      mealTypeId: form.get("mealTypeId"),
-      locationId: form.get("locationId"),
-      teamId: form.get("teamId"),
-      supplierCompanyId: form.get("supplierCompanyId"),
+    const directItem = adminOrderItemFromForm(form);
+    const items = adminOrderCartItems.length ? adminOrderCartItems : [directItem];
+    items.forEach(validateAdminOrderItem);
+    await Promise.all(items.map((item) => createMealRequest({
+      date: item.date,
+      mealTypeId: item.mealTypeId,
+      locationId: item.locationId,
+      teamId: item.teamId,
+      supplierCompanyId: item.supplierCompanyId,
       leaderId: null,
       originRole: "admin",
-      quantity: form.get("quantity"),
+      quantity: item.quantity,
       status: "enviado",
-      notes: String(form.get("notes") ?? "")
-    }, null);
+      notes: item.notes
+    }, null)));
+    const createdCount = items.length;
+    adminOrderCartItems = [];
     adminOrderFormOpen = false;
     await refreshData();
     operationNotice = {
-      title: "Pedido admin criado",
-      message: "O pedido foi registrado e já aparece na lista operacional."
+      title: createdCount > 1 ? "Pedidos criados" : "Pedido criado",
+      message: createdCount > 1
+        ? `${createdCount} pedidos foram registrados e ja aparecem na lista operacional.`
+        : "O pedido foi registrado e ja aparece na lista operacional."
     };
     render();
   } catch (error) {
     console.error(error);
     adminOrderError = error.message || "Nao foi possivel criar o pedido administrativo.";
     render();
-  } finally {
-    if (button) button.disabled = false;
   }
 }
 
@@ -1986,8 +2188,33 @@ async function handleWorkSectionSubmit(event) {
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel salvar a equipe: ${error.message}`);
-  } finally {
-    if (button) button.disabled = false;
+  }
+}
+
+async function handleWorkSectionDelete(button) {
+  const section = state.workSections.find((item) => item.id === button.dataset.deleteWorkSection);
+  if (!section) return;
+  pendingDeleteConfirmation = { type: "work-section", id: section.id };
+  render();
+}
+
+async function performWorkSectionDelete(id) {
+  const section = state.workSections.find((item) => item.id === id);
+  if (!section) return;
+  try {
+    await saveWorkSection({
+      id: section.id,
+      name: section.name,
+      headcount: section.headcount,
+      leaderId: section.leaderId,
+      areaType: section.areaType,
+      active: false
+    });
+    await refreshData();
+    toast("Efetivo removido dos novos pedidos.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel excluir o efetivo: ${error.message}`);
   }
 }
 
@@ -1998,14 +2225,29 @@ async function handleMealCatalogSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
-    await saveMealTypeCatalog({
+    const mealId = await saveMealTypeCatalog({
       id: String(form.get("id") ?? "") || null,
       name: form.get("name"),
       description: form.get("description"),
-      unitPrice: form.get("unitPrice"),
+      unitPrice: parseCurrencyInput(form.get("unitPrice")),
       category: String(form.get("category") ?? "outro"),
       active: form.get("active") === "true"
     });
+    const supplierIds = new Set(form.getAll("supplierCompanyIds").map((value) => String(value)));
+    const targetMealId = mealId || String(form.get("id") ?? "");
+    if (targetMealId) {
+      const existingSupplierIds = new Set((state.supplierMealTypes ?? [])
+        .filter((item) => item.mealTypeId === targetMealId && item.active === true)
+        .map((item) => item.supplierCompanyId));
+      const suppliersToTouch = new Set([...supplierIds, ...existingSupplierIds]);
+      await Promise.all([...suppliersToTouch].map((supplierCompanyId) => saveSupplierMealTypeLink({
+        supplierCompanyId,
+        mealTypeId: targetMealId,
+        active: supplierIds.has(supplierCompanyId),
+        unitPrice: null,
+        notes: ""
+      })));
+    }
     if (!form.get("id")) formElement.reset();
     settingsMealModalId = null;
     await refreshData();
@@ -2021,8 +2263,13 @@ async function handleMealCatalogSubmit(event) {
 async function handleMealCatalogDelete(id) {
   const meal = state.mealCatalog.find((item) => item.id === id);
   if (!meal) return;
-  const button = root.querySelector(`[data-delete-meal-type="${id}"]`);
-  if (button) button.disabled = true;
+  pendingDeleteConfirmation = { type: "meal-type", id: meal.id };
+  render();
+}
+
+async function performMealCatalogDelete(id) {
+  const meal = state.mealCatalog.find((item) => item.id === id);
+  if (!meal) return;
   try {
     await saveMealTypeCatalog({
       id: meal.id,
@@ -2036,9 +2283,31 @@ async function handleMealCatalogDelete(id) {
     toast("Tipo removido dos novos pedidos.");
   } catch (error) {
     console.error(error);
-    toast(`Não foi possível remover o tipo: ${error.message}`);
+    toast(`Nao foi possivel remover o tipo: ${error.message}`);
+  }
+}
+
+async function handleMealCatalogActiveToggle(button) {
+  const meal = state.mealCatalog.find((item) => item.id === button.dataset.mealActiveToggle);
+  if (!meal) return;
+  const active = button.dataset.nextActive === "true";
+  button.disabled = true;
+  try {
+    await saveMealTypeCatalog({
+      id: meal.id,
+      name: meal.label,
+      description: meal.description,
+      unitPrice: meal.unitPrice,
+      category: meal.category,
+      active
+    });
+    await refreshData();
+    toast(active ? "Refeicao ativada." : "Refeicao desativada.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel alterar a refeicao: ${error.message}`);
   } finally {
-    if (button) button.disabled = false;
+    button.disabled = false;
   }
 }
 
@@ -2071,6 +2340,27 @@ async function handleAccessInviteSubmit(event) {
   }
 }
 
+function selectedTeamLabel(teamIds) {
+  return teamIds
+    .map((teamId) => state.workSections.find((section) => section.id === teamId)?.name)
+    .filter(Boolean)
+    .join(", ");
+}
+
+async function assignUserToWorkSections(userId, selectedTeamIds) {
+  if (!userId) return;
+  const selected = new Set(selectedTeamIds);
+  const affected = (state.workSections ?? []).filter((section) => selected.has(section.id) || section.leaderId === userId);
+  await Promise.all(affected.map((section) => saveWorkSection({
+    id: section.id,
+    name: section.name,
+    headcount: section.headcount,
+    leaderId: selected.has(section.id) ? userId : null,
+    areaType: section.areaType,
+    active: section.active !== false
+  })));
+}
+
 async function handleAdminUserSubmit(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -2078,20 +2368,28 @@ async function handleAdminUserSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
-    await createAdminManagedUser({
+    const userId = String(form.get("id") ?? "");
+    const teamIds = form.getAll("teamIds").map((value) => String(value));
+    const team = String(form.get("team") ?? "").trim() || selectedTeamLabel(teamIds);
+    const payload = {
       name: form.get("name"),
       email: form.get("email"),
       password: form.get("password"),
       role: form.get("role"),
-      team: form.get("team"),
-      supplierCompanyId: String(form.get("supplierCompanyId") ?? "") || null,
+      team,
+      supplierCompanyId: null,
       active: form.get("active") === "true"
-    });
+    };
+    const result = userId
+      ? await updateAdminManagedUser({ ...payload, userId })
+      : await createAdminManagedUser(payload);
+    await assignUserToWorkSections(result?.id ?? userId, teamIds);
     formElement.reset();
     settingsUserModalOpen = false;
+    settingsUserModalId = null;
     settingsUserModalError = "";
     await refreshData();
-    toast("Usuario criado pelo Admin.");
+    toast(userId ? "Usuario atualizado." : "Usuario criado pelo Admin.");
   } catch (error) {
     console.error(error);
     settingsUserModalError = error.message || "Nao foi possivel criar usuario.";
@@ -2099,6 +2397,36 @@ async function handleAdminUserSubmit(event) {
     toast(`Nao foi possivel criar usuario: ${error.message}`);
   } finally {
     if (button) button.disabled = false;
+  }
+}
+
+async function handleAdminUserDelete(button) {
+  const userId = button.dataset.deleteAdminUser;
+  const user = state.users.find((item) => item.id === userId);
+  if (!user) return;
+  if (user.id === state.authenticatedUserId) {
+    toast("Nao e possivel excluir o proprio acesso logado.");
+    return;
+  }
+  pendingDeleteConfirmation = { type: "admin-user", id: user.id };
+  render();
+}
+
+async function performAdminUserDelete(userId) {
+  const user = state.users.find((item) => item.id === userId);
+  if (!user) return;
+  if (user.id === state.authenticatedUserId) {
+    toast("Nao e possivel excluir o proprio acesso logado.");
+    return;
+  }
+  try {
+    await deleteAdminManagedUser({ userId });
+    await assignUserToWorkSections(userId, []);
+    await refreshData();
+    toast("Usuario excluido permanentemente.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel excluir usuario: ${error.message}`);
   }
 }
 
@@ -2146,14 +2474,23 @@ async function handleSupplierCompanySubmit(event) {
       notes: form.get("notes"),
       active
     });
-    const currentLinkMealIds = new Set((state.supplierMealTypes ?? [])
-      .filter((item) => item.supplierCompanyId === savedSupplierId)
-      .map((item) => item.mealTypeId));
-    const newMealNames = form.getAll("newMealName").map((value) => String(value ?? "").trim());
-    const newMealCategories = form.getAll("newMealCategory").map((value) => String(value ?? "outro"));
-    const newMealUnitPrices = form.getAll("newMealUnitPrice").map((value) => String(value ?? "").trim());
-    const newMealDescriptions = form.getAll("newMealDescription").map((value) => String(value ?? "").trim());
+    if (!supplierId || String(form.get("loginEmail") ?? "").trim()) {
+      const loginEmail = String(form.get("loginEmail") ?? form.get("email") ?? "").trim();
+      const loginName = String(form.get("loginName") ?? form.get("contactName") ?? form.get("tradeName") ?? form.get("legalName") ?? "").trim();
+      await createAdminManagedUser({
+        name: loginName,
+        email: loginEmail,
+        password: form.get("loginPassword"),
+        role: "fornecedor",
+        team: form.get("tradeName") || form.get("legalName"),
+        supplierCompanyId: savedSupplierId,
+        active
+      });
+    }
     if (!active) {
+      const currentLinkMealIds = new Set((state.supplierMealTypes ?? [])
+        .filter((item) => item.supplierCompanyId === savedSupplierId)
+        .map((item) => item.mealTypeId));
       await Promise.all([...currentLinkMealIds].map((mealTypeId) => saveSupplierMealTypeLink({
         supplierCompanyId: savedSupplierId,
         mealTypeId,
@@ -2162,25 +2499,6 @@ async function handleSupplierCompanySubmit(event) {
         notes: ""
       })));
     }
-    const newMeals = await Promise.all(newMealNames.map(async (name, index) => {
-      if (!name) return null;
-      const unitPrice = newMealUnitPrices[index] || state.settings.defaultMealUnitPrice || 0;
-      return saveMealTypeCatalog({
-        id: null,
-        name,
-        description: newMealDescriptions[index] || "",
-        unitPrice,
-        category: newMealCategories[index] || "outro",
-        active
-      });
-    }));
-    await Promise.all(newMeals.filter(Boolean).map((mealTypeId) => saveSupplierMealTypeLink({
-      supplierCompanyId: savedSupplierId,
-      mealTypeId,
-      active,
-      unitPrice: null,
-      notes: ""
-    })));
     if (!form.get("id")) formElement.reset();
     settingsSupplierModalId = null;
     await refreshData();
@@ -2193,24 +2511,73 @@ async function handleSupplierCompanySubmit(event) {
   }
 }
 
-async function handleSupplierCompanyUserSubmit(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const button = event.submitter;
-  if (button) button.disabled = true;
+async function handleSupplierCompanyDelete(button) {
+  const supplier = state.supplierCompanies.find((item) => item.id === button.dataset.deleteSupplierCompany);
+  if (!supplier) return;
+  pendingDeleteConfirmation = { type: "supplier-company", id: supplier.id };
+  render();
+}
+
+async function performSupplierCompanyDelete(id) {
+  const supplier = state.supplierCompanies.find((item) => item.id === id);
+  if (!supplier) return;
   try {
-    await saveSupplierCompanyUser({
-      supplierCompanyId: form.get("supplierCompanyId"),
-      userId: form.get("userId"),
-      active: form.get("active") === "true"
+    await saveSupplierCompany({
+      id: supplier.id,
+      legalName: supplier.legalName,
+      tradeName: supplier.tradeName,
+      cnpj: supplier.cnpj,
+      stateRegistration: supplier.stateRegistration,
+      municipalRegistration: supplier.municipalRegistration,
+      addressLine: supplier.addressLine,
+      city: supplier.city,
+      state: supplier.state,
+      zipCode: supplier.zipCode,
+      phone: supplier.phone,
+      email: supplier.email,
+      contactName: supplier.contactName,
+      bankDetails: supplier.bankDetails,
+      notes: supplier.notes,
+      active: false
     });
+    await Promise.all((state.supplierMealTypes ?? [])
+      .filter((item) => item.supplierCompanyId === supplier.id)
+      .map((item) => saveSupplierMealTypeLink({
+        supplierCompanyId: supplier.id,
+        mealTypeId: item.mealTypeId,
+        active: false,
+        unitPrice: null,
+        notes: ""
+      })));
+    const linkedUsers = (state.supplierCompanyUsers ?? []).filter((item) => item.supplierCompanyId === supplier.id);
+    await Promise.all(linkedUsers.map((link) => saveSupplierCompanyUser({
+      supplierCompanyId: supplier.id,
+      userId: link.userId,
+      active: false
+    })));
+    await Promise.all(linkedUsers.map((link) => updateUserActiveStatus({ userId: link.userId, active: false })));
     await refreshData();
-    toast("Login vinculado ao fornecedor.");
+    toast("Fornecedor excluido dos novos pedidos.");
   } catch (error) {
     console.error(error);
-    toast(`Nao foi possivel vincular login: ${error.message}`);
+    toast(`Nao foi possivel excluir fornecedor: ${error.message}`);
+  }
+}
+
+async function handleConfirmedDelete(event) {
+  const button = event.currentTarget;
+  const confirmation = pendingDeleteConfirmation;
+  if (!confirmation) return;
+  button.disabled = true;
+  try {
+    pendingDeleteConfirmation = null;
+    if (confirmation.type === "work-section") await performWorkSectionDelete(confirmation.id);
+    if (confirmation.type === "meal-type") await performMealCatalogDelete(confirmation.id);
+    if (confirmation.type === "admin-user") await performAdminUserDelete(confirmation.id);
+    if (confirmation.type === "supplier-company") await performSupplierCompanyDelete(confirmation.id);
+    render();
   } finally {
-    if (button) button.disabled = false;
+    button.disabled = false;
   }
 }
 
@@ -2218,14 +2585,13 @@ async function handleSupplierMealLinkSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const button = event.submitter;
-  const activeValue = button?.dataset?.mealLinkToggle ? button.value : form.get("active");
   if (button) button.disabled = true;
   try {
     await saveSupplierMealTypeLink({
       supplierCompanyId: form.get("supplierCompanyId"),
       mealTypeId: form.get("mealTypeId"),
-      active: activeValue === "true",
-      unitPrice: form.get("unitPrice"),
+      active: form.get("active") === "true",
+      unitPrice: null,
       notes: form.get("notes")
     });
     await refreshData();
@@ -2235,6 +2601,55 @@ async function handleSupplierMealLinkSubmit(event) {
     toast(`Nao foi possivel salvar vinculo: ${error.message}`);
   } finally {
     if (button) button.disabled = false;
+  }
+}
+
+async function handleSupplierMealLinkToggle(button) {
+  const formElement = button.closest("[data-form='supplier-meal-link']");
+  if (!formElement) return;
+  const form = new FormData(formElement);
+  const active = button.value === "true";
+  button.disabled = true;
+  try {
+    await saveSupplierMealTypeLink({
+      supplierCompanyId: form.get("supplierCompanyId"),
+      mealTypeId: form.get("mealTypeId"),
+      active,
+      unitPrice: null,
+      notes: form.get("notes")
+    });
+    await refreshData();
+    toast(active ? "Vinculo ativado." : "Vinculo desativado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel alterar vinculo: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function handleSupplierMealDrop(target, mealTypeId) {
+  const supplierCompanyId = target.dataset.dropSupplier;
+  const targetMealId = target.dataset.dropMeal;
+  if (!supplierCompanyId || !mealTypeId) return;
+  if (targetMealId && mealTypeId !== targetMealId) return;
+  try {
+    const linkedSuppliers = new Set((state.supplierMealTypes ?? [])
+      .filter((item) => item.mealTypeId === mealTypeId && item.active === true)
+      .map((item) => item.supplierCompanyId));
+    linkedSuppliers.add(supplierCompanyId);
+    await Promise.all([...linkedSuppliers].map((id) => saveSupplierMealTypeLink({
+      supplierCompanyId: id,
+      mealTypeId,
+      active: id === supplierCompanyId,
+      unitPrice: null,
+      notes: ""
+    })));
+    await refreshData();
+    toast("Refeicao movida para o fornecedor.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel mover refeicao: ${error.message}`);
   }
 }
 
@@ -2678,7 +3093,7 @@ function mapApplicationData(data, profile) {
         .map((location) => ({ id: location.id, name: location.name }))
     }));
   state.mealCatalog = mappedCatalog;
-  state.mealTypes = mappedCatalog.filter((item) => item.active);
+  state.mealTypes = mappedCatalog.filter((item) => item.active === true);
   state.supplierMealTypes = (data.supplierMealTypes?.length ? data.supplierMealTypes.map((item) => ({
     supplierCompanyId: item.supplier_company_id,
     mealTypeId: item.meal_type_id,
@@ -2689,7 +3104,7 @@ function mapApplicationData(data, profile) {
   })) : data.supplierCompanies?.length ? [] : state.supplierCompanies.flatMap((supplier) => mappedCatalog.map((meal) => ({
     supplierCompanyId: supplier.id,
     mealTypeId: meal.id,
-    active: supplier.active !== false && meal.active !== false,
+    active: supplier.active !== false && meal.active === true,
     unitPrice: null,
     notes: ""
   }))));

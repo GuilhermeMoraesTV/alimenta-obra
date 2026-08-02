@@ -129,8 +129,8 @@ const pedidosStyles = `
   .admin-page .admin-request-shell { display: grid; min-width: 0; gap: .35rem; }
   .admin-page .admin-request-owner { display: inline-flex; width: max-content; max-width: 100%; align-items: center; gap: .45rem; border-radius: .5rem; border: 1px dashed #d6d3d1; background: #fffefa; padding: .35rem .55rem; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #78716c; }
   .admin-page .admin-request-owner strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1c1917; }
-  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: 1 / -1; }
+  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+  .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: auto; }
   @media (max-width: 767px) {
     .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
     .admin-page .admin-pedidos-receipt .admin-receipt-metrics[data-count="3"] .admin-receipt-chip:last-child { grid-column: auto; }

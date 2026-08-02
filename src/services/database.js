@@ -495,6 +495,7 @@ export async function updateUserActiveStatus({ userId, active }) {
 export async function createAdminManagedUser({ email, password, name, role, supplierCompanyId = null, team = "", active = true }) {
   const { data, error } = await requireSupabase().functions.invoke("admin-create-user", {
     body: {
+      action: "create",
       email: String(email ?? "").trim(),
       password,
       name: String(name ?? "").trim(),
@@ -502,6 +503,56 @@ export async function createAdminManagedUser({ email, password, name, role, supp
       supplierCompanyId,
       team: String(team ?? "").trim(),
       active: Boolean(active)
+    }
+  });
+  if (data?.error) throw new Error(data.error);
+  if (error) {
+    const response = error.context;
+    if (response?.json) {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {}
+      if (payload?.error) throw new Error(payload.error);
+    }
+    throw error;
+  }
+  return data;
+}
+
+export async function updateAdminManagedUser({ userId, email, password = "", name, role, team = "", active = true }) {
+  const { data, error } = await requireSupabase().functions.invoke("admin-create-user", {
+    body: {
+      action: "update",
+      userId,
+      email: String(email ?? "").trim(),
+      password,
+      name: String(name ?? "").trim(),
+      role,
+      team: String(team ?? "").trim(),
+      active: Boolean(active)
+    }
+  });
+  if (data?.error) throw new Error(data.error);
+  if (error) {
+    const response = error.context;
+    if (response?.json) {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {}
+      if (payload?.error) throw new Error(payload.error);
+    }
+    throw error;
+  }
+  return data;
+}
+
+export async function deleteAdminManagedUser({ userId }) {
+  const { data, error } = await requireSupabase().functions.invoke("admin-create-user", {
+    body: {
+      action: "delete",
+      userId
     }
   });
   if (data?.error) throw new Error(data.error);

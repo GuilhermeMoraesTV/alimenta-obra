@@ -90,7 +90,7 @@ export function getSupplierMealLink(state, supplierCompanyId, mealTypeId) {
 
 export function getSuppliersForMeal(state, mealTypeId, { includeInactive = false } = {}) {
   const companies = getSupplierCompanies(state, { includeInactive });
-  if (!state.supplierMealTypes?.length) return companies;
+  if (!state.supplierMealTypes?.length) return [];
   return companies.filter((company) => {
     const link = getSupplierMealLink(state, company.id, mealTypeId);
     return link?.active === true;
@@ -122,12 +122,13 @@ export function getActiveWorkSections(state, leaderId = "") {
 
 export function getMealsForSection(state, sectionId = "") {
   const activeMeals = state.mealTypes ?? [];
-  if (!sectionId) return activeMeals;
+  const orderableMeals = activeMeals.filter((meal) => getSuppliersForMeal(state, meal.id, { includeInactive: false }).length > 0);
+  if (!sectionId) return orderableMeals;
   const allowedIds = (state.sectionMealTypes ?? [])
     .filter((item) => item.sectionId === sectionId && item.active !== false)
     .map((item) => item.mealTypeId);
-  if (!allowedIds.length) return activeMeals;
-  return activeMeals.filter((meal) => allowedIds.includes(meal.id));
+  if (!allowedIds.length) return orderableMeals;
+  return orderableMeals.filter((meal) => allowedIds.includes(meal.id));
 }
 
 export function requestOriginLabel(request) {

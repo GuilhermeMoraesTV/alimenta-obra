@@ -88,7 +88,8 @@ export function RequestForm({ icon, requestError = "", state, user }) {
         ) : null}
       </TicketPanel>
 
-      <TicketPanel number="3" title="Refeicao e fornecedor">
+      <TicketPanel number="3" title="Refeicao">
+        <input type="hidden" name="supplierCompanyId" value={suppliers[0]?.id ?? ""} />
         <div className="grid gap-2 sm:grid-cols-3">
           {mealsForSection.map((meal, index) => (
             <label className="grid cursor-pointer grid-cols-[34px_minmax(0,1fr)_18px] items-start gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-200 bg-white p-3 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50" key={meal.id}>
@@ -98,15 +99,6 @@ export function RequestForm({ icon, requestError = "", state, user }) {
               <span className="mt-1 h-4 w-4 rounded-full border border-stone-300 bg-white shadow-inner" />
             </label>
           ))}
-        </div>
-        <div className="mt-3">
-          <Field id="request-supplier" label="Fornecedor">
-            <select className={inputClass} id="request-supplier" name="supplierCompanyId" required>
-              {suppliers.length
-                ? suppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.tradeName || supplier.legalName}</option>)
-                : <option value="">Nenhum fornecedor ativo para essa refeicao</option>}
-            </select>
-          </Field>
         </div>
         {sections.length && !mealsForSection.length ? (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">

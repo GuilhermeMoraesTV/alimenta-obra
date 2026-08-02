@@ -25,6 +25,18 @@ function mealGroups(rows) {
   }, {})).sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
 }
 
+function timestampValue(value) {
+  return value ? new Date(value).getTime() || 0 : 0;
+}
+
+function newestActivity(consolidation) {
+  return Math.max(timestampValue(consolidation?.updatedAt), timestampValue(consolidation?.sentAt), timestampValue(consolidation?.createdAt));
+}
+
+function consolidationActionPriority(consolidation) {
+  return { saiu_entrega: 3, producao: 2, confirmado: 1 }[consolidation.status] ?? 0;
+}
+
 export const dailyBlockStyles = `
   .admin-page .daily-block-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); justify-items: center; align-items: start; gap: .75rem; }
   .admin-page .daily-block-card { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: 100%; max-width: 27rem; max-height: 36rem; min-width: 0; overflow: hidden; border-radius: 14px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
@@ -39,7 +51,12 @@ export const dailyBlockStyles = `
   .admin-page .daily-meal-title { display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: #1c1917; }
   .admin-page .daily-meal-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; font-weight: 950; }
   .admin-page .daily-meal-title span { border-radius: 999px; background: #fff7ed; padding: .18rem .48rem; color: #c2410c; font-size: .75rem; font-weight: 950; }
+  .admin-page .daily-cancelled-block { display: grid; gap: .35rem; border-radius: .75rem; border: 1px solid #fecaca; background: #fef2f2; padding: .55rem; }
+  .admin-page .daily-cancelled-title { display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: #991b1b; }
+  .admin-page .daily-cancelled-title strong { font-size: .78rem; font-weight: 950; text-transform: uppercase; }
+  .admin-page .daily-cancelled-title span { border-radius: 999px; background: #fff; padding: .16rem .46rem; color: #991b1b; font-size: .72rem; font-weight: 950; }
   .admin-page .daily-request-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: .55rem; border-radius: .55rem; background: #fafaf9; padding: .42rem .5rem; }
+  .admin-page .daily-request-row.is-cancelled { background: #fff; opacity: .92; }
   .admin-page .daily-request-title { min-width: 0; }
   .admin-page .daily-request-title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; color: #1c1917; }
   .admin-page .daily-request-title small { display: block; margin-top: .1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #78716c; font-size: .64rem; font-weight: 800; }
@@ -87,19 +104,30 @@ export function DailyBlockCard(props) {
   const consolidations = (state.consolidations ?? []).filter((item) => item.date === date && item.status !== "rascunho");
   const consolidation = consolidations.find((item) => ["rascunho", "enviado"].includes(item.status)) ?? consolidations[0];
   const activeRequests = requests.filter((request) => request.status !== "cancelado");
+  const cancelledRequests = requests.filter((request) => request.status === "cancelado");
   const waitingRequests = activeRequests.filter((request) => request.status === "enviado");
   const linkedRequestIds = new Set(consolidations.flatMap((item) => item.requestIds ?? []));
-  const extraWaitingRequests = waitingRequests.filter((request) => !linkedRequestIds.has(request.id));
+  const lastSentAt = Math.max(...consolidations.map((item) => timestampValue(item.sentAt)), 0);
+  const extraWaitingRequests = waitingRequests.filter((request) => {
+    if (linkedRequestIds.has(request.id)) return false;
+    if (!lastSentAt) return true;
+    return Math.max(timestampValue(request.updatedAt), timestampValue(request.createdAt)) > lastSentAt;
+  });
   const displayRequests = extraWaitingRequests.length ? extraWaitingRequests : activeRequests;
   const total = displayRequests.reduce((sum, request) => sum + Number(request.quantity ?? 0), 0);
   const byMeal = mealGroups(displayRequests);
   const leadersCount = new Set(displayRequests.map((request) => request.leaderId)).size;
   const sectionsCount = new Set(displayRequests.map((request) => request.teamId || request.sectionName || request.location)).size;
+  const suppliersCount = new Set(displayRequests.map((request) => request.supplierCompanyId || request.supplierId).filter(Boolean)).size;
   const currentUser = state.users.find((user) => user.id === state.activeUserId);
   const cancelledConfirmedBlocks = consolidations.filter((item) => item.status === "cancelado_confirmado");
   const cancelableConfirmedBlocks = currentUser?.role === "admin"
     ? consolidations.filter((item) => ["confirmado", "producao", "saiu_entrega"].includes(item.status))
     : [];
+  const cancelableConfirmedBlock = [...cancelableConfirmedBlocks].sort((a, b) => {
+    const priorityDiff = consolidationActionPriority(b) - consolidationActionPriority(a);
+    return priorityDiff || newestActivity(b) - newestActivity(a);
+  })[0];
 
   return (
     <article className="daily-block-card">
@@ -108,7 +136,7 @@ export function DailyBlockCard(props) {
           <div>
             <span className="compact-kicker">Bloco diario</span>
             <h2>{formatDate(date)}</h2>
-            <p>{displayRequests.length} pedidos - {leadersCount} encarregados - {sectionsCount} equipes</p>
+            <p>{displayRequests.length} pedidos - {leadersCount} encarregados - {sectionsCount} equipes - {suppliersCount} fornecedores</p>
           </div>
         </div>
       </header>
@@ -140,6 +168,23 @@ export function DailyBlockCard(props) {
             })}
           </section>
         ))}
+        {cancelledRequests.length ? (
+          <section className="daily-cancelled-block">
+            <div className="daily-cancelled-title"><strong>Pedidos cancelados</strong><span>{cancelledRequests.length}</span></div>
+            {cancelledRequests.map((request) => (
+              <div className="daily-request-row is-cancelled" key={request.id}>
+                <div className="daily-request-title">
+                  <strong>{mealDistributionName(state, request)}</strong>
+                  <small>{requestOriginLabel(request)} - {request.sectionName || request.location} - {getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId)}</small>
+                </div>
+                <div className="daily-request-side">
+                  <div className="daily-request-qty"><strong>{request.quantity}</strong></div>
+                  <span className={`badge ${request.status}`}>{statusLabel(STATUS_LABEL, request.status)}</span>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : null}
       </div>
       <footer className="daily-block-footer">
         <div className="daily-final-summary">
@@ -165,11 +210,11 @@ export function DailyBlockCard(props) {
                 <Icon icon={icon} name="truck" size={15} />{consolidation.status === "enviado" ? "Enviar pedido extra" : "Enviar novo pedido da data"}
               </button>
             ) : null}
-            {cancelableConfirmedBlocks.map((item) => (
-              <button className="btn danger" type="button" data-cancel-confirmed-consolidation={item.id} key={item.id}>
-                <Icon icon={icon} name="trash" size={15} />Cancelar confirmado
+            {cancelableConfirmedBlock ? (
+              <button className="btn danger" type="button" data-cancel-confirmed-consolidation={cancelableConfirmedBlock.id}>
+                <Icon icon={icon} name="trash" size={15} />Cancelar envio ao fornecedor
               </button>
-            ))}
+            ) : null}
           </>
         ) : waitingRequests.length ? (
           <button className="btn primary" type="button" data-send-request-date={date}><Icon icon={icon} name="truck" size={15} />Enviar bloco ao fornecedor</button>

@@ -35,7 +35,7 @@ begin
     raise exception 'Usuario nao encontrado.';
   end if;
 
-  insert into public.audit_log (actor_id, action, entity, entity_id, metadata)
+  insert into public.audit_log (actor_id, action, entity, entity_id, payload)
   values (
     v_actor,
     case when coalesce(p_active, true) then 'Usuario ativado' else 'Usuario desativado' end,
