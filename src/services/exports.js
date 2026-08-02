@@ -5,6 +5,7 @@ const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 const SYSTEM_LOGO_URL = new URL(`${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`, window.location.origin).href;
 const CONSAG_LOGO_URL = new URL(`${import.meta.env.BASE_URL}assets/logo-consag.png`, window.location.origin).href;
 const KPI_CHART_COLORS = ["#002060", "#0070c0", "#7ea6d8", "#a6a6a6", "#d9e2f3", "#4b76b8"];
+const CANCELLED_STATUSES = new Set(["cancelado", "cancelado_confirmado"]);
 
 const downloadBlob = (filename, blob) => {
   const url = URL.createObjectURL(blob);
@@ -196,7 +197,7 @@ function auditDescription(item) {
 }
 
 function buildMeasurementModel(state, rows, options = {}) {
-  const activeRows = rows.filter((request) => request.status !== "cancelado")
+  const activeRows = rows.filter((request) => !CANCELLED_STATUSES.has(request.status))
     .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"));
   const rowDates = activeRows.map((request) => request.date).filter(Boolean).sort();
   const periodStart = options.filter?.start || rowDates[0] || state.settings?.defaultMealDate || new Date().toISOString().slice(0, 10);
@@ -316,11 +317,10 @@ function buildMeasurementModel(state, rows, options = {}) {
 function buildOrdersModel(state, rows, options = {}) {
   const model = buildMeasurementModel(state, rows, options);
   const period = options.periodLabel ?? model.periodLabel;
-  const cancelledStatuses = new Set(["cancelado", "cancelado_confirmado"]);
   const orderDetailRows = [...rows]
     .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"))
     .map((request) => {
-      const cancelled = cancelledStatuses.has(request.status);
+      const cancelled = CANCELLED_STATUSES.has(request.status);
       const consumed = cancelled ? 0 : actualQuantity(state, request);
       const unitPrice = requestUnitPrice(state, request);
       return {
@@ -347,7 +347,7 @@ function buildOrdersModel(state, rows, options = {}) {
     ...Object.values(orderDetailRows.reduce((acc, row) => {
       acc[row.date] ??= { date: row.date, count: 0, cancelled: 0, requested: 0, consumed: 0, leaders: new Set(), sections: new Set(), value: 0 };
       acc[row.date].count += 1;
-      if (cancelledStatuses.has(row.status)) acc[row.date].cancelled += 1;
+      if (CANCELLED_STATUSES.has(row.status)) acc[row.date].cancelled += 1;
       acc[row.date].requested += row.requested;
       acc[row.date].consumed += row.consumed;
       acc[row.date].leaders.add(row.leader);
@@ -446,8 +446,9 @@ function weekdayShort(value) {
   return value ? new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(new Date(`${value}T12:00:00`)).replace(".", "") : "-";
 }
 
-function renderDocumentHeader({ title, subtitle, eyebrow = "" }) {
-  return `<header class="brand-header">
+function renderDocumentHeader({ title, subtitle, eyebrow = "", className = "" }) {
+  const headerClass = ["brand-header", className].filter(Boolean).join(" ");
+  return `<header class="${escapeHtml(headerClass)}">
     <div><div class="brand-mark"><img src="${CONSAG_LOGO_URL}" alt="CONSAG" /><div>${eyebrow ? `<span>${escapeHtml(eyebrow)}</span>` : ""}<h1>${escapeHtml(title)}</h1></div></div>${subtitle ? `<p class="document-subtitle">${escapeHtml(subtitle)}</p>` : ""}</div>
     <div class="system-mark"><img src="${SYSTEM_LOGO_URL}" alt="AlimentaObra" /></div>
   </header>`;
@@ -472,6 +473,7 @@ function renderPrintablePage({ title, subtitle, eyebrow = "", children, footer =
       .brand-header { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 18px; align-items: center; padding-bottom: 12px; border-bottom: 5px solid #002060; }
       .brand-mark { display: flex; align-items: center; gap: 12px; }
       .brand-mark img { width: ${isLandscape ? "210px" : "182px"}; max-height: 58px; object-fit: contain; object-position: left center; }
+      .kpi-brand-header .brand-mark img { width: 250px; max-height: 72px; }
       .brand-mark span { display: block; color: #002060; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
       .system-mark { display: grid; justify-items: end; align-items: center; }
       .system-mark img { width: ${isLandscape ? "132px" : "116px"}; max-height: ${isLandscape ? "54px" : "46px"}; object-fit: contain; object-position: right center; }
@@ -516,6 +518,11 @@ function renderPrintablePage({ title, subtitle, eyebrow = "", children, footer =
       .kpi-note-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
       .kpi-note { min-height: 50px; border: 1px solid #b4c7e7; background: #f7f9fc; padding: 10px; color: #3c4043; font-size: 10px; line-height: 1.3; }
       .kpi-note strong { display: block; margin-bottom: 5px; color: #002060; font-size: 11px; text-transform: uppercase; }
+      .financial-status-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 6px; }
+      .financial-status-item { border: 1px solid #d9e2f3; background: #f7f9fc; padding: 7px; }
+      .financial-status-item span { display: block; color: #5f6368; font-size: 8px; font-weight: 900; text-transform: uppercase; }
+      .financial-status-item strong { display: block; margin-top: 4px; color: #002060; font-size: 11px; }
+      .financial-status-item small { display: block; margin-top: 3px; color: #5f6368; font-size: 8px; line-height: 1.2; }
       .kpi-table { margin: 0; border: 1px solid #b4c7e7; border-collapse: collapse; border-radius: 0; font-size: 9px; }
       .kpi-table th { border: 1px solid #b4c7e7; background: #d9d9d9; color: #202124; padding: 6px 7px; text-align: center; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
       .kpi-table td { border: 1px solid #b4c7e7; padding: 6px 7px; background: #fff; }
@@ -876,7 +883,7 @@ function renderOrdersPdfHtml(state, rows, options = {}) {
     acc[row.date].requested += row.requested;
     acc[row.date].consumed += row.consumed;
     acc[row.date].value += row.value;
-    if (["cancelado", "cancelado_confirmado"].includes(row.status)) acc[row.date].cancelled += 1;
+    if (CANCELLED_STATUSES.has(row.status)) acc[row.date].cancelled += 1;
     acc[row.date].leaders.add(row.leader);
     acc[row.date].sections.add(row.section);
     return acc;
@@ -910,7 +917,7 @@ function renderOrdersPdfHtml(state, rows, options = {}) {
       .orders-table tfoot { display: table-row-group; }
       .orders-table tfoot th { background: #002060; color: #fff; }
       @media print { .order-day-block { box-shadow: none; } .order-day-header { break-after: avoid; page-break-after: avoid; } .orders-table { break-before: avoid; page-break-before: avoid; } }
-    </style><section class="metrics"><div class="metric"><span>Periodo</span><strong>${escapeHtml(model.periodLabel)}</strong></div><div class="metric"><span>Pedidos</span><strong>${orderRows.length}</strong></div><div class="metric"><span>Cancelados</span><strong>${orderRows.filter((row) => ["cancelado", "cancelado_confirmado"].includes(row.status)).length}</strong></div></section><section class="metrics"><div class="metric"><span>Solicitado</span><strong>${orderRows.reduce((sum, row) => sum + row.requested, 0)}</strong></div><div class="metric"><span>Realizado</span><strong>${orderRows.reduce((sum, row) => sum + row.consumed, 0)}</strong></div><div class="metric"><span>Valor total</span><strong>${money(orderRows.reduce((sum, row) => sum + row.value, 0))}</strong></div></section>${blockHtml || "<p class=\"small-note\">Sem pedidos no periodo.</p>"}`
+    </style><section class="metrics"><div class="metric"><span>Periodo</span><strong>${escapeHtml(model.periodLabel)}</strong></div><div class="metric"><span>Pedidos</span><strong>${orderRows.length}</strong></div><div class="metric"><span>Cancelados</span><strong>${orderRows.filter((row) => CANCELLED_STATUSES.has(row.status)).length}</strong></div></section><section class="metrics"><div class="metric"><span>Solicitado</span><strong>${orderRows.reduce((sum, row) => sum + row.requested, 0)}</strong></div><div class="metric"><span>Realizado</span><strong>${orderRows.reduce((sum, row) => sum + row.consumed, 0)}</strong></div><div class="metric"><span>Valor total</span><strong>${money(orderRows.reduce((sum, row) => sum + row.value, 0))}</strong></div></section>${blockHtml || "<p class=\"small-note\">Sem pedidos no periodo.</p>"}`
   });
 }
 
@@ -1028,7 +1035,7 @@ function renderDailyDemandSvg(days) {
   </svg>`;
 }
 
-function renderDonutSvg(items, centerLabel) {
+function renderDonutSvg(items, centerLabel, options = {}) {
   const width = 360;
   const height = 190;
   const cx = 82;
@@ -1036,6 +1043,8 @@ function renderDonutSvg(items, centerLabel) {
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const total = items.reduce((sum, item) => sum + Number(item.value ?? 0), 0);
+  const formatValue = options.formatValue ?? String;
+  const stackedLegend = options.legendLayout === "stacked";
   let offset = 0;
   const circles = total ? items.map((item, index) => {
     const value = Number(item.value ?? 0);
@@ -1045,8 +1054,12 @@ function renderDonutSvg(items, centerLabel) {
     return circle;
   }).join("") : `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="#d9d9d9" stroke-width="32"/>`;
   const legend = (items.length ? items : [{ label: "Sem dados", value: 0 }]).slice(0, 7).map((item, index) => {
-    const y = 42 + index * 19;
-    return `<rect x="178" y="${y - 8}" width="9" height="9" fill="${KPI_CHART_COLORS[index % KPI_CHART_COLORS.length]}"/><text x="193" y="${y}" font-size="11" fill="#4b5563">${escapeHtml(compactLabel(item.label, 19))}</text><text x="340" y="${y}" text-anchor="end" font-size="11" font-weight="800" fill="#202124">${item.value}</text>`;
+    const y = stackedLegend ? 48 + index * 42 : 42 + index * 19;
+    const percentLabel = total ? ` (${percent(item.value, total)}%)` : "";
+    if (stackedLegend) {
+      return `<rect x="178" y="${y - 11}" width="9" height="9" fill="${KPI_CHART_COLORS[index % KPI_CHART_COLORS.length]}"/><text x="193" y="${y - 3}" font-size="10" fill="#4b5563">${escapeHtml(compactLabel(item.label, 23))}</text><text x="193" y="${y + 15}" font-size="12" font-weight="900" fill="#202124">${escapeHtml(formatValue(item.value))}${options.showPercent ? escapeHtml(percentLabel) : ""}</text>`;
+    }
+    return `<rect x="178" y="${y - 8}" width="9" height="9" fill="${KPI_CHART_COLORS[index % KPI_CHART_COLORS.length]}"/><text x="193" y="${y}" font-size="11" fill="#4b5563">${escapeHtml(compactLabel(item.label, 19))}</text><text x="340" y="${y}" text-anchor="end" font-size="11" font-weight="800" fill="#202124">${escapeHtml(formatValue(item.value))}${options.showPercent ? escapeHtml(percentLabel) : ""}</text>`;
   }).join("");
   const centerText = String(centerLabel ?? "");
   const centerSize = centerText.length > 12 ? 10 : centerText.length > 8 ? 12 : 17;
@@ -1054,7 +1067,7 @@ function renderDonutSvg(items, centerLabel) {
     <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>
     ${circles}
     <circle cx="${cx}" cy="${cy}" r="31" fill="#fff" stroke="#d9e2f3"/>
-    <text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="${centerSize}" font-weight="900" fill="#002060">${escapeHtml(centerText)}</text>
+    ${options.hideCenterLabel ? "" : `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="${centerSize}" font-weight="900" fill="#002060">${escapeHtml(centerText)}</text>`}
     ${legend}
   </svg>`;
 }
@@ -1098,6 +1111,9 @@ function renderKpiPdfHtml(state, rows, title) {
   const requested = model.detailRows.reduce((sum, row) => sum + row.requested, 0);
   const consumed = model.totalQuantity;
   const effective = model.detailRows.reduce((sum, row) => sum + Number(row.effective || 0), 0);
+  const totalRecords = rows.length;
+  const activeRecordCount = model.detailRows.length;
+  const cancelledRecordCount = rows.filter((row) => CANCELLED_STATUSES.has(row.status)).length;
   const mealRows = model.mealSummary.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${money(row.value)}</td></tr>`).join("");
   const sectionRows = model.sectionSummary.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td class="number">${row.requested}</td><td class="number">${row.consumed}</td><td class="number">${row.effective || "-"}</td><td class="number">${row.consumed - row.requested}</td><td class="number">${money(row.value)}</td></tr>`).join("");
   const byDay = Object.entries(model.detailRows.reduce((acc, row) => {
@@ -1107,7 +1123,7 @@ function renderKpiPdfHtml(state, rows, title) {
     acc[row.date].effective += Number(row.effective || 0);
     return acc;
   }, {})).sort(([a], [b]) => a.localeCompare(b));
-  const byStatus = Object.entries(model.detailRows.reduce((acc, row) => {
+  const byStatus = Object.entries(rows.reduce((acc, row) => {
     const label = STATUS_LABEL[row.status] ?? row.status ?? "Sem status";
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;
@@ -1118,7 +1134,7 @@ function renderKpiPdfHtml(state, rows, title) {
   const adherence = requested ? `${percent(consumed, requested)}%` : "-";
   const averageCost = consumed ? money(model.totalValue / consumed) : money(0);
   const subtitle = "";
-  const pageHeader = renderDocumentHeader({ title, subtitle });
+  const pageHeader = renderDocumentHeader({ title, subtitle, className: "kpi-brand-header" });
 
   return renderPrintablePage({
     title,
@@ -1127,11 +1143,12 @@ function renderKpiPdfHtml(state, rows, title) {
     orientation: "landscape",
     showHeader: false,
     children: `<section class="kpi-report">
-      <section class="report-page">${pageHeader}<div class="page-label">Resumo executivo</div><p class="page-subtitle">Leitura consolidada do periodo filtrado no sistema, seguindo a identidade azul CONSAG.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes planejadas</small></div><div class="kpi-score"><span>Consumido real</span><strong>${consumed}</strong><small>${adherence} do solicitado</small></div><div class="kpi-score"><span>Efetivo</span><strong>${effective || "-"}</strong><small>base informada por area</small></div><div class="kpi-score"><span>Custo total</span><strong>${money(model.totalValue)}</strong><small>${averageCost} por refeicao</small></div></div><article class="kpi-panel"><h2>Comparativo de refeicoes</h2><div class="kpi-panel-body">${renderGroupedBarSvg(mealChartRows)}</div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Diferenca</strong>${consumed - requested} refeicoes entre consumo real e solicitado.</div><div class="kpi-note"><strong>Aderencia</strong>${adherence} entre consumo real e solicitado.</div><div class="kpi-note"><strong>Registros</strong>${model.detailRows.length} pedidos considerados no filtro atual.</div></div></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Resumo executivo</div><div class="kpi-scoreboard"><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes planejadas</small></div><div class="kpi-score"><span>Consumido real</span><strong>${consumed}</strong><small>${adherence} do solicitado</small></div><div class="kpi-score"><span>Efetivo</span><strong>${effective || "-"}</strong><small>base informada por area</small></div><div class="kpi-score"><span>Custo total</span><strong>${money(model.totalValue)}</strong><small>${averageCost} por refeicao</small></div></div><article class="kpi-panel"><h2>Comparativo por tipo de refeicao</h2><div class="kpi-panel-body">${renderGroupedBarSvg(mealChartRows)}</div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Diferenca</strong>${consumed - requested} refeicoes entre consumo real e solicitado.</div><div class="kpi-note"><strong>Consumo x solicitado</strong>${adherence} do total solicitado foi consumido.</div><div class="kpi-note"><strong>Pedidos no filtro</strong>${totalRecords} registros no filtro; ${activeRecordCount} entram no calculo operacional${cancelledRecordCount ? ` e ${cancelledRecordCount} estao cancelados.` : "."}</div></div></section>
       <section class="report-page">${pageHeader}<div class="page-label">Evolucao diaria</div><p class="page-subtitle">A linha escura mostra o total solicitado; a linha clara mostra o consumido. Os rotulos destacam onde faltou ou sobrou refeicao.</p><article class="kpi-panel"><h2>Solicitado x consumido por dia</h2><div class="kpi-panel-body">${renderDailyDemandSvg(byDay)}</div></article></section>
-      <section class="report-page">${pageHeader}<div class="page-label">Distribuicao e status</div><p class="page-subtitle">Composicao por tipo de refeicao e status dos pedidos no periodo selecionado.</p><div class="kpi-two"><article class="kpi-panel"><h2>Distribuicao por refeicao</h2><div class="kpi-panel-body">${renderDonutSvg(mealItems, String(consumed || requested))}</div></article><article class="kpi-panel"><h2>Status dos pedidos</h2><div class="kpi-panel-body">${renderDonutSvg(byStatus, String(model.detailRows.length))}</div></article></div></section>
-      <section class="report-page">${pageHeader}<div class="page-label">Areas e trechos</div><p class="page-subtitle">Ranking operacional para identificar concentracao de consumo, diferencas e custo por frente.</p><article class="kpi-panel"><h2>Top equipes / trechos por consumo</h2><div class="kpi-panel-body">${renderHorizontalRankingSvg(sectionChartRows)}</div></article><article class="kpi-panel"><h2>Detalhamento por equipe / trecho</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Equipe / trecho</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Efetivo</th><th class="number">Dif.</th><th class="number">Custo</th></tr></thead><tbody>${sectionRows || "<tr><td colspan=\"6\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article></section>
-      <section class="report-page">${pageHeader}<div class="page-label">Detalhamento por refeicao</div><p class="page-subtitle">Composicao completa por tipo de refeicao para conferencia em reuniao e rastreabilidade do periodo.</p><article class="kpi-panel"><h2>Composicao por tipo de refeicao</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Tipo</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Efetivo</th><th class="number">Custo</th></tr></thead><tbody>${mealRows || "<tr><td colspan=\"5\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article><div class="kpi-note-grid"><div class="kpi-note"><strong>Fonte</strong>Pedidos, consumo real, efetivo por equipe/trecho e precos cadastrados no AlimentaObra.</div><div class="kpi-note"><strong>Leitura</strong>O consumo real prevalece quando o fornecedor/admin informou medicao final.</div><div class="kpi-note"><strong>Marca</strong>Cores e hierarquia visual seguem a base azul da CONSAG.</div></div></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Distribuicao e status</div><p class="page-subtitle">Composicao por tipo de refeicao e status dos pedidos no periodo selecionado, incluindo cancelados quando houver.</p><div class="kpi-two"><article class="kpi-panel"><h2>Distribuicao por refeicao</h2><div class="kpi-panel-body">${renderDonutSvg(mealItems, String(consumed || requested))}</div></article><article class="kpi-panel"><h2>Status dos pedidos</h2><div class="kpi-panel-body">${renderDonutSvg(byStatus, String(totalRecords))}</div></article></div></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Areas e trechos</div><p class="page-subtitle">Ranking operacional para identificar concentracao de consumo, diferencas e custo por frente.</p><article class="kpi-panel"><h2>Top equipes / trechos por consumo</h2><div class="kpi-panel-body">${renderHorizontalRankingSvg(sectionChartRows)}</div></article></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Detalhamento por equipe / trecho</div><p class="page-subtitle">Tabela completa por frente operacional, em folha propria para conferencia.</p><article class="kpi-panel"><h2>Detalhamento por equipe / trecho</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Equipe / trecho</th><th class="number">Solicitado</th><th class="number">Consumido</th><th class="number">Efetivo</th><th class="number">Diferenca</th><th class="number">Custo total</th></tr></thead><tbody>${sectionRows || "<tr><td colspan=\"6\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article></section>
+      <section class="report-page">${pageHeader}<div class="page-label">Detalhamento por refeicao</div><p class="page-subtitle">Composicao completa por tipo de refeicao para conferencia em reuniao e rastreabilidade do periodo.</p><article class="kpi-panel"><h2>Composicao por tipo de refeicao</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Tipo de refeicao</th><th class="number">Solicitado</th><th class="number">Consumido</th><th class="number">Efetivo</th><th class="number">Custo total</th></tr></thead><tbody>${mealRows || "<tr><td colspan=\"5\">Sem dados no periodo.</td></tr>"}</tbody></table></div></article></section>
     </section>`
   });
 }
@@ -1193,7 +1210,7 @@ function renderFinancialPdfHtml(state, rows, title) {
 }
 
 function renderExecutiveFinancialPdfHtml(state, rows, title) {
-  const sortedRows = [...rows].filter((request) => request.status !== "cancelado").sort((a, b) => b.date.localeCompare(a.date));
+  const sortedRows = [...rows].filter((request) => !CANCELLED_STATUSES.has(request.status)).sort((a, b) => b.date.localeCompare(a.date));
   const total = sortedRows.reduce((sum, request) => sum + actualQuantity(state, request) * requestUnitPrice(state, request), 0);
   const delivered = sortedRows.filter((request) => request.status === "entregue").reduce((sum, request) => sum + actualQuantity(state, request) * requestUnitPrice(state, request), 0);
   const open = total - delivered;
@@ -1219,12 +1236,18 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
     return acc;
   }, {})).map(([, item]) => item).sort((a, b) => b.value - a.value);
   const statusItems = [
-    { label: "Concluido", value: Math.max(0, delivered) },
-    { label: "Em aberto", value: Math.max(0, open) }
+    { label: "Valor concluido", value: Math.max(0, delivered) },
+    { label: "Saldo em aberto", value: Math.max(0, open) }
   ].filter((item) => item.value > 0);
-  const table = sortedRows.slice(0, 24).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${escapeHtml(request.mealType)}</td><td>${escapeHtml(request.sectionName || request.location)}</td><td class="number">${Number(request.quantity ?? 0)}</td><td class="number">${actualQuantity(state, request)}</td><td class="number">${money(requestUnitPrice(state, request))}</td><td class="number">${money(actualQuantity(state, request) * requestUnitPrice(state, request))}</td><td>${escapeHtml(request.status)}</td></tr>`).join("");
+  const financialStatusDetails = [
+    { label: "Total do periodo", value: total, note: "base do grafico" },
+    { label: "Valor concluido", value: delivered, note: `${percent(delivered, total)}% do total` },
+    { label: "Saldo em aberto", value: open, note: `${percent(open, total)}% do total` }
+  ].map((item) => `<div class="financial-status-item"><span>${escapeHtml(item.label)}</span><strong>${money(item.value)}</strong><small>${escapeHtml(item.note)}</small></div>`).join("");
+  const table = sortedRows.map((request) => `<tr><td>${formatDate(request.date)}</td><td>${escapeHtml(request.mealType)}</td><td>${escapeHtml(request.sectionName || request.location)}</td><td class="number">${Number(request.quantity ?? 0)}</td><td class="number">${actualQuantity(state, request)}</td><td class="number">${money(requestUnitPrice(state, request))}</td><td class="number">${money(actualQuantity(state, request) * requestUnitPrice(state, request))}</td><td>${escapeHtml(request.status)}</td></tr>`).join("");
   const subtitle = "Relatorio financeiro executivo com custo total, valores concluidos, saldo em aberto e composicao por tipo, dia e frente.";
-  const pageHeader = renderDocumentHeader({ title, subtitle });
+  const firstPageHeader = renderDocumentHeader({ title, subtitle });
+  const pageHeader = renderDocumentHeader({ title, subtitle: "" });
 
   return renderPrintablePage({
     title,
@@ -1233,9 +1256,9 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
     orientation: "landscape",
     showHeader: false,
     children: `<section class="kpi-report">
-      <section class="report-page">${pageHeader}<div class="page-label">Resumo financeiro</div><p class="page-subtitle">Leitura consolidada dos custos de refeicoes no periodo selecionado, com solicitado e consumido em destaque.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Total previsto</span><strong>${money(total)}</strong><small>valor financeiro do periodo</small></div><div class="kpi-score"><span>Solicitado</span><strong>${requested}</strong><small>refeicoes pedidas</small></div><div class="kpi-score"><span>Consumido</span><strong>${consumed}</strong><small>refeicoes realizadas</small></div><div class="kpi-score"><span>Saldo operacional</span><strong>${consumed - requested >= 0 ? "+" : ""}${consumed - requested}</strong><small>consumido menos solicitado</small></div></div><div class="kpi-two"><article class="kpi-panel"><h2>Composicao por refeicao</h2><div class="kpi-panel-body">${renderValueBarSvg(byMeal.slice(0, 7), "value", money)}</div></article><article class="kpi-panel"><h2>Status financeiro</h2><div class="kpi-panel-body">${renderDonutSvg(statusItems.map((item) => ({ label: item.label, value: Math.round(item.value) })), "Total")}</div></article></div><div class="kpi-note-grid"><div class="kpi-note"><strong>Concluido</strong>${money(delivered)} ja entregue ou fechado no periodo.</div><div class="kpi-note"><strong>Em aberto</strong>${money(open)} ainda pendente no periodo.</div><div class="kpi-note"><strong>Ticket medio</strong>${money(averageTicket)} por refeicao consumida.</div></div></section>
+      <section class="report-page">${firstPageHeader}<div class="page-label">Resumo financeiro</div><p class="page-subtitle">Leitura consolidada dos custos de refeicoes no periodo selecionado, com status financeiro em destaque.</p><div class="kpi-scoreboard"><div class="kpi-score"><span>Total previsto</span><strong>${money(total)}</strong><small>valor financeiro do periodo</small></div><div class="kpi-score"><span>Total concluido</span><strong>${money(delivered)}</strong><small>ja entregue ou fechado</small></div><div class="kpi-score"><span>Total em aberto</span><strong>${money(open)}</strong><small>ainda pendente no periodo</small></div><div class="kpi-score"><span>Saldo operacional</span><strong>${consumed - requested >= 0 ? "+" : ""}${consumed - requested}</strong><small>consumido menos solicitado</small></div></div><div class="kpi-two"><article class="kpi-panel"><h2>Composicao por refeicao</h2><div class="kpi-panel-body">${renderValueBarSvg(byMeal.slice(0, 7), "value", money)}</div></article><article class="kpi-panel"><h2>Status financeiro</h2><div class="kpi-panel-body">${renderDonutSvg(statusItems, "", { formatValue: money, showPercent: true, hideCenterLabel: true, legendLayout: "stacked" })}<div class="financial-status-grid">${financialStatusDetails}</div></div></article></div><div class="kpi-note-grid"><div class="kpi-note"><strong>Concluido</strong>${money(delivered)} ja entregue ou fechado no periodo.</div><div class="kpi-note"><strong>Em aberto</strong>${money(open)} ainda pendente no periodo.</div><div class="kpi-note"><strong>Ticket medio</strong>${money(averageTicket)} por refeicao consumida.</div></div></section>
       <section class="report-page">${pageHeader}<div class="page-label">Evolucao e frentes</div><p class="page-subtitle">Acompanhamento dos valores por data e ranking das frentes com maior impacto financeiro.</p><div class="kpi-two"><article class="kpi-panel"><h2>Evolucao por dia</h2><div class="kpi-panel-body">${renderValueBarSvg(byDay, "value", money, 18)}</div></article><article class="kpi-panel"><h2>Top equipes / trechos por custo</h2><div class="kpi-panel-body">${renderValueBarSvg(bySection.slice(0, 8), "value", money)}</div></article></div></section>
-      <section class="report-page">${pageHeader}<div class="page-label">Movimentacoes</div><p class="page-subtitle">Detalhamento financeiro das movimentacoes consideradas no periodo.</p><article class="kpi-panel"><h2>Movimentacoes do periodo</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Data</th><th>Tipo</th><th>Equipe/Trecho</th><th class="number">Solic.</th><th class="number">Cons.</th><th class="number">Unitario</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table || "<tr><td colspan=\"8\">Sem movimentacao no periodo.</td></tr>"}</tbody></table></div></article>${sortedRows.length > 24 ? `<p class="small-note">Mostrando as 24 movimentacoes mais recentes. Use a medicao em Excel para conferencia completa linha a linha.</p>` : ""}</section>
+      <section class="report-page">${pageHeader}<div class="page-label">Movimentacoes</div><p class="page-subtitle">Detalhamento financeiro das movimentacoes consideradas no periodo.</p><article class="kpi-panel"><h2>Movimentacoes do periodo</h2><div class="kpi-panel-body"><table class="kpi-table"><thead><tr><th>Data</th><th>Tipo</th><th>Equipe/Trecho</th><th class="number">Solicitado</th><th class="number">Consumido</th><th class="number">Unitario</th><th class="number">Total</th><th>Status</th></tr></thead><tbody>${table || "<tr><td colspan=\"8\">Sem movimentacao no periodo.</td></tr>"}</tbody></table></div></article></section>
     </section>`
   });
 }
@@ -1430,7 +1453,7 @@ function buildOrdersDailySheet(model) {
   const blocks = Object.values(orderRows.reduce((acc, row) => {
     acc[row.date] ??= { date: row.date, count: 0, cancelled: 0, requested: 0, consumed: 0, effective: 0, leaders: new Set(), sections: new Set(), value: 0 };
     acc[row.date].count += 1;
-    if (["cancelado", "cancelado_confirmado"].includes(row.status)) acc[row.date].cancelled += 1;
+    if (CANCELLED_STATUSES.has(row.status)) acc[row.date].cancelled += 1;
     acc[row.date].requested += row.requested;
     acc[row.date].consumed += row.consumed;
     acc[row.date].effective += Number(row.effective || 0);

@@ -51,6 +51,172 @@ button:disabled {
   opacity: .56;
 }
 
+.admin-order-modal-panel {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden !important;
+}
+
+.admin-order-form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.admin-order-body {
+  display: grid;
+  gap: .75rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: .15rem;
+  overscroll-behavior: contain;
+}
+
+.admin-order-cart {
+  display: grid;
+  gap: .5rem;
+  border: 1px solid #fed7aa;
+  border-radius: 1rem;
+  background: #fff;
+  padding: .75rem;
+}
+
+.admin-order-cart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.admin-order-cart-head strong {
+  color: #1c1917;
+  font-size: .88rem;
+  font-weight: 950;
+}
+
+.admin-order-cart-head span {
+  border-radius: 999px;
+  background: #fff7ed;
+  padding: .25rem .62rem;
+  color: #c2410c;
+  font-size: .64rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.admin-order-cart-list {
+  display: grid;
+  gap: .5rem;
+}
+
+.admin-order-cart:not([data-items="1"]) .admin-order-cart-list {
+  max-height: 12.5rem;
+  overflow-y: auto;
+  padding-right: .15rem;
+}
+
+.admin-order-cart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
+  border: 1px solid #ffedd5;
+  border-radius: .85rem;
+  background: #fff7ed;
+  padding: .65rem;
+}
+
+.admin-order-cart-row strong {
+  display: block;
+  color: #292524;
+  font-size: .88rem;
+  line-height: 1.2;
+}
+
+.admin-order-cart-row small {
+  display: block;
+  margin-top: .15rem;
+  color: #78716c;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.admin-order-remove-btn {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  place-items: center;
+  border: 1px solid #fecaca;
+  border-radius: .7rem;
+  background: #fff;
+  padding: 0;
+  color: #b91c1c;
+}
+
+.admin-order-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  margin: .85rem -1rem -1rem;
+  border-top: 1px solid #e7e5e4;
+  background: rgba(255, 255, 255, .96);
+  padding: .75rem 1rem 1rem;
+  box-shadow: 0 -12px 22px rgba(28, 25, 23, .08);
+}
+
+.admin-order-footer button {
+  min-width: 0;
+}
+
+.settings-modal-panel {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden !important;
+}
+
+.settings-modal-form,
+.supplier-company-form {
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+.settings-modal-form {
+  display: grid;
+  gap: .75rem;
+  overflow-y: auto;
+  padding-right: .15rem;
+}
+
+.settings-modal-panel .settings-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: .85rem -1rem -1rem;
+  border-top: 1px solid #e7e5e4;
+  background: rgba(255, 255, 255, .96);
+  padding: .75rem 1rem 1rem;
+  box-shadow: 0 -12px 22px rgba(28, 25, 23, .08);
+}
+
+.settings-modal-panel .settings-actions .btn {
+  min-width: 0;
+}
+
+.supplier-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: .85rem -1rem -1rem;
+  padding: .75rem 1rem 1rem;
+  box-shadow: 0 -12px 22px rgba(28, 25, 23, .08);
+}
+
 .icon {
   display: inline-block;
   flex: 0 0 auto;
@@ -933,7 +1099,7 @@ button:disabled {
   .app-modal-backdrop,
   .settings-modal-backdrop {
     padding: .55rem !important;
-    overflow: hidden !important;
+    overflow: auto !important;
   }
 
   .settings-modal-backdrop {
@@ -942,13 +1108,22 @@ button:disabled {
 
   .app-modal-panel,
   .settings-modal-panel {
-    width: calc((100vw - 1.1rem) / var(--mobile-modal-zoom)) !important;
-    max-width: calc((100vw - 1.1rem) / var(--mobile-modal-zoom)) !important;
-    max-height: calc((100dvh - 1.1rem) / var(--mobile-modal-zoom)) !important;
+    box-sizing: border-box !important;
+    width: calc(100vw - 1.1rem) !important;
+    max-width: calc(100vw - 1.1rem) !important;
+    max-height: calc(100dvh - 1.1rem) !important;
     border-radius: 18px !important;
     padding: .85rem !important;
-    transform: scale(var(--mobile-modal-zoom));
-    transform-origin: center;
+    transform: none !important;
+  }
+
+  .supplier-modal-panel,
+  .meal-modal-panel {
+    width: calc(100vw - 1.1rem) !important;
+    max-width: calc(100vw - 1.1rem) !important;
+    max-height: calc(100dvh - 1.1rem) !important;
+    overflow-x: hidden !important;
+    transform: none !important;
   }
 
   .app-modal-panel {
@@ -960,6 +1135,11 @@ button:disabled {
     margin-bottom: .62rem !important;
     gap: .55rem !important;
     padding-bottom: .55rem !important;
+  }
+
+  .app-modal-panel header > div,
+  .settings-modal-header > div {
+    min-width: 0 !important;
   }
 
   .app-modal-panel h2,
@@ -977,6 +1157,35 @@ button:disabled {
   .app-modal-panel form,
   .settings-modal-panel form {
     gap: .58rem !important;
+  }
+
+  .app-modal-panel .admin-order-form {
+    gap: 0 !important;
+  }
+
+  .app-modal-panel .admin-order-body {
+    gap: .58rem !important;
+  }
+
+  .app-modal-panel .admin-order-cart {
+    padding: .58rem !important;
+  }
+
+  .app-modal-panel .admin-order-cart:not([data-items="1"]) .admin-order-cart-list {
+    max-height: 9.1rem !important;
+  }
+
+  .app-modal-panel .admin-order-cart-row {
+    gap: .52rem !important;
+    padding: .52rem !important;
+  }
+
+  .app-modal-panel .admin-order-cart-row strong {
+    font-size: .76rem !important;
+  }
+
+  .app-modal-panel .admin-order-cart-row small {
+    font-size: .64rem !important;
   }
 
   .app-modal-panel input,
@@ -1000,6 +1209,8 @@ button:disabled {
   .app-modal-panel footer,
   .settings-modal-panel .settings-actions {
     margin-top: .65rem !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
     gap: .45rem !important;
     padding-top: .55rem !important;
   }
@@ -1013,6 +1224,47 @@ button:disabled {
     font-size: .68rem !important;
   }
 
+  .app-modal-panel .admin-order-remove-btn {
+    width: 2.1rem !important;
+    height: 2.1rem !important;
+    min-width: 2.1rem !important;
+    min-height: 2.1rem !important;
+    flex: 0 0 2.1rem !important;
+    padding: 0 !important;
+  }
+
+  .app-modal-panel .admin-order-footer {
+    display: grid !important;
+    grid-template-columns: minmax(0, .78fr) minmax(0, 1.25fr) minmax(0, 1fr) !important;
+    gap: .38rem !important;
+    margin: .65rem -.85rem -.85rem !important;
+    padding: .55rem .85rem .78rem !important;
+  }
+
+  .app-modal-panel .admin-order-footer button {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: .42rem !important;
+    white-space: normal !important;
+    line-height: 1.05 !important;
+  }
+
+  .settings-modal-panel .btn {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+  }
+
+  .settings-modal-panel .settings-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 2 !important;
+    margin: .62rem -.85rem -.85rem !important;
+    padding: .55rem .85rem .78rem !important;
+    background: rgba(255, 255, 255, .96) !important;
+    box-shadow: 0 -10px 18px rgba(28, 25, 23, .08) !important;
+  }
+
   .settings-modal-close,
   .app-modal-panel .modal-close {
     width: 2rem !important;
@@ -1022,7 +1274,10 @@ button:disabled {
   }
 
   .supplier-modal-panel {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
     padding: 0 !important;
+    overflow: hidden !important;
   }
 
   .supplier-modal-header {
@@ -1053,13 +1308,20 @@ button:disabled {
   }
 
   .supplier-company-form {
-    max-height: calc((100dvh - 4.75rem) / var(--mobile-modal-zoom)) !important;
+    max-height: none !important;
+    height: 100% !important;
     gap: .55rem !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
     padding: .65rem !important;
+    width: 100% !important;
   }
 
   .supplier-form-section {
     border-radius: .95rem !important;
+    height: max-content !important;
+    overflow: visible !important;
   }
 
   .supplier-form-section-head {
@@ -1075,17 +1337,31 @@ button:disabled {
 
   .supplier-form-body {
     gap: .55rem !important;
+    height: max-content !important;
     padding: .65rem !important;
   }
 
   .supplier-form-grid {
     gap: .55rem !important;
+    height: max-content !important;
   }
 
   .supplier-form-footer {
-    margin-right: -.65rem !important;
-    margin-bottom: -.65rem !important;
-    margin-left: -.65rem !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 2 !important;
+    margin: .55rem -.65rem -.65rem !important;
     padding: .65rem !important;
+    background: #fff !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .supplier-form-footer .btn.outline {
+    flex: .85 1 0 !important;
+  }
+
+  .supplier-form-footer .btn.primary {
+    flex: 1.15 1 0 !important;
   }
 }

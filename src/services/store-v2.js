@@ -61,7 +61,7 @@ export function getLeaders(state) {
 }
 
 export function getSuppliers(state) {
-  return state.users.filter((user) => user.role === "fornecedor" && user.active !== false);
+  return (state.users ?? []).filter((user) => user.role === "fornecedor" && user.active !== false);
 }
 
 export function getSupplierCompanies(state, { includeInactive = true } = {}) {
@@ -122,7 +122,10 @@ export function getActiveWorkSections(state, leaderId = "") {
 
 export function getMealsForSection(state, sectionId = "") {
   const activeMeals = state.mealTypes ?? [];
-  const orderableMeals = activeMeals.filter((meal) => getSuppliersForMeal(state, meal.id, { includeInactive: false }).length > 0);
+  const hasSupplierMealRules = (state.supplierMealTypes ?? []).some((item) => item.active === true);
+  const orderableMeals = hasSupplierMealRules
+    ? activeMeals.filter((meal) => getSuppliersForMeal(state, meal.id, { includeInactive: false }).length > 0)
+    : activeMeals;
   if (!sectionId) return orderableMeals;
   const allowedIds = (state.sectionMealTypes ?? [])
     .filter((item) => item.sectionId === sectionId && item.active !== false)

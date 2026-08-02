@@ -104,6 +104,15 @@ let reportFilter = {
   teamId: "",
   originRole: ""
 };
+let financeFilter = {
+  range: "all",
+  start: "",
+  end: "",
+  supplierCompanyId: "",
+  mealTypeId: "",
+  teamId: "",
+  originRole: ""
+};
 let dailyReportGenerationDate = "";
 let renderCycle = 0;
 const pageMountModules = new Map();
@@ -183,6 +192,10 @@ function assertMealDateIsNotPast(date) {
   if (!date || String(date) < minimumMealDate()) {
     throw new Error("Não é permitido criar ou alterar pedido para data passada.");
   }
+}
+
+function inactiveUserLoginMessage() {
+  return "Este usuario esta desativado. Fale com o administrador.";
 }
 
 const root = document.querySelector("#app-root");
@@ -322,6 +335,9 @@ function render() {
     consolidationValue,
     countStatus,
     exportMenuOpen,
+    financeFilter,
+    financePeriodLabel: getFinancePeriodLabel(),
+    financeRows: getFinanceRows(),
     formatDate,
     formatDateTime,
     getConsolidationForDate,
@@ -554,10 +570,10 @@ function renderAdminOrderModal() {
   const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
   const cartRows = adminOrderCartItems.map((item, index) => {
     const label = adminOrderCartItemLabel(item);
-    return `<div class="grid gap-2 rounded-xl border border-orange-100 bg-orange-50/45 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div><strong class="block text-sm">${escapeHtml(label.meal)} - ${label.quantity} refeicoes</strong><small class="text-xs font-bold text-stone-500">${escapeHtml(label.supplier)} - ${escapeHtml(label.section)} - ${formatDate(item.date)}</small></div><button class="${modalButtonOutlineClass} min-h-9 px-3 text-xs" type="button" data-remove-admin-order-item="${index}">${icon("trash", 14)}Remover</button></div>`;
+    return `<div class="admin-order-cart-row"><div><strong>${escapeHtml(label.meal)} - ${label.quantity} refeicoes</strong><small>${escapeHtml(label.supplier)} - ${escapeHtml(label.section)} - ${formatDate(item.date)}</small></div><button class="admin-order-remove-btn" type="button" data-remove-admin-order-item="${index}" aria-label="Remover ${escapeHtml(label.meal)} do carrinho" title="Remover">${icon("trash", 15)}</button></div>`;
   }).join("");
 
-  return `<div class="${modalBackdropClass}" data-close-admin-order-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="admin-order-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Pedido administrativo</span><h2 class="${modalTitleClass}" id="admin-order-title">Fazer pedido</h2><p class="mt-1 text-sm text-stone-500">Escolha o fornecedor; a lista de refeicoes mostra somente o que ele atende.</p></div><button class="${modalCloseClass}" type="button" data-close-admin-order-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="admin-order"><input type="hidden" name="originRole" value="admin" /><input type="hidden" name="leaderId" value="" /><input type="hidden" name="locationId" value="${fallbackLocationId}" />${adminOrderError ? `<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">${escapeHtml(adminOrderError)}</div>` : ""}<div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-date">Data da refeicao</label><input class="${modalInputClass}" id="admin-order-date" name="date" type="date" min="${minimumMealDate()}" value="${minimumMealDate()}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-quantity">Quantidade solicitada</label><input class="${modalInputClass}" id="admin-order-quantity" name="quantity" type="number" min="1" value="10" required /></div></div><div class="grid gap-3 sm:grid-cols-3"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-supplier">Fornecedor</label><select class="${modalInputClass}" id="admin-order-supplier" name="supplierCompanyId" data-admin-order-supplier required>${supplierOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-team">Efetivo / local</label><select class="${modalInputClass}" id="admin-order-team" name="teamId" data-admin-order-team required>${sectionOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="admin-order-meal" name="mealTypeId" data-admin-order-meal required>${mealOptions}</select></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="admin-order-notes" name="notes" placeholder="Ex.: buffet para escritorio, reforco de equipe ou evento interno"></textarea></div>${adminOrderCartItems.length ? `<section class="grid gap-2 rounded-2xl border border-orange-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><strong class="text-sm font-black text-stone-950">Carrinho de pedidos</strong><span class="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black uppercase text-orange-700">${adminOrderCartItems.length} itens</span></div>${cartRows}</section>` : ""}<footer class="grid gap-2 border-t border-stone-100 pt-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"><button class="${modalButtonOutlineClass}" type="button" data-close-admin-order-modal>Cancelar</button><button class="${modalButtonOutlineClass}" type="button" data-add-admin-order-item ${canCreate ? "" : "disabled"}>${icon("plus", 15)}Adicionar ao carrinho</button><button class="${modalButtonPrimaryClass}" type="submit" ${canCreate || adminOrderCartItems.length ? "" : "disabled"}>${adminOrderCartItems.length ? `Criar ${adminOrderCartItems.length} pedidos` : "Salvar pedido"}</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-admin-order-modal><section class="${modalPanelClass} admin-order-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-order-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Pedido administrativo</span><h2 class="${modalTitleClass}" id="admin-order-title">Fazer pedido</h2><p class="mt-1 text-sm text-stone-500">Escolha o fornecedor; a lista de refeicoes mostra somente o que ele atende.</p></div><button class="${modalCloseClass}" type="button" data-close-admin-order-modal aria-label="Fechar">x</button></header><form class="admin-order-form" data-form="admin-order"><div class="admin-order-body"><input type="hidden" name="originRole" value="admin" /><input type="hidden" name="leaderId" value="" /><input type="hidden" name="locationId" value="${fallbackLocationId}" />${adminOrderError ? `<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">${escapeHtml(adminOrderError)}</div>` : ""}<div class="grid gap-3 sm:grid-cols-2"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-date">Data da refeicao</label><input class="${modalInputClass}" id="admin-order-date" name="date" type="date" min="${minimumMealDate()}" value="${minimumMealDate()}" required /></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-quantity">Quantidade solicitada</label><input class="${modalInputClass}" id="admin-order-quantity" name="quantity" type="number" min="1" value="10" required /></div></div><div class="grid gap-3 sm:grid-cols-3"><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-supplier">Fornecedor</label><select class="${modalInputClass}" id="admin-order-supplier" name="supplierCompanyId" data-admin-order-supplier required>${supplierOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-team">Efetivo / local</label><select class="${modalInputClass}" id="admin-order-team" name="teamId" data-admin-order-team required>${sectionOptions}</select></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-meal">Tipo de refeicao</label><select class="${modalInputClass}" id="admin-order-meal" name="mealTypeId" data-admin-order-meal required>${mealOptions}</select></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="admin-order-notes">Observacao</label><textarea class="${modalInputClass} min-h-24 py-2" id="admin-order-notes" name="notes" placeholder="Ex.: buffet para escritorio, reforco de equipe ou evento interno"></textarea></div>${adminOrderCartItems.length ? `<section class="admin-order-cart" data-items="${adminOrderCartItems.length}"><div class="admin-order-cart-head"><strong>Carrinho de pedidos</strong><span>${adminOrderCartItems.length} itens</span></div><div class="admin-order-cart-list">${cartRows}</div></section>` : ""}</div><footer class="admin-order-footer"><button class="${modalButtonOutlineClass}" type="button" data-close-admin-order-modal>Cancelar</button><button class="${modalButtonOutlineClass}" type="button" data-add-admin-order-item ${canCreate ? "" : "disabled"}>${icon("plus", 15)}Adicionar ao carrinho</button><button class="${modalButtonPrimaryClass}" type="submit" ${canCreate || adminOrderCartItems.length ? "" : "disabled"}>${adminOrderCartItems.length ? `Criar ${adminOrderCartItems.length} pedidos` : "Salvar pedido"}</button></footer></form></section></div>`;
 }
 
 function renderActualsModal() {
@@ -654,6 +670,19 @@ function renderOperationModal() {
   return "";
 }
 
+function requestActualQuantity(request) {
+  const actual = state.consolidationActuals?.find((item) =>
+    item.date === request.date
+    && item.teamId === request.teamId
+    && item.mealTypeId === request.mealTypeId
+  );
+  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+}
+
+function financialRequestValue(request) {
+  return requestActualQuantity(request) * requestUnitPrice(request);
+}
+
 function renderFinanceiro(mode) {
   const isSupplier = mode === "fornecedor";
   const cancelledConfirmedRequestIds = new Set(state.consolidations
@@ -665,23 +694,24 @@ function renderFinanceiro(mode) {
   const month = state.settings.defaultMealDate.slice(0, 7);
   const rows = sourceRows.filter((request) => request.date.startsWith(month));
   const delivered = rows.filter((request) => request.status === "entregue");
-  const projected = rows.reduce((sum, request) => sum + requestValue(request), 0);
-  const deliveredValue = delivered.reduce((sum, request) => sum + requestValue(request), 0);
+  const projected = rows.reduce((sum, request) => sum + financialRequestValue(request), 0);
+  const deliveredValue = delivered.reduce((sum, request) => sum + financialRequestValue(request), 0);
   const pendingValue = projected - deliveredValue;
+  const mealCount = rows.reduce((sum, request) => sum + requestActualQuantity(request), 0);
   const byMeal = state.mealTypes.map((meal) => ({
     label: meal.label,
-    value: rows.filter((request) => request.mealTypeId === meal.id).reduce((sum, request) => sum + requestValue(request), 0)
+    value: rows.filter((request) => request.mealTypeId === meal.id).reduce((sum, request) => sum + financialRequestValue(request), 0)
   })).filter((item) => item.value > 0);
   const max = Math.max(...byMeal.map((item) => item.value), 1);
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(`${state.settings.defaultMealDate}T12:00:00`);
-    date.setDate(date.getDate() - (6 - index));
-    const key = date.toISOString().slice(0, 10);
-    return { key, label: String(date.getDate()).padStart(2, "0"), value: sourceRows.filter((request) => request.date === key).reduce((sum, request) => sum + requestValue(request), 0) };
-  });
-  const dailyMax = Math.max(...days.map((item) => item.value), 1);
+  const bySection = Object.values(rows.reduce((acc, request) => {
+    const label = request.sectionName || request.location || "Sem equipe";
+    acc[label] ??= { label, value: 0 };
+    acc[label].value += financialRequestValue(request);
+    return acc;
+  }, {})).sort((a, b) => b.value - a.value);
+  const sectionMax = Math.max(...bySection.map((item) => item.value), 1);
   const title = isSupplier ? "Financeiro do fornecedor" : "Financeiro administrativo";
-  return `<section class="finance-page">${topbar(title, `Análise de ${month}`, `${isSupplier ? renderSupplierBackButton() : renderAdminBackButton()}<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${sumQty(rows)} refeições no mês</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operação</small></article><article class="finance-metric"><span>Ticket médio</span><strong>${money(rows.length ? projected / sumQty(rows) : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Composição por refeição</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentação no período.</div>`}</article><article class="finance-card"><h2>Evolução dos últimos 7 dias</h2><div class="finance-bars">${days.map((item) => `<div><strong>${item.value ? money(item.value).replace("R$", "") : "-"}</strong><i style="height:${Math.max(5, Math.round((item.value / dailyMax) * 126))}px"></i><span>${item.label}</span></div>`).join("")}</div></article></div><article class="finance-card finance-table-card"><h2>Movimentações do período</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${request.quantity}</td><td><strong>${money(requestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
+  return `<section class="finance-page">${topbar(title, `Análise de ${month}`, `${isSupplier ? renderSupplierBackButton() : renderAdminBackButton()}<button class="btn primary" data-export-finance="${mode}">Gerar PDF</button>`)}<div class="finance-metrics"><article class="finance-metric accent"><span>${isSupplier ? "Faturamento previsto" : "Custo previsto"}</span><strong>${money(projected)}</strong><small>${mealCount} refeições no mês</small></article><article class="finance-metric"><span>${isSupplier ? "Faturado" : "Pago/entregue"}</span><strong>${money(deliveredValue)}</strong><small>${delivered.length} pedidos entregues</small></article><article class="finance-metric"><span>Em aberto</span><strong>${money(pendingValue)}</strong><small>pedidos ainda em operação</small></article><article class="finance-metric"><span>Ticket médio</span><strong>${money(mealCount ? projected / mealCount : 0)}</strong><small>por refeicao</small></article></div><div class="finance-grid"><article class="finance-card"><h2>Custo por refeicao</h2>${byMeal.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / max) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentação no período.</div>`}</article><article class="finance-card"><h2>Custo por equipe / trecho</h2>${bySection.map((item) => `<div class="finance-progress"><div><span>${item.label}</span><strong>${money(item.value)}</strong></div><i><b style="width:${Math.max(3, Math.round((item.value / sectionMax) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem movimentação no período.</div>`}</article></div><article class="finance-card finance-table-card"><h2>Movimentações do período</h2><div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Consumido</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((request) => `<tr><td>${formatDate(request.date)}</td><td>${request.mealType}</td><td>${requestActualQuantity(request)}</td><td><strong>${money(financialRequestValue(request))}</strong></td><td><span class="badge ${request.status}">${STATUS_LABEL[request.status]}</span></td></tr>`).join("")}</tbody></table></div></article></section>`;
 }
 
 function renderPainel() {
@@ -810,10 +840,51 @@ function normalizeReportFilter(nextFilter = reportFilter) {
   return start <= end ? { range: "custom", start, end, ...extra } : { range: "custom", start: end, end: start, ...extra };
 }
 
-function getReportRows() {
+function normalizeFinanceFilter(nextFilter = financeFilter) {
+  const baseDate = nextFilter.start || state.settings.defaultMealDate;
+  const extra = {
+    supplierCompanyId: nextFilter.supplierCompanyId ?? "",
+    mealTypeId: nextFilter.mealTypeId ?? "",
+    teamId: nextFilter.teamId ?? "",
+    originRole: nextFilter.originRole ?? ""
+  };
+  if (nextFilter.range === "all") return { range: "all", start: "", end: "", ...extra };
+  if (nextFilter.range === "day") return { range: "day", start: baseDate, end: baseDate, ...extra };
+  if (nextFilter.range === "week") {
+    const start = getWeekStart(baseDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { range: "week", start: toDateKey(start), end: toDateKey(end), ...extra };
+  }
+  if (nextFilter.range === "month") {
+    const [year, month] = baseDate.split("-").map(Number);
+    const start = new Date(year, month - 1, 1, 12);
+    const end = new Date(year, month, 0, 12);
+    return { range: "month", start: toDateKey(start), end: toDateKey(end), ...extra };
+  }
+  const start = nextFilter.start || state.settings.defaultMealDate;
+  const end = nextFilter.end || start;
+  return start <= end ? { range: "custom", start, end, ...extra } : { range: "custom", start: end, end: start, ...extra };
+}
+
+function getReportRows({ includeCancelled = false } = {}) {
   const filter = normalizeReportFilter(reportFilter);
   return state.requests
-    .filter((request) => request.status !== "cancelado")
+    .filter((request) => includeCancelled || request.status !== "cancelado")
+    .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end))
+    .filter((request) => !filter.supplierCompanyId || request.supplierCompanyId === filter.supplierCompanyId)
+    .filter((request) => !filter.mealTypeId || request.mealTypeId === filter.mealTypeId)
+    .filter((request) => !filter.teamId || request.teamId === filter.teamId)
+    .filter((request) => !filter.originRole || request.originRole === filter.originRole);
+}
+
+function getFinanceRows() {
+  const filter = normalizeFinanceFilter(financeFilter);
+  const cancelledConfirmedRequestIds = new Set(state.consolidations
+    .filter((consolidation) => consolidation.status === "cancelado_confirmado")
+    .flatMap((consolidation) => consolidation.requestIds ?? []));
+  return state.requests
+    .filter((request) => request.status !== "cancelado" && !cancelledConfirmedRequestIds.has(request.id))
     .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end))
     .filter((request) => !filter.supplierCompanyId || request.supplierCompanyId === filter.supplierCompanyId)
     .filter((request) => !filter.mealTypeId || request.mealTypeId === filter.mealTypeId)
@@ -824,6 +895,13 @@ function getReportRows() {
 function getReportPeriodLabel() {
   const filter = normalizeReportFilter(reportFilter);
   if (filter.range === "all") return "Todo período";
+  if (filter.start === filter.end) return formatDate(filter.start);
+  return `${formatDate(filter.start)} a ${formatDate(filter.end)}`;
+}
+
+function getFinancePeriodLabel() {
+  const filter = normalizeFinanceFilter(financeFilter);
+  if (filter.range === "all") return "Todo periodo";
   if (filter.start === filter.end) return formatDate(filter.start);
   return `${formatDate(filter.start)} a ${formatDate(filter.end)}`;
 }
@@ -839,6 +917,21 @@ function applyReportFilterFromControls(scope = root, { shouldRender = true } = {
     mealTypeId: valueOf("[data-report-meal]", reportFilter.mealTypeId ?? ""),
     teamId: valueOf("[data-report-team]", reportFilter.teamId ?? ""),
     originRole: valueOf("[data-report-origin]", reportFilter.originRole ?? "")
+  });
+  if (shouldRender) render();
+}
+
+function applyFinanceFilterFromControls(scope = root, { shouldRender = true } = {}) {
+  const valueOf = (selector, fallback = "") => scope.querySelector(selector)?.value ?? fallback;
+  financeFilter = normalizeFinanceFilter({
+    ...financeFilter,
+    range: valueOf("[data-finance-range]", financeFilter.range),
+    start: valueOf("[data-finance-start]", financeFilter.start),
+    end: valueOf("[data-finance-end]", financeFilter.end),
+    supplierCompanyId: valueOf("[data-finance-supplier]", financeFilter.supplierCompanyId ?? ""),
+    mealTypeId: valueOf("[data-finance-meal]", financeFilter.mealTypeId ?? ""),
+    teamId: valueOf("[data-finance-team]", financeFilter.teamId ?? ""),
+    originRole: valueOf("[data-finance-origin]", financeFilter.originRole ?? "")
   });
   if (shouldRender) render();
 }
@@ -1411,6 +1504,25 @@ function keepActiveSettingsTabVisible() {
   });
 }
 
+function updateCheckboxMultiSelectSummary(menu) {
+  const options = Array.from(menu.querySelectorAll("[data-multi-option], [data-team-option]"));
+  const selectedOptions = options.filter((input) => input.checked);
+  const summary = menu.querySelector("[data-multi-summary], [data-team-summary]");
+  const selectAll = menu.querySelector("[data-multi-select-all], [data-team-select-all]");
+  const labels = selectedOptions
+    .map((input) => input.dataset.multiLabel || input.dataset.teamLabel || input.value)
+    .filter(Boolean);
+
+  if (summary) summary.textContent = labels.length ? labels.join(", ") : (menu.dataset.placeholder || "Selecionar equipes");
+  options.forEach((input) => {
+    input.closest(".team-multi-row")?.classList.toggle("is-selected", input.checked);
+  });
+  if (selectAll) {
+    selectAll.checked = options.length > 0 && selectedOptions.length === options.length;
+    selectAll.closest(".team-multi-row")?.classList.toggle("is-selected", selectAll.checked);
+  }
+}
+
 function bindEvents() {
   root.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1529,6 +1641,40 @@ function bindEvents() {
   });
   root.querySelectorAll("[data-report-apply]").forEach((button) => {
     button.addEventListener("click", () => applyReportFilterFromControls(button.closest(".export-options") ?? root));
+  });
+  root.querySelectorAll("[data-finance-range]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      financeFilter = normalizeFinanceFilter({ ...financeFilter, range: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-finance-start]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      financeFilter = normalizeFinanceFilter({ ...financeFilter, start: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-finance-end]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      financeFilter = normalizeFinanceFilter({ ...financeFilter, end: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-finance-supplier], [data-finance-meal], [data-finance-team], [data-finance-origin]").forEach((control) => {
+    control.addEventListener("change", (event) => {
+      const key = event.currentTarget.matches("[data-finance-supplier]")
+        ? "supplierCompanyId"
+        : event.currentTarget.matches("[data-finance-meal]")
+          ? "mealTypeId"
+          : event.currentTarget.matches("[data-finance-team]")
+            ? "teamId"
+            : "originRole";
+      financeFilter = normalizeFinanceFilter({ ...financeFilter, [key]: event.currentTarget.value });
+      render();
+    });
+  });
+  root.querySelectorAll("[data-finance-apply]").forEach((button) => {
+    button.addEventListener("click", () => applyFinanceFilterFromControls(button.closest(".admin-filter-popover") ?? root));
   });
   root.querySelectorAll("[data-cancel-request]").forEach((button) => {
     button.addEventListener("click", () => cancelRequest(button.dataset.cancelRequest));
@@ -1663,6 +1809,19 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
+  root.querySelectorAll("[data-multi-select], [data-team-multi-select]").forEach((menu) => {
+    updateCheckboxMultiSelectSummary(menu);
+    menu.querySelector("[data-multi-select-all], [data-team-select-all]")?.addEventListener("change", (event) => {
+      const checked = event.currentTarget.checked;
+      menu.querySelectorAll("[data-multi-option], [data-team-option]").forEach((input) => {
+        input.checked = checked;
+      });
+      updateCheckboxMultiSelectSummary(menu);
+    });
+    menu.querySelectorAll("[data-multi-option], [data-team-option]").forEach((input) => {
+      input.addEventListener("change", () => updateCheckboxMultiSelectSummary(menu));
+    });
+  });
   root.querySelectorAll("[data-delete-admin-user]").forEach((button) => {
     button.addEventListener("click", () => handleAdminUserDelete(button));
   });
@@ -1875,8 +2034,11 @@ async function handleLoginSubmit(event) {
     const message = String(error?.message ?? "");
     const isExpectedAuthError = String(error?.status ?? "") === "400"
       || message.toLowerCase().includes("invalid login credentials");
-    loginError = "E-mail ou senha invalidos. Confira os dados e tente novamente.";
-    if (!isExpectedAuthError) console.error(error);
+    const isInactiveUser = message.toLowerCase().includes("desativado");
+    loginError = isInactiveUser
+      ? inactiveUserLoginMessage()
+      : "E-mail ou senha invalidos. Confira os dados e tente novamente.";
+    if (!isExpectedAuthError && !isInactiveUser) console.error(error);
     renderLogin();
   } finally {
     if (button) button.disabled = false;
@@ -2456,13 +2618,14 @@ async function handleSupplierCompanySubmit(event) {
   try {
     const supplierId = String(form.get("id") ?? "") || null;
     const active = form.get("active") === "true";
+    const existingSupplier = supplierId ? state.supplierCompanies?.find((supplier) => supplier.id === supplierId) : null;
     const savedSupplierId = await saveSupplierCompany({
       id: supplierId,
       legalName: form.get("legalName"),
       tradeName: form.get("tradeName"),
       cnpj: form.get("cnpj"),
-      stateRegistration: form.get("stateRegistration"),
-      municipalRegistration: form.get("municipalRegistration"),
+      stateRegistration: form.has("stateRegistration") ? form.get("stateRegistration") : existingSupplier?.stateRegistration,
+      municipalRegistration: form.has("municipalRegistration") ? form.get("municipalRegistration") : existingSupplier?.municipalRegistration,
       addressLine: form.get("addressLine"),
       city: form.get("city"),
       state: form.get("state"),
@@ -2912,7 +3075,7 @@ async function handleExport(type) {
 }
 
 function handleKpiExport() {
-  const rows = getReportRows();
+  const rows = getReportRows({ includeCancelled: true });
   if (!exportKpiPdf(state, rows, "KPIs operacionais")) {
     toast("Permita a abertura de janela para gerar o PDF de KPI.");
     return;
@@ -2931,7 +3094,7 @@ function getRowsPeriodLabel(rows, prefix = "Periodo") {
 function handleFinanceExport(mode) {
   const rows = mode === "fornecedor"
     ? supplierConsolidations().flatMap((consolidation) => getConsolidationSummary(state, consolidation).rows)
-    : state.requests.filter((request) => request.status !== "cancelado");
+    : getFinanceRows();
   if (!exportFinancialPdf(state, rows, mode === "fornecedor" ? "Financeiro do fornecedor" : "Financeiro administrativo")) {
     toast("Permita a abertura de janela para gerar o PDF.");
   }
@@ -3272,6 +3435,17 @@ async function refreshData({ silent = false } = {}) {
     render();
     await ensureYesterdayDailyReport(profile);
   } catch (error) {
+    const isInactiveUser = String(error?.message ?? "").toLowerCase().includes("desativado");
+    if (isInactiveUser) {
+      await signOut().catch(() => {});
+      state.authenticatedUserId = null;
+      state.activeUserId = null;
+      state.loading = false;
+      loginError = inactiveUserLoginMessage();
+      renderLogin();
+      if (!silent) throw error;
+      return;
+    }
     console.error(error);
     state.loading = false;
     render();

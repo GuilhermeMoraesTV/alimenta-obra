@@ -79,7 +79,7 @@ export function createSettingsPage(ctx) {
     [&_.settings-section-grid>.settings-panel-wide]:lg:col-span-2
     [&_.meal-catalog-list]:grid-cols-1 md:[&_.meal-catalog-list]:grid-cols-2
     [&_.meal-catalog-card]:rounded-2xl [&_.meal-catalog-card]:border-solid [&_.meal-catalog-card]:border-stone-200/80 [&_.meal-catalog-card]:bg-white
-    [&_.settings-actions]:flex-wrap [&_.settings-actions_.btn]:w-full sm:[&_.settings-actions_.btn]:w-auto
+    [&_.settings-actions]:flex-wrap [&_.settings-actions_.btn]:w-full sm:[&_.settings-actions_.btn]:w-auto [&_.settings-modal-panel_.settings-actions]:flex-nowrap [&_.settings-modal-panel_.settings-actions_.btn]:w-auto [&_.settings-modal-panel_.settings-actions_.btn]:min-w-0 [&_.settings-modal-panel_.settings-actions_.btn]:flex-1 sm:[&_.settings-modal-panel_.settings-actions_.btn]:flex-none
     [&_.settings-panel-title]:items-center [&_.settings-panel-title]:justify-start [&_.settings-panel-title>div]:min-w-0
     [&_.settings-panel-title_h2]:leading-tight [&_.settings-panel-title_p]:leading-snug
     [&_.settings-section-grid]:grid-cols-1 lg:[&_.settings-section-grid]:grid-cols-2
@@ -94,8 +94,8 @@ export function createSettingsPage(ctx) {
     [&_.role-chip]:inline-flex [&_.role-chip]:items-center [&_.role-chip]:rounded-full [&_.role-chip]:border [&_.role-chip]:border-stone-200 [&_.role-chip]:bg-stone-50 [&_.role-chip]:px-2.5 [&_.role-chip]:py-1 [&_.role-chip]:text-[10px] [&_.role-chip]:font-black [&_.role-chip]:uppercase [&_.role-chip]:tracking-[.08em] [&_.role-chip]:text-stone-600
     [&_.team-checkbox-grid]:grid [&_.team-checkbox-grid]:grid-cols-1 [&_.team-checkbox-grid]:gap-2 sm:[&_.team-checkbox-grid]:grid-cols-2
     [&_.team-checkbox]:grid [&_.team-checkbox]:cursor-pointer [&_.team-checkbox]:grid-cols-[18px_minmax(0,1fr)] [&_.team-checkbox]:items-start [&_.team-checkbox]:gap-2 [&_.team-checkbox]:rounded-xl [&_.team-checkbox]:border [&_.team-checkbox]:border-stone-200 [&_.team-checkbox]:bg-stone-50/70 [&_.team-checkbox]:p-3 [&_.team-checkbox_strong]:block [&_.team-checkbox_strong]:text-xs [&_.team-checkbox_strong]:font-black [&_.team-checkbox_small]:mt-0.5 [&_.team-checkbox_small]:block [&_.team-checkbox_small]:text-[10px] [&_.team-checkbox_small]:font-bold [&_.team-checkbox_small]:text-stone-500
-    [&_.team-select-menu]:relative [&_.team-select-menu_summary]:flex [&_.team-select-menu_summary]:min-h-11 [&_.team-select-menu_summary]:cursor-pointer [&_.team-select-menu_summary]:items-center [&_.team-select-menu_summary]:justify-between [&_.team-select-menu_summary]:gap-2 [&_.team-select-menu_summary]:rounded-xl [&_.team-select-menu_summary]:border [&_.team-select-menu_summary]:border-stone-300 [&_.team-select-menu_summary]:bg-white [&_.team-select-menu_summary]:px-3 [&_.team-select-menu_summary]:text-sm [&_.team-select-menu_summary]:font-extrabold [&_.team-select-menu_summary]:text-stone-900
-    [&_.team-select-list]:mt-2 [&_.team-select-list]:grid [&_.team-select-list]:max-h-52 [&_.team-select-list]:gap-1.5 [&_.team-select-list]:overflow-auto [&_.team-select-list]:rounded-xl [&_.team-select-list]:border [&_.team-select-list]:border-stone-200 [&_.team-select-list]:bg-white [&_.team-select-list]:p-2 [&_.team-select-row]:grid [&_.team-select-row]:cursor-pointer [&_.team-select-row]:grid-cols-[18px_minmax(0,1fr)] [&_.team-select-row]:items-center [&_.team-select-row]:gap-2 [&_.team-select-row]:rounded-lg [&_.team-select-row]:px-2 [&_.team-select-row]:py-2 [&_.team-select-row]:text-xs [&_.team-select-row]:font-bold [&_.team-select-row]:text-stone-700 hover:[&_.team-select-row]:bg-stone-50
+    [&_.team-multi-select]:relative [&_.team-multi-select]:w-full [&_.team-multi-select]:max-w-md [&_.team-multi-select_summary]:flex [&_.team-multi-select_summary]:min-h-11 [&_.team-multi-select_summary]:cursor-pointer [&_.team-multi-select_summary]:list-none [&_.team-multi-select_summary]:items-center [&_.team-multi-select_summary]:justify-between [&_.team-multi-select_summary]:gap-2 [&_.team-multi-select_summary]:rounded-lg [&_.team-multi-select_summary]:border [&_.team-multi-select_summary]:border-stone-300 [&_.team-multi-select_summary]:bg-white [&_.team-multi-select_summary]:px-3 [&_.team-multi-select_summary]:text-sm [&_.team-multi-select_summary]:font-bold [&_.team-multi-select_summary]:text-stone-700
+    [&_.team-multi-list]:absolute [&_.team-multi-list]:left-0 [&_.team-multi-list]:top-full [&_.team-multi-list]:z-20 [&_.team-multi-list]:mt-1 [&_.team-multi-list]:grid [&_.team-multi-list]:w-full [&_.team-multi-list]:max-h-60 [&_.team-multi-list]:overflow-auto [&_.team-multi-list]:rounded-md [&_.team-multi-list]:border [&_.team-multi-list]:border-stone-200 [&_.team-multi-list]:bg-white [&_.team-multi-list]:shadow-lg [&_.team-multi-row]:grid [&_.team-multi-row]:cursor-pointer [&_.team-multi-row]:grid-cols-[18px_minmax(0,1fr)] [&_.team-multi-row]:items-center [&_.team-multi-row]:gap-2 [&_.team-multi-row]:px-3 [&_.team-multi-row]:py-2 [&_.team-multi-row]:text-sm [&_.team-multi-row]:font-bold [&_.team-multi-row]:text-stone-700 hover:[&_.team-multi-row]:bg-stone-50 [&_.team-multi-row.is-selected]:bg-stone-300 [&_.team-multi-row.is-selected]:text-stone-900 [&_.team-multi-row.is-strong]:font-black
     [&_.settings-modal-backdrop]:fixed [&_.settings-modal-backdrop]:inset-0 [&_.settings-modal-backdrop]:z-50 [&_.settings-modal-backdrop]:grid [&_.settings-modal-backdrop]:place-items-end [&_.settings-modal-backdrop]:bg-stone-950/45 [&_.settings-modal-backdrop]:p-0 [&_.settings-modal-backdrop]:backdrop-blur-sm sm:[&_.settings-modal-backdrop]:place-items-center sm:[&_.settings-modal-backdrop]:p-4
     [&_.settings-modal-panel]:max-h-[92vh] [&_.settings-modal-panel]:w-full [&_.settings-modal-panel]:max-w-2xl [&_.settings-modal-panel]:overflow-auto [&_.settings-modal-panel]:rounded-t-[28px] [&_.settings-modal-panel]:border [&_.settings-modal-panel]:border-white/70 [&_.settings-modal-panel]:bg-white [&_.settings-modal-panel]:p-5 [&_.settings-modal-panel]:shadow-2xl sm:[&_.settings-modal-panel]:rounded-[28px]
     [&_.settings-modal-header]:mb-4 [&_.settings-modal-header]:flex [&_.settings-modal-header]:items-start [&_.settings-modal-header]:justify-between [&_.settings-modal-header]:gap-3 [&_.settings-modal-header]:border-b [&_.settings-modal-header]:border-stone-100 [&_.settings-modal-header]:pb-3
@@ -115,7 +115,7 @@ export function createSettingsPage(ctx) {
     [&_.supplier-form-grid]:grid [&_.supplier-form-grid]:grid-cols-1 [&_.supplier-form-grid]:gap-3 md:[&_.supplier-form-grid]:grid-cols-2
     md:[&_.supplier-form-grid.three]:grid-cols-3 lg:[&_.supplier-form-grid.contact]:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px]
     [&_.supplier-company-form_.field]:min-w-0 [&_.supplier-company-form_input]:min-w-0 [&_.supplier-company-form_select]:min-w-0 [&_.supplier-company-form_textarea]:min-w-0
-    [&_.supplier-form-footer]:sticky [&_.supplier-form-footer]:bottom-0 [&_.supplier-form-footer]:z-10 [&_.supplier-form-footer]:-mx-4 [&_.supplier-form-footer]:-mb-4 [&_.supplier-form-footer]:flex [&_.supplier-form-footer]:flex-col-reverse [&_.supplier-form-footer]:gap-2 [&_.supplier-form-footer]:border-t [&_.supplier-form-footer]:border-stone-200/80 [&_.supplier-form-footer]:bg-white/95 [&_.supplier-form-footer]:p-4 [&_.supplier-form-footer]:backdrop-blur sm:[&_.supplier-form-footer]:-mx-5 sm:[&_.supplier-form-footer]:-mb-5 sm:[&_.supplier-form-footer]:flex-row sm:[&_.supplier-form-footer]:justify-end sm:[&_.supplier-form-footer]:p-5
+    [&_.supplier-form-footer]:flex [&_.supplier-form-footer]:flex-nowrap [&_.supplier-form-footer]:gap-2 [&_.supplier-form-footer]:border-t [&_.supplier-form-footer]:border-stone-200/80 [&_.supplier-form-footer]:bg-white [&_.supplier-form-footer]:pt-4 sm:[&_.supplier-form-footer]:justify-end sm:[&_.supplier-form-footer]:pt-5 [&_.supplier-form-footer_.btn.outline]:flex-[0.85_1_0] [&_.supplier-form-footer_.btn.primary]:flex-[1.15_1_0] sm:[&_.supplier-form-footer_.btn]:flex-none
     [&_.settings-error-card]:rounded-xl [&_.settings-error-card]:border [&_.settings-error-card]:border-red-200 [&_.settings-error-card]:bg-red-50 [&_.settings-error-card]:px-4 [&_.settings-error-card]:py-3 [&_.settings-error-card]:text-sm [&_.settings-error-card]:font-bold [&_.settings-error-card]:text-red-700
     [&_.supplier-grid]:grid [&_.supplier-grid]:grid-cols-1 [&_.supplier-grid]:gap-3 xl:[&_.supplier-grid]:grid-cols-2
     [&_.supplier-card]:grid [&_.supplier-card]:gap-3 [&_.supplier-card]:rounded-[22px] [&_.supplier-card]:border [&_.supplier-card]:border-stone-200/80 [&_.supplier-card]:bg-white [&_.supplier-card]:p-4 [&_.supplier-card]:shadow-[0_16px_34px_rgba(25,27,24,.07)]
@@ -300,7 +300,9 @@ export function createSettingsPage(ctx) {
 
   function renderAdminUsersPanel() {
     const state = getState();
-    const users = [...(state.users ?? [])].sort((a, b) => roleName(a.role).localeCompare(roleName(b.role)) || String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    const users = [...(state.users ?? [])]
+      .filter((user) => user.active !== false)
+      .sort((a, b) => roleName(a.role).localeCompare(roleName(b.role)) || String(a.name ?? "").localeCompare(String(b.name ?? "")));
     return `
       <section class="settings-panel settings-panel-wide">
         <div class="settings-panel-title">
@@ -309,8 +311,8 @@ export function createSettingsPage(ctx) {
         </div>
         <div class="settings-premium-toolbar">
           <div>
-            <span class="settings-count-pill">${users.length} acessos</span>
-            <p class="mt-2">Consulte status, perfil e vinculo sem abrir um formulario gigante.</p>
+            <span class="settings-count-pill">${users.length} acessos ativos</span>
+            <p class="mt-2">Usuarios excluidos ou desativados nao aparecem na operacao.</p>
           </div>
           <button class="btn primary" type="button" data-open-admin-user-modal="new">${icon("plus", 15)}Novo usuario</button>
         </div>
@@ -359,9 +361,10 @@ export function createSettingsPage(ctx) {
     const selectedTeamIds = new Set((state.workSections ?? []).filter((section) => section.leaderId === user?.id).map((section) => section.id));
     const selectedTeamNames = (state.workSections ?? []).filter((section) => selectedTeamIds.has(section.id)).map((section) => section.name);
     const teamSummary = selectedTeamNames.length ? selectedTeamNames.join(", ") : "Selecionar equipes";
+    const allTeamsSelected = (state.workSections ?? []).length > 0 && (state.workSections ?? []).every((section) => selectedTeamIds.has(section.id));
     const teamOptions = (state.workSections ?? []).map((section) => `
-      <label class="team-select-row">
-        <input type="checkbox" name="teamIds" value="${section.id}" ${selectedTeamIds.has(section.id) ? "checked" : ""} />
+      <label class="team-multi-row ${selectedTeamIds.has(section.id) ? "is-selected" : ""}">
+        <input type="checkbox" name="teamIds" value="${section.id}" data-team-option data-team-label="${escapeHtml(section.name)}" ${selectedTeamIds.has(section.id) ? "checked" : ""} />
         <span>${escapeHtml(section.name)} - ${Number(section.headcount ?? 0)} pessoas - ${areaTypeLabel(section.areaType)}</span>
       </label>`).join("");
     return `
@@ -375,7 +378,7 @@ export function createSettingsPage(ctx) {
             </div>
             <button class="settings-modal-close" type="button" data-close-admin-user-modal aria-label="Fechar">x</button>
           </header>
-          <form class="grid gap-3" data-form="admin-user">
+          <form class="settings-modal-form" data-form="admin-user">
             <input type="hidden" name="id" value="${user?.id ?? ""}" />
             ${error ? `<div class="settings-error-card">${escapeHtml(error)}</div>` : ""}
             <div class="form-grid">
@@ -387,7 +390,7 @@ export function createSettingsPage(ctx) {
               <div class="field"><label for="admin-user-role">Perfil</label>${roleField}</div>
             </div>
             <div class="field"><label for="admin-user-team">Identificacao interna</label><input id="admin-user-team" name="team" value="${escapeHtml(user?.team ?? "")}" placeholder="Ex.: Frente Norte, Administrativo" /></div>
-            <div class="field"><label>Equipes vinculadas <span class="optional-label">Opcional</span></label>${teamOptions ? `<details class="team-select-menu"><summary><span>${escapeHtml(teamSummary)}</span><span>${icon("arrow", 13)}</span></summary><div class="team-select-list">${teamOptions}</div></details>` : `<div class="empty">Cadastre um efetivo antes de vincular.</div>`}</div>
+            <div class="field"><label>Equipes vinculadas <span class="optional-label">Opcional</span></label>${teamOptions ? `<details class="team-multi-select" data-team-multi-select data-placeholder="Selecionar equipes"><summary><span class="min-w-0 truncate" data-team-summary>${escapeHtml(teamSummary)}</span><span class="shrink-0" aria-hidden="true">${icon("arrow", 13)}</span></summary><div class="team-multi-list"><label class="team-multi-row is-strong ${allTeamsSelected ? "is-selected" : ""}"><input type="checkbox" data-team-select-all ${allTeamsSelected ? "checked" : ""} /><span>Selecionar todos</span></label>${teamOptions}</div></details>` : `<div class="empty">Cadastre um efetivo antes de vincular.</div>`}</div>
             <div class="form-grid">
               <div class="field"><label for="admin-user-active">Status</label><select id="admin-user-active" name="active"><option value="true" ${user?.active === false ? "" : "selected"}>Ativo</option><option value="false" ${user?.active === false ? "selected" : ""}>Inativo</option></select></div>
             </div>
@@ -457,6 +460,36 @@ export function createSettingsPage(ctx) {
     const isEditing = Boolean(supplier.id);
     const hasLinkedLogin = isEditing && (state.supplierCompanyUsers ?? []).some((link) => link.supplierCompanyId === supplier.id && link.active !== false);
     const shouldShowLoginFields = !isEditing || !hasLinkedLogin;
+    const selectedState = String(supplier.state ?? "").trim().toUpperCase();
+    const brazilStateOptions = [
+      ["AC", "Acre"],
+      ["AL", "Alagoas"],
+      ["AP", "Amapa"],
+      ["AM", "Amazonas"],
+      ["BA", "Bahia"],
+      ["CE", "Ceara"],
+      ["DF", "Distrito Federal"],
+      ["ES", "Espirito Santo"],
+      ["GO", "Goias"],
+      ["MA", "Maranhao"],
+      ["MT", "Mato Grosso"],
+      ["MS", "Mato Grosso do Sul"],
+      ["MG", "Minas Gerais"],
+      ["PA", "Para"],
+      ["PB", "Paraiba"],
+      ["PR", "Parana"],
+      ["PE", "Pernambuco"],
+      ["PI", "Piaui"],
+      ["RJ", "Rio de Janeiro"],
+      ["RN", "Rio Grande do Norte"],
+      ["RS", "Rio Grande do Sul"],
+      ["RO", "Rondonia"],
+      ["RR", "Roraima"],
+      ["SC", "Santa Catarina"],
+      ["SP", "Sao Paulo"],
+      ["SE", "Sergipe"],
+      ["TO", "Tocantins"]
+    ].map(([uf, label]) => `<option value="${uf}" ${selectedState === uf ? "selected" : ""}>${uf} - ${label}</option>`).join("");
     return `
       <form class="supplier-company-form" data-form="supplier-company">
         <input type="hidden" name="id" value="${supplier.id ?? ""}" />
@@ -471,10 +504,8 @@ export function createSettingsPage(ctx) {
               <div class="field"><label>Razao social</label><input name="legalName" value="${escapeHtml(supplier.legalName ?? "")}" placeholder="Ex.: Almeida Refeicoes Ltda" required /></div>
               <div class="field"><label>Nome fantasia</label><input name="tradeName" value="${escapeHtml(supplier.tradeName ?? "")}" placeholder="Ex.: Cozinha Almeida" /></div>
             </div>
-            <div class="supplier-form-grid three">
+            <div class="supplier-form-grid">
               <div class="field"><label>CNPJ</label><input name="cnpj" value="${escapeHtml(supplier.cnpj ?? "")}" placeholder="00.000.000/0001-00" /></div>
-              <div class="field"><label>Inscricao estadual</label><input name="stateRegistration" value="${escapeHtml(supplier.stateRegistration ?? "")}" /></div>
-              <div class="field"><label>Inscricao municipal</label><input name="municipalRegistration" value="${escapeHtml(supplier.municipalRegistration ?? "")}" /></div>
             </div>
           </div>
         </section>
@@ -494,7 +525,7 @@ export function createSettingsPage(ctx) {
             <div class="field"><label>Endereco completo</label><input name="addressLine" value="${escapeHtml(supplier.addressLine ?? "")}" placeholder="Rua, numero, bairro" /></div>
             <div class="supplier-form-grid three">
               <div class="field"><label>Cidade</label><input name="city" value="${escapeHtml(supplier.city ?? "")}" /></div>
-              <div class="field"><label>Estado</label><input name="state" maxlength="2" value="${escapeHtml(supplier.state ?? "")}" placeholder="UF" /></div>
+              <div class="field"><label>Estado</label><select name="state"><option value="">Selecione</option>${brazilStateOptions}</select></div>
               <div class="field"><label>CEP</label><input name="zipCode" value="${escapeHtml(supplier.zipCode ?? "")}" /></div>
             </div>
           </div>
@@ -559,12 +590,12 @@ export function createSettingsPage(ctx) {
                 <span class="meal-status-chip ${supplier.active ? "active" : "inactive"}">${supplier.active ? "Ativo" : "Inativo"}</span>
               </div>
               <div class="meal-link-grid">
-              ${meals.map((meal) => {
+              ${meals.filter((meal) => state.supplierMealTypes?.some((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id && item.active === true)).map((meal) => {
                 const link = state.supplierMealTypes?.find((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id);
                 const active = supplier.active !== false && link?.active === true;
                 const disabled = supplier.active === false ? "disabled" : "";
                 const price = link?.unitPrice ?? meal.unitPrice;
-                return `<form class="meal-link-card ${active ? "is-active" : "is-inactive"}" draggable="true" data-drag-meal="${meal.id}" data-form="supplier-meal-link" data-drop-supplier="${supplier.id}" data-drop-meal="${meal.id}"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" /><input type="hidden" name="active" value="${active ? "true" : "false"}" /><div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(price)}</small></div><button class="meal-link-toggle ${active ? "is-active" : ""}" type="button" data-meal-link-toggle value="${active ? "false" : "true"}" aria-pressed="${active}" ${disabled}><span></span><strong>${active ? "Ativo" : "Inativo"}</strong></button></div></form>`;
+                return `<form class="meal-link-card ${active ? "is-active" : "is-inactive"}" draggable="true" data-drag-meal="${meal.id}" data-form="supplier-meal-link"><input type="hidden" name="supplierCompanyId" value="${supplier.id}" /><input type="hidden" name="mealTypeId" value="${meal.id}" /><input type="hidden" name="active" value="${active ? "true" : "false"}" /><div class="meal-link-card-head"><div><strong>${escapeHtml(meal.label)}</strong><small>${mealCategoryLabel(meal.category)} - ${money(price)}</small></div><button class="meal-link-toggle ${active ? "is-active" : ""}" type="button" data-meal-link-toggle value="${active ? "false" : "true"}" aria-pressed="${active}" ${disabled}><span></span><strong>${active ? "Ativo" : "Inativo"}</strong></button></div></form>`;
               }).join("") || `<div class="empty">Nenhuma refeicao vinculada a este fornecedor.</div>`}
               </div>
             </article>`).join("")}
@@ -672,7 +703,7 @@ export function createSettingsPage(ctx) {
   function renderWorkSectionForm(section, leaders) {
     const id = section?.id ?? "new";
     return `
-      <form class="meal-catalog-new-form" data-form="work-section">
+      <form class="meal-catalog-new-form settings-modal-form" data-form="work-section">
         <input type="hidden" name="id" value="${section?.id ?? ""}" />
         <div class="form-grid">
           <div class="field"><label for="work-section-name-${id}">Equipe/trecho</label><input id="work-section-name-${id}" name="name" value="${escapeHtml(section?.name ?? "")}" placeholder="Ex.: Frente Norte" required /></div>
@@ -741,15 +772,22 @@ export function createSettingsPage(ctx) {
   function renderMealCatalogForm(meal = null) {
     const state = getState();
     const id = meal?.id ?? "new";
-    const supplierOptions = (state.supplierCompanies ?? [])
-      .filter((supplier) => supplier.active !== false)
-      .map((supplier) => {
-        const linked = meal?.id && state.supplierMealTypes?.some((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id && item.active === true);
-        return `<label class="team-checkbox"><input type="checkbox" name="supplierCompanyIds" value="${supplier.id}" ${linked ? "checked" : ""} /><span><strong>${escapeHtml(supplier.tradeName || supplier.legalName)}</strong><small>${escapeHtml(supplier.city || supplier.email || "Fornecedor ativo")}</small></span></label>`;
-      })
-      .join("");
+    const activeSuppliers = (state.supplierCompanies ?? []).filter((supplier) => supplier.active !== false);
+    const selectedSupplierIds = new Set(activeSuppliers
+      .filter((supplier) => meal?.id && state.supplierMealTypes?.some((item) => item.supplierCompanyId === supplier.id && item.mealTypeId === meal.id && item.active === true))
+      .map((supplier) => supplier.id));
+    const selectedSupplierNames = activeSuppliers
+      .filter((supplier) => selectedSupplierIds.has(supplier.id))
+      .map((supplier) => supplier.tradeName || supplier.legalName || supplier.email);
+    const supplierSummary = selectedSupplierNames.length ? selectedSupplierNames.join(", ") : "Selecionar fornecedores";
+    const allSuppliersSelected = activeSuppliers.length > 0 && activeSuppliers.every((supplier) => selectedSupplierIds.has(supplier.id));
+    const supplierOptions = activeSuppliers.map((supplier) => {
+      const title = supplier.tradeName || supplier.legalName || supplier.email || "Fornecedor";
+      const meta = supplier.city || supplier.email || "Fornecedor ativo";
+      return `<label class="team-multi-row ${selectedSupplierIds.has(supplier.id) ? "is-selected" : ""}"><input type="checkbox" name="supplierCompanyIds" value="${supplier.id}" data-multi-option data-multi-label="${escapeHtml(title)}" ${selectedSupplierIds.has(supplier.id) ? "checked" : ""} /><span>${escapeHtml(title)} - ${escapeHtml(meta)}</span></label>`;
+    }).join("");
     return `
-      <form class="meal-catalog-new-form" data-form="meal-catalog">
+      <form class="meal-catalog-new-form settings-modal-form" data-form="meal-catalog">
         <input type="hidden" name="id" value="${meal?.id ?? ""}" />
         <div class="form-grid">
           <div class="field">
@@ -783,7 +821,7 @@ export function createSettingsPage(ctx) {
           <label for="meal-description-${id}">O que vem nessa marmita</label>
           <textarea id="meal-description-${id}" name="description" placeholder="Ex.: arroz, feijao, frango grelhado, salada e farofa">${escapeHtml(meal?.description ?? "")}</textarea>
         </div>
-        <div class="field"><label>Fornecedores desta refeicao <span class="optional-label">Opcional</span></label><div class="team-checkbox-grid">${supplierOptions || `<div class="empty">Cadastre um fornecedor antes de vincular.</div>`}</div></div>
+        <div class="field"><label>Fornecedores desta refeicao <span class="optional-label">Opcional</span></label>${supplierOptions ? `<details class="team-multi-select" data-multi-select data-placeholder="Selecionar fornecedores"><summary><span class="min-w-0 truncate" data-multi-summary>${escapeHtml(supplierSummary)}</span><span class="shrink-0" aria-hidden="true">${icon("arrow", 13)}</span></summary><div class="team-multi-list"><label class="team-multi-row is-strong ${allSuppliersSelected ? "is-selected" : ""}"><input type="checkbox" data-multi-select-all ${allSuppliersSelected ? "checked" : ""} /><span>Selecionar todos</span></label>${supplierOptions}</div></details>` : `<div class="empty">Cadastre um fornecedor antes de vincular.</div>`}</div>
         <footer class="settings-actions">
           <button class="btn outline" type="button" data-close-meal-modal>Cancelar</button>
           <button class="btn primary" type="submit">${meal?.id ? "Salvar" : `${icon("plus", 15)}Cadastrar`}</button>
@@ -835,7 +873,7 @@ export function createSettingsPage(ctx) {
     const subtitle = meal ? "Atualize tipo, preco, categoria e composicao." : "Cadastre tipo, preco, categoria e composicao.";
     return `
       <div class="settings-modal-backdrop" data-close-meal-modal>
-        <section class="settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title" onclick="event.stopPropagation()">
+        <section class="settings-modal-panel meal-modal-panel" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title" onclick="event.stopPropagation()">
           <header class="settings-modal-header">
             <div>
               <span class="compact-kicker">Refeicao</span>

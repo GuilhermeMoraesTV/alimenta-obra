@@ -686,14 +686,9 @@ export function Relatorios(props) {
           </ChartCard>
         </div>
 
-        <div className="report-chart-grid">
-          <ChartCard kicker="Areas e trechos" title="Top equipes por consumo" subtitle="Frentes com maior volume operacional no periodo." chip="ranking">
-            <HorizontalBars items={analytics.sections} valueKey="consumed" />
-          </ChartCard>
-          <ChartCard kicker="Financeiro" title="Custo por refeicao" subtitle="Estimativa baseada no preco unitario cadastrado." chip={formatMoney(analytics.value)}>
-            <HorizontalBars items={analytics.meals} valueKey="value" format={formatMoney} />
-          </ChartCard>
-        </div>
+        <ChartCard kicker="Areas e trechos" title="Top equipes por consumo" subtitle="Frentes com maior volume operacional no periodo." chip="ranking">
+          <HorizontalBars items={analytics.sections} valueKey="consumed" />
+        </ChartCard>
 
         <div className="report-chart-grid wide">
           <ChartCard kicker="Capacidade" title="Ocupacao diaria" subtitle="Consumo real comparado ao efetivo das equipes/trechos." chip={occupancy}>
