@@ -261,3 +261,16 @@ export function requestUnitPrice(state, request) {
   const link = supplierId ? getSupplierMealLink(state, supplierId, request.mealTypeId) : null;
   return Number(link?.unitPrice ?? request.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }
+
+export function requestActualQuantity(state, request) {
+  const actual = state.consolidationActuals?.find((item) =>
+    item.date === request.date
+    && item.teamId === request.teamId
+    && item.mealTypeId === request.mealTypeId
+  );
+  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+}
+
+export function requestFinancialValue(state, request) {
+  return requestActualQuantity(state, request) * requestUnitPrice(state, request);
+}

@@ -1,5 +1,6 @@
 import React from "react";
 import { AdminBackButton, AdminFilterMenu, AdminReceiptHeader, Icon, statusLabel } from "./shared.jsx";
+import { requestActualQuantity, requestFinancialValue as resolveRequestFinancialValue } from "../../services/store-v2.js";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -181,19 +182,6 @@ function clampPercent(value, max = 100) {
   return Math.min(max, Math.max(0, value));
 }
 
-function actualQuantity(state, request) {
-  const actual = state.consolidationActuals?.find((item) =>
-    item.date === request.date
-    && item.teamId === request.teamId
-    && item.mealTypeId === request.mealTypeId
-  );
-  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
-}
-
-function requestUnitPrice(state, request) {
-  return Number(state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? request.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
-}
-
 function FinanceChartCard({ children, className = "", kicker, title, subtitle, chip }) {
   return (
     <article className={`report-chart-card ${className}`.trim()}>
@@ -242,11 +230,12 @@ export function Financeiro(props) {
   const isAllPeriod = currentFilter.range === "all";
   const isCustomPeriod = currentFilter.range === "custom";
   const delivered = rows.filter((request) => request.status === "entregue");
-  const requestFinancialValue = (request) => actualQuantity(state, request) * requestUnitPrice(state, request);
+  const actualQuantity = (request) => requestActualQuantity(state, request);
+  const requestFinancialValue = (request) => resolveRequestFinancialValue(state, request);
   const projected = rows.reduce((sum, request) => sum + requestFinancialValue(request), 0);
   const deliveredValue = delivered.reduce((sum, request) => sum + requestFinancialValue(request), 0);
   const pendingValue = projected - deliveredValue;
-  const mealCount = rows.reduce((sum, request) => sum + actualQuantity(state, request), 0);
+  const mealCount = rows.reduce((sum, request) => sum + actualQuantity(request), 0);
   const byMeal = Object.values(rows.reduce((acc, request) => {
     const label = request.mealType || "Sem tipo";
     acc[label] ??= { label, value: 0 };
@@ -343,7 +332,7 @@ export function Financeiro(props) {
                   <span className={`badge ${request.status}`}>{statusLabel(STATUS_LABEL, request.status)}</span>
                 </div>
                 <div className="finance-mobile-row-meta">
-                  <span>Consumido<strong>{actualQuantity(state, request)}</strong></span>
+                  <span>Consumido<strong>{actualQuantity(request)}</strong></span>
                   <span>Valor<strong>{money(requestFinancialValue(request))}</strong></span>
                 </div>
               </article>
@@ -371,7 +360,7 @@ export function Financeiro(props) {
                       {request.mealType}
                     </td>
                     <td className="px-5 py-3.5 text-center font-bold text-stone-600">
-                      {actualQuantity(state, request)}
+                      {actualQuantity(request)}
                     </td>
                     <td className="px-5 py-3.5 font-black text-stone-900 transition-colors group-hover/row:text-blue-700">
                       {money(requestFinancialValue(request))}

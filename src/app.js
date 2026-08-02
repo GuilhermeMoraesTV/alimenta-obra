@@ -23,6 +23,8 @@ import {
   getUserName,
   loadUiState,
   mealCategoryLabel,
+  requestActualQuantity as resolveRequestActualQuantity,
+  requestFinancialValue as resolveRequestFinancialValue,
   requestOriginLabel,
   requestsForDate,
   saveUiState
@@ -350,6 +352,7 @@ function render() {
     reportFilter,
     reportPeriodLabel: getReportPeriodLabel(),
     reportRows: getReportRows(),
+    reportRowsWithCancelled: getReportRows({ includeCancelled: true }),
     state,
     sumQty,
     totalsByMeal,
@@ -671,16 +674,11 @@ function renderOperationModal() {
 }
 
 function requestActualQuantity(request) {
-  const actual = state.consolidationActuals?.find((item) =>
-    item.date === request.date
-    && item.teamId === request.teamId
-    && item.mealTypeId === request.mealTypeId
-  );
-  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+  return resolveRequestActualQuantity(state, request);
 }
 
 function financialRequestValue(request) {
-  return requestActualQuantity(request) * requestUnitPrice(request);
+  return resolveRequestFinancialValue(state, request);
 }
 
 function renderFinanceiro(mode) {
@@ -869,8 +867,14 @@ function normalizeFinanceFilter(nextFilter = financeFilter) {
 
 function getReportRows({ includeCancelled = false } = {}) {
   const filter = normalizeReportFilter(reportFilter);
+  const cancelledConfirmedRequestIds = new Set(state.consolidations
+    .filter((consolidation) => consolidation.status === "cancelado_confirmado")
+    .flatMap((consolidation) => consolidation.requestIds ?? []));
   return state.requests
-    .filter((request) => includeCancelled || request.status !== "cancelado")
+    .map((request) => cancelledConfirmedRequestIds.has(request.id)
+      ? { ...request, status: "cancelado_confirmado", actualQuantity: 0 }
+      : request)
+    .filter((request) => includeCancelled || !["cancelado", "cancelado_confirmado"].includes(request.status))
     .filter((request) => filter.range === "all" || (request.date >= filter.start && request.date <= filter.end))
     .filter((request) => !filter.supplierCompanyId || request.supplierCompanyId === filter.supplierCompanyId)
     .filter((request) => !filter.mealTypeId || request.mealTypeId === filter.mealTypeId)
@@ -1335,6 +1339,7 @@ function renderSupplierDocuments() {
 function renderRelatorios() {
   const filter = normalizeReportFilter(reportFilter);
   const rows = getReportRows();
+  const rowsWithCancelled = getReportRows({ includeCancelled: true });
   const total = sumQty(rows);
   const byLeader = Object.entries(rows.reduce((acc, request) => {
     const leader = getUserName(state, request.leaderId);
@@ -1343,7 +1348,7 @@ function renderRelatorios() {
     return acc;
   }, {})).sort((a, b) => b[1] - a[1]);
   const byMeal = Object.entries(totalsByMeal(rows)).sort((a, b) => b[1] - a[1]);
-  const byStatus = Object.entries(rows.reduce((acc, request) => {
+  const byStatus = Object.entries(rowsWithCancelled.reduce((acc, request) => {
     const label = STATUS_LABEL[request.status] ?? request.status;
     acc[label] ??= 0;
     acc[label] += 1;
@@ -1391,7 +1396,7 @@ function renderRelatorios() {
       </div>
       <div class="insight-panel">
         <h2 class="section-title">Status dos pedidos</h2>
-        ${byStatus.map(([status, qty]) => `<div class="finance-progress"><div><span>${status}</span><strong>${qty}</strong></div><i><b style="width:${Math.max(3, Math.round((qty / rows.length) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem dados no periodo.</div>`}
+        ${byStatus.map(([status, qty]) => `<div class="finance-progress"><div><span>${status}</span><strong>${qty}</strong></div><i><b style="width:${Math.max(3, Math.round((qty / rowsWithCancelled.length) * 100))}%"></b></i></div>`).join("") || `<div class="empty">Sem dados no periodo.</div>`}
       </div>
       <div class="insight-panel">
         <h2 class="section-title">Ranking por encarregado</h2>

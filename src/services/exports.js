@@ -1,4 +1,4 @@
-import { getConsolidationSummary, getSupplierCompanies, getSupplierCompanyName, getSuppliers, getUserName, requestOriginLabel, requestUnitPrice as resolveRequestUnitPrice } from "./store-v2.js";
+import { getConsolidationSummary, getSupplierCompanies, getSupplierCompanyName, getSuppliers, getUserName, requestActualQuantity as resolveRequestActualQuantity, requestFinancialValue as resolveRequestFinancialValue, requestOriginLabel, requestUnitPrice as resolveRequestUnitPrice } from "./store-v2.js";
 import { STATUS_LABEL } from "../core/navigation.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -44,7 +44,8 @@ const mealDescription = (state, mealTypeId) => state.mealCatalog?.find((meal) =>
 const sectionHeadcount = (state, sectionId) => Number(state.workSections?.find((section) => section.id === sectionId)?.headcount ?? 0);
 const requestHeadcount = (state, request) => Number(request.sectionHeadcount ?? request.headcount ?? sectionHeadcount(state, request.teamId));
 const requestUnitPrice = (state, request) => resolveRequestUnitPrice(state, request);
-const actualQuantity = (state, request) => Number(state.consolidationActuals?.find((item) => item.date === request.date && item.teamId === request.teamId && item.mealTypeId === request.mealTypeId)?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+const actualQuantity = (state, request) => resolveRequestActualQuantity(state, request);
+const requestFinancialValue = (state, request) => resolveRequestFinancialValue(state, request);
 const formatDateTime = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "-";
 const formatDate = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(`${value}T12:00:00`)) : "-";
 const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0));
@@ -1211,8 +1212,8 @@ function renderFinancialPdfHtml(state, rows, title) {
 
 function renderExecutiveFinancialPdfHtml(state, rows, title) {
   const sortedRows = [...rows].filter((request) => !CANCELLED_STATUSES.has(request.status)).sort((a, b) => b.date.localeCompare(a.date));
-  const total = sortedRows.reduce((sum, request) => sum + actualQuantity(state, request) * requestUnitPrice(state, request), 0);
-  const delivered = sortedRows.filter((request) => request.status === "entregue").reduce((sum, request) => sum + actualQuantity(state, request) * requestUnitPrice(state, request), 0);
+  const total = sortedRows.reduce((sum, request) => sum + requestFinancialValue(state, request), 0);
+  const delivered = sortedRows.filter((request) => request.status === "entregue").reduce((sum, request) => sum + requestFinancialValue(state, request), 0);
   const open = total - delivered;
   const requested = sortedRows.reduce((sum, request) => sum + Number(request.quantity ?? 0), 0);
   const consumed = sortedRows.reduce((sum, request) => sum + actualQuantity(state, request), 0);
@@ -1220,19 +1221,19 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
   const byMeal = Object.entries(sortedRows.reduce((acc, request) => {
     const key = request.mealType || "Refeicao";
     acc[key] ??= { label: key, value: 0 };
-    acc[key].value += actualQuantity(state, request) * requestUnitPrice(state, request);
+    acc[key].value += requestFinancialValue(state, request);
     return acc;
   }, {})).map(([, item]) => item).sort((a, b) => b.value - a.value);
   const byDay = Object.entries(sortedRows.reduce((acc, request) => {
     const key = request.date;
     acc[key] ??= { label: formatDate(key), value: 0 };
-    acc[key].value += actualQuantity(state, request) * requestUnitPrice(state, request);
+    acc[key].value += requestFinancialValue(state, request);
     return acc;
   }, {})).map(([, item]) => item).sort((a, b) => a.label.localeCompare(b.label));
   const bySection = Object.entries(sortedRows.reduce((acc, request) => {
     const key = request.sectionName || request.location || "Sem equipe";
     acc[key] ??= { label: key, value: 0 };
-    acc[key].value += actualQuantity(state, request) * requestUnitPrice(state, request);
+    acc[key].value += requestFinancialValue(state, request);
     return acc;
   }, {})).map(([, item]) => item).sort((a, b) => b.value - a.value);
   const statusItems = [
@@ -1244,7 +1245,7 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
     { label: "Valor concluido", value: delivered, note: `${percent(delivered, total)}% do total` },
     { label: "Saldo em aberto", value: open, note: `${percent(open, total)}% do total` }
   ].map((item) => `<div class="financial-status-item"><span>${escapeHtml(item.label)}</span><strong>${money(item.value)}</strong><small>${escapeHtml(item.note)}</small></div>`).join("");
-  const table = sortedRows.map((request) => `<tr><td>${formatDate(request.date)}</td><td>${escapeHtml(request.mealType)}</td><td>${escapeHtml(request.sectionName || request.location)}</td><td class="number">${Number(request.quantity ?? 0)}</td><td class="number">${actualQuantity(state, request)}</td><td class="number">${money(requestUnitPrice(state, request))}</td><td class="number">${money(actualQuantity(state, request) * requestUnitPrice(state, request))}</td><td>${escapeHtml(request.status)}</td></tr>`).join("");
+  const table = sortedRows.map((request) => `<tr><td>${formatDate(request.date)}</td><td>${escapeHtml(request.mealType)}</td><td>${escapeHtml(request.sectionName || request.location)}</td><td class="number">${Number(request.quantity ?? 0)}</td><td class="number">${actualQuantity(state, request)}</td><td class="number">${money(requestUnitPrice(state, request))}</td><td class="number">${money(requestFinancialValue(state, request))}</td><td>${escapeHtml(request.status)}</td></tr>`).join("");
   const subtitle = "Relatorio financeiro executivo com custo total, valores concluidos, saldo em aberto e composicao por tipo, dia e frente.";
   const firstPageHeader = renderDocumentHeader({ title, subtitle });
   const pageHeader = renderDocumentHeader({ title, subtitle: "" });

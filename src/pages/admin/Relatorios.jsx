@@ -1,5 +1,6 @@
 import React from "react";
 import { AdminBackButton, AdminFilterMenu, AdminReceiptHeader, Icon } from "./shared.jsx";
+import { requestActualQuantity, requestFinancialValue } from "../../services/store-v2.js";
 
 const baseAdminScreenStyles = `
   .admin-page {
@@ -229,20 +230,11 @@ function compactDate(value) {
 }
 
 function actualQuantity(state, request) {
-  const actual = state.consolidationActuals?.find((item) =>
-    item.date === request.date
-    && item.teamId === request.teamId
-    && item.mealTypeId === request.mealTypeId
-  );
-  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+  return requestActualQuantity(state, request);
 }
 
 function requestHeadcount(state, request) {
   return Number(request.sectionHeadcount ?? request.headcount ?? state.workSections?.find((section) => section.id === request.teamId)?.headcount ?? 0);
-}
-
-function requestUnitPrice(state, request) {
-  return Number(state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? request.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }
 
 function summarizeRows(state, rows, statusLabels = {}) {
@@ -250,8 +242,7 @@ function summarizeRows(state, rows, statusLabels = {}) {
     const requested = Number(request.quantity ?? 0);
     const consumed = actualQuantity(state, request);
     const effective = requestHeadcount(state, request);
-    const unitPrice = requestUnitPrice(state, request);
-    const value = consumed * unitPrice;
+    const value = requestFinancialValue(state, request);
     const meal = request.mealType || "Sem tipo";
     const section = request.sectionName || request.location || "Sem equipe";
     const status = statusLabels[request.status] ?? request.status ?? "Sem status";
@@ -518,9 +509,11 @@ function DailyReportCard({ icon, report, reportDate }) {
 }
 
 export function Relatorios(props) {
-  const { icon, reportFilter, reportPeriodLabel, reportRows, state, sumQty, totalsByMeal } = props;
+  const { icon, reportFilter, reportPeriodLabel, reportRows, reportRowsWithCancelled, state, sumQty, totalsByMeal } = props;
   const rows = reportRows ?? state.requests.filter((request) => request.status !== "cancelado");
+  const rowsWithCancelled = reportRowsWithCancelled ?? rows;
   const analytics = summarizeRows(state, rows, props.STATUS_LABEL ?? {});
+  const statusAnalytics = summarizeRows(state, rowsWithCancelled, props.STATUS_LABEL ?? {});
   const yesterday = previousDateKey();
   const yesterdayReport = state.dailyReports?.find((report) => report.date === yesterday);
   const currentFilter = reportFilter ?? { range: "all", start: state.settings.defaultMealDate, end: state.settings.defaultMealDate };
@@ -529,15 +522,9 @@ export function Relatorios(props) {
   const isAllPeriod = currentFilter.range === "all";
   const isCustomPeriod = currentFilter.range === "custom";
   const adherence = analytics.requested ? `${Math.round((analytics.consumed / analytics.requested) * 100)}%` : "-";
-  const occupancy = analytics.effective ? `${Math.round((analytics.consumed / analytics.effective) * 100)}%` : "-";
+  const serviceRate = analytics.effective ? `${Math.round((analytics.consumed / analytics.effective) * 100)}%` : "-";
   const averageTicket = analytics.consumed ? formatMoney(analytics.value / analytics.consumed) : formatMoney(0);
-  const cancelledConfirmedCount = (state.consolidations ?? []).filter((consolidation) => {
-    if (consolidation.status !== "cancelado_confirmado") return false;
-    if (!currentFilter.start && !currentFilter.end) return true;
-    const start = currentFilter.start || currentFilter.end;
-    const end = currentFilter.end || currentFilter.start;
-    return consolidation.date >= start && consolidation.date <= end;
-  }).length;
+  const cancelledConfirmedCount = rowsWithCancelled.filter((request) => request.status === "cancelado_confirmado").length;
 
   return (
     <>
@@ -664,7 +651,7 @@ export function Relatorios(props) {
       <section className="report-analytics mt-3">
         <div className="report-insights">
           <article className="report-insight"><span>Consumido real</span><strong>{formatNumber(analytics.consumed)}</strong><p>{adherence} do solicitado no filtro.</p></article>
-          <article className="report-insight"><span>Ocupacao</span><strong>{occupancy}</strong><p>Consumo comparado ao efetivo informado.</p></article>
+          <article className="report-insight"><span>Diferenca</span><strong>{formatNumber(analytics.consumed - analytics.requested)}</strong><p>refeicoes entre consumo real e solicitado.</p></article>
           <article className="report-insight"><span>Custo estimado</span><strong>{formatMoney(analytics.value)}</strong><p>{averageTicket} por refeicao consumida.</p></article>
         </div>
 
@@ -678,24 +665,20 @@ export function Relatorios(props) {
         </div>
 
         <div className="report-chart-grid">
-          <ChartCard kicker="Status" title="Situacao dos pedidos" subtitle="Visao resumida do funil operacional, sem repetir a lista de pedidos." chip={`${rows.length} pedidos`}>
-            <DonutChart items={analytics.statuses} center={String(rows.length)} />
+          <ChartCard kicker="Status" title="Situacao dos pedidos" subtitle="Visao resumida do funil operacional, incluindo cancelamentos confirmados." chip={`${rowsWithCancelled.length} pedidos`}>
+            <DonutChart items={statusAnalytics.statuses} center={String(rowsWithCancelled.length)} />
           </ChartCard>
           <ChartCard kicker="Evolucao" title="Consumo diario" subtitle="Ultimos dias do periodo filtrado para identificar picos e quedas." chip={`${analytics.days.length} dias`}>
             <ColumnChart items={analytics.days} />
           </ChartCard>
         </div>
 
-        <ChartCard kicker="Areas e trechos" title="Top equipes por consumo" subtitle="Frentes com maior volume operacional no periodo." chip="ranking">
-          <HorizontalBars items={analytics.sections} valueKey="consumed" />
-        </ChartCard>
-
         <div className="report-chart-grid wide">
-          <ChartCard kicker="Capacidade" title="Ocupacao diaria" subtitle="Consumo real comparado ao efetivo das equipes/trechos." chip={occupancy}>
-            <ColumnChart items={analytics.days.map((day) => ({ ...day, occupancy: day.effective ? Math.round((day.consumed / day.effective) * 100) : 0 }))} valueKey="occupancy" format={(value) => `${value}%`} />
+          <ChartCard kicker="Areas e trechos" title="Top equipes por consumo" subtitle="Frentes com maior volume operacional no periodo." chip="ranking">
+            <HorizontalBars items={analytics.sections} valueKey="consumed" />
           </ChartCard>
-          <ChartCard kicker="Mapa de calor" title="Dia da semana x refeicao" subtitle="Concentracao de consumo por dia e tipo de alimentacao." chip="heatmap">
-            <HeatmapChart meals={analytics.meals} heatmap={analytics.heatmap} />
+          <ChartCard kicker="Efetivo" title="Atendimento diario" subtitle="Percentual do efetivo atendido por refeicoes consumidas." chip={serviceRate}>
+            <ColumnChart items={analytics.days.map((day) => ({ ...day, occupancy: day.effective ? Math.round((day.consumed / day.effective) * 100) : 0 }))} valueKey="occupancy" format={(value) => `${value}%`} />
           </ChartCard>
         </div>
       </section>
