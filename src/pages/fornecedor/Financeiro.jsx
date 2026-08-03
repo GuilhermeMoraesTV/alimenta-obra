@@ -1,6 +1,12 @@
 import React from "react";
 import { Icon, SupplierBackButton, SupplierReceiptHeader, statusLabel, supplierConsolidations } from "./shared.jsx";
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function Financeiro(props) {
   const { formatDate, icon, money, requestValue, state, sumQty, user, STATUS_LABEL } = props;
   const sourceRows = supplierConsolidations(state, user)
@@ -15,7 +21,7 @@ export function Financeiro(props) {
   const mealCount = sumQty(rows);
   const byMeal = state.mealTypes.map((meal) => ({ label: meal.label, value: rows.filter((request) => request.mealTypeId === meal.id).reduce((sum, request) => sum + requestValue(request), 0) })).filter((item) => item.value > 0);
   const max = Math.max(...byMeal.map((item) => item.value), 1);
-  const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(`${state.settings.defaultMealDate}T12:00:00`); date.setDate(date.getDate() - (6 - index)); const key = date.toISOString().slice(0, 10); return { key, label: String(date.getDate()).padStart(2, "0"), value: sourceRows.filter((request) => request.date === key).reduce((sum, request) => sum + requestValue(request), 0) }; });
+  const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(`${state.settings.defaultMealDate}T12:00:00`); date.setDate(date.getDate() - (6 - index)); const key = localDateKey(date); return { key, label: String(date.getDate()).padStart(2, "0"), value: sourceRows.filter((request) => request.date === key).reduce((sum, request) => sum + requestValue(request), 0) }; });
   const dailyMax = Math.max(...days.map((item) => item.value), 1);
   const sortedRows = [...rows].sort((a, b) => b.date.localeCompare(a.date));
 

@@ -1,18 +1,20 @@
 import React from "react";
-import { requestOriginLabel } from "../../services/store-v2.js";
+import { getRecordedActualQuantity, requestOriginLabel } from "../../services/store-v2.js";
 import { Icon, mealDistributionName, mealGroups, statusLabel } from "./shared.jsx";
 
 export const supplierDailyBlockStyles = `
-  .supplier-page .supplier-daily-block-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: start; gap: .75rem; }
-  .supplier-page .supplier-daily-block-card { display: grid; min-width: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .supplier-page .supplier-daily-block-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,22rem),1fr)); align-items: stretch; gap: .75rem; }
+  .supplier-page .supplier-daily-block-card { display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 34rem; max-height: 34rem; min-width: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
   .supplier-page .supplier-daily-block-card.is-extra { border-color: #fdba74; border-left-color: #ea580c; background: #fff7ed; }
+  .supplier-page .supplier-daily-block-card.is-cancelled { border-color: #fecaca; border-left-color: #ef4444; background: #fff7f7; }
   .supplier-page .supplier-daily-block-head { display: grid; gap: .55rem; border-bottom: 1px solid #f5f5f4; padding: .75rem; }
   .supplier-page .supplier-daily-block-head-main { display: grid; align-items: start; gap: .75rem; }
   .supplier-page .supplier-daily-block-head h2 { font-size: 1rem; line-height: 1; color: #1c1917; }
   .supplier-page .supplier-daily-block-head p { color: #78716c; font-size: .72rem; font-weight: 800; }
   .supplier-page .supplier-daily-extra-chip { display: inline-flex; width: fit-content; align-items: center; gap: .28rem; border-radius: 999px; border: 1px solid #fb923c; background: #ffedd5; padding: .28rem .5rem; color: #9a3412; font-size: 9px; font-weight: 950; text-transform: uppercase; }
-  .supplier-page .supplier-daily-block-body { display: grid; gap: .45rem; padding: .65rem .75rem; }
-  .supplier-page .supplier-daily-meal-block { display: grid; gap: .35rem; border-radius: .8rem; border: 1px solid #eee8df; background: #fff; padding: .58rem; }
+  .supplier-page .supplier-daily-block-body { display: grid; align-content: start; gap: .45rem; min-height: 0; overflow-y: auto; padding: .65rem .75rem; scrollbar-width: none; -ms-overflow-style: none; }
+  .supplier-page .supplier-daily-block-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .supplier-page .supplier-daily-meal-block { display: grid; align-self: start; gap: .35rem; border-radius: .8rem; border: 1px solid #eee8df; background: #fff; padding: .58rem; }
   .supplier-page .supplier-daily-meal-title { display: flex; align-items: center; justify-content: space-between; gap: .65rem; color: #1c1917; }
   .supplier-page .supplier-daily-meal-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .86rem; font-weight: 950; }
   .supplier-page .supplier-daily-meal-title span { border-radius: 999px; background: #fff7ed; padding: .18rem .5rem; color: #c2410c; font-size: .78rem; font-weight: 950; }
@@ -52,6 +54,7 @@ export function SupplierDailyBlockCard(props) {
   const { consolidation, formatDate, getConsolidationSummary, icon, nextSupplierStep, STATUS_LABEL } = props;
   const summary = getConsolidationSummary(props.state, consolidation);
   const next = nextSupplierStep(consolidation.status);
+  const isCancellationPending = consolidation.status === "cancelamento_pendente";
   const createdAt = new Date(consolidation.createdAt ?? consolidation.sentAt ?? 0).getTime();
   const isExtra = Number.isFinite(createdAt) && (props.state.consolidations ?? []).some((item) => {
     if (item.id === consolidation.id || item.date !== consolidation.date || item.supplierId !== consolidation.supplierId) return false;
@@ -60,16 +63,21 @@ export function SupplierDailyBlockCard(props) {
     return Number.isFinite(itemCreatedAt) && itemCreatedAt < createdAt;
   });
   const byMeal = mealGroups(summary.rows);
+  const recordedActualTotal = summary.rows.reduce((sum, request) => {
+    const actual = getRecordedActualQuantity(props.state, consolidation.id, request);
+    return sum + Number(actual ?? 0);
+  }, 0);
+  const canShowRecordedActuals = ["saiu_entrega", "entregue", "cancelado_confirmado"].includes(consolidation.status);
+  const hasRecordedActuals = canShowRecordedActuals
+    && summary.rows.some((request) => getRecordedActualQuantity(props.state, consolidation.id, request) !== null);
   const leadersCount = new Set(summary.rows.map((request) => request.leaderId || request.createdBy)).size;
   const sectionsCount = new Set(summary.rows.map((request) => request.teamId || request.sectionName || request.location)).size;
   const updatedRows = consolidation.sentAt
     ? summary.rows.filter((request) => request.updatedAt && new Date(request.updatedAt) > new Date(consolidation.sentAt))
     : [];
   const hasAdminUpdate = consolidation.status === "enviado" && (updatedRows.length > 0 || (consolidation.revisions?.length ?? 0) > 0);
-  const isConfirmedCancelled = consolidation.status === "cancelado_confirmado";
-
   return (
-    <article className={`supplier-daily-block-card${isExtra ? " is-extra" : ""}`}>
+    <article className={`supplier-daily-block-card${isExtra ? " is-extra" : ""}${isCancellationPending ? " is-cancelled" : ""}`}>
       <header className="supplier-daily-block-head">
         <div className="supplier-daily-block-head-main">
           <div>
@@ -85,15 +93,21 @@ export function SupplierDailyBlockCard(props) {
           <section className="supplier-daily-meal-block" key={data.key}>
             <div className="supplier-daily-meal-title"><strong>{data.label}</strong><span>{data.total}</span></div>
             {props.requestMealDescription?.(data.rows[0]) ? <div className="supplier-daily-meal-description">{props.requestMealDescription(data.rows[0])}</div> : null}
-            {data.rows.map((request) => (
-              <div className="supplier-daily-request-row" key={request.id}>
-                <div className="supplier-daily-request-title">
-                  <strong>{mealDistributionName(props.state, request)}</strong>
-                  <small>{requestOriginLabel(request)} - {request.sectionName || request.location}</small>
+            {data.rows.map((request) => {
+              const recordedActual = canShowRecordedActuals ? getRecordedActualQuantity(props.state, consolidation.id, request) : null;
+              return (
+                <div className="supplier-daily-request-row" key={request.id}>
+                  <div className="supplier-daily-request-title">
+                    <strong>{mealDistributionName(props.state, request)}</strong>
+                    <small>{requestOriginLabel(request)} - {request.sectionName || request.location}</small>
+                  </div>
+                  <div className="supplier-daily-request-qty">
+                    <strong>{request.quantity}</strong>
+                    {recordedActual !== null ? <small>{recordedActual} cons.</small> : null}
+                  </div>
                 </div>
-                <div className="supplier-daily-request-qty"><strong>{request.quantity}</strong></div>
-              </div>
-            ))}
+              );
+            })}
           </section>
         ))}
       </div>
@@ -104,6 +118,12 @@ export function SupplierDailyBlockCard(props) {
             <div><strong>Pedido atualizado pelo Admin</strong><span>Confira quantidades e itens antes de confirmar recebimento.</span></div>
           </div>
         ) : null}
+        {isCancellationPending ? (
+          <div className="supplier-daily-cancel-note">
+            <span>Pedido cancelado pelo Admin</span>
+            <strong>Confirmar ciencia</strong>
+          </div>
+        ) : null}
         <div className="supplier-daily-final-summary">
           {byMeal.map((data) => (
             <div className="supplier-daily-final-row" key={data.key}>
@@ -112,8 +132,8 @@ export function SupplierDailyBlockCard(props) {
             </div>
           ))}
         </div>
+        {hasRecordedActuals ? <div className="supplier-daily-total-line"><span>Consumo real</span><strong>{recordedActualTotal} refeicoes</strong></div> : null}
         <div className="supplier-daily-total-line"><span>{isExtra ? "Total do extra" : "Total do dia"}</span><strong>{summary.total} refeicoes</strong></div>
-        {isConfirmedCancelled ? <div className="supplier-daily-cancel-note"><span>Consumo real</span><strong>0 refeicoes</strong></div> : null}
         <div className="supplier-daily-actions">
           {next ? <button className="btn primary small" data-step={next.step} data-id={consolidation.id}><Icon icon={icon} name={next.iconName ?? "check"} size={15} />{next.label}</button> : <span className={`badge ${consolidation.status}`}>{statusLabel(STATUS_LABEL, consolidation.status)}</span>}
         </div>

@@ -77,7 +77,7 @@ export function Orders(props) {
           description="Blocos diarios recebidos, consumo real e saida."
           actions={(
             <SupplierFilterMenu icon={icon}>
-              <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">A registrar saida</option><option value="saiu_entrega">Saida registrada</option><option value="entregue">Entregues</option><option value="cancelado_confirmado">Cancelados apos confirmacao</option></select>
+              <select defaultValue={supplierOrderStatus} data-supplier-status><option value="ativos">Pedidos ativos</option><option value="todos">Todos os pedidos</option><option value="enviado">A confirmar</option><option value="confirmado">A registrar saida</option><option value="cancelamento_pendente">Cancelamento pendente</option><option value="saiu_entrega">Saida registrada</option><option value="entregue">Entregues</option><option value="cancelado_confirmado">Cancelados apos confirmacao</option></select>
               <input type="date" defaultValue={supplierOrderDate} data-supplier-date />
               <button className="btn outline small" data-supplier-clear-filter>Limpar filtros</button>
             </SupplierFilterMenu>

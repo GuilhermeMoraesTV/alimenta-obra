@@ -538,6 +538,7 @@ const adminDesignStyles = `
   .admin-page .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
   .admin-page .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
   .admin-page .badge.cancelado { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+  .admin-page .badge.cancelamento_pendente { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .admin-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .admin-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .admin-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }

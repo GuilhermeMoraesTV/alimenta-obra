@@ -61,6 +61,7 @@ const supplierPageStyles = `
   .supplier-page .badge { display: inline-flex; min-height: 1.75rem; align-items: center; border-radius: 999px; border: 1px solid #e7e5e4; background: #f5f5f4; padding: 0 .625rem; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #57534e; }
   .supplier-page .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
   .supplier-page .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+  .supplier-page .badge.cancelamento_pendente { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .supplier-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .supplier-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .supplier-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }

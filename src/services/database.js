@@ -43,6 +43,13 @@ function isMissingSupplierCompanySchema(error) {
     || String(error?.message ?? "").includes("area_type");
 }
 
+function isMissingMealCategorySchema(error) {
+  return Number(error?.status) === 404
+    || ["42703", "42P01", "PGRST200", "PGRST202", "PGRST205"].includes(error?.code)
+    || String(error?.message ?? "").includes("meal_categories")
+    || String(error?.message ?? "").includes("can_record_actuals");
+}
+
 function deliveryAddressErrorMessage(error) {
   const message = String(error?.message ?? "");
   if (error?.code === "23505" || message.includes("delivery_addresses_leader_id_label_key")) {
@@ -171,6 +178,16 @@ async function fetchWorkSectionsWithCompatibility(client) {
     .order("name");
 }
 
+async function fetchMealCategoriesWithCompatibility(client) {
+  const response = await client
+    .from("meal_categories")
+    .select("id, label, can_record_actuals, active, sort_order, created_at, updated_at")
+    .order("sort_order");
+  if (!response.error) return response;
+  if (!isMissingMealCategorySchema(response.error)) return response;
+  return { data: [], error: null, schemaMissing: true };
+}
+
 export async function validateAlimentaObraSchema() {
   const { error } = await requireSupabase()
     .from("meal_types")
@@ -291,6 +308,7 @@ export async function fetchApplicationData() {
   const sectionMealTypesPromise = client
     .from("work_section_meal_types")
     .select("work_section_id, meal_type_id, active");
+  const mealCategoriesPromise = fetchMealCategoriesWithCompatibility(client);
   const results = await Promise.all([
     client.from("profiles").select("id, name, email, role, team, active").order("name"),
     fetchMealCatalogWithCompatibility(client),
@@ -310,9 +328,10 @@ export async function fetchApplicationData() {
     supplierCompaniesPromise,
     supplierCompanyUsersPromise,
     supplierMealTypesPromise,
-    sectionMealTypesPromise
+    sectionMealTypesPromise,
+    mealCategoriesPromise
   ]);
-  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports, supplierCompanies, supplierCompanyUsers, supplierMealTypes, sectionMealTypes] = results;
+  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports, supplierCompanies, supplierCompanyUsers, supplierMealTypes, sectionMealTypes, mealCategories] = results;
   const documentRows = documents.error && ["42P01", "PGRST205"].includes(documents.error.code)
     ? []
     : ensure(documents.data, documents.error);
@@ -341,6 +360,9 @@ export async function fetchApplicationData() {
   const sectionMealTypeRows = sectionMealTypes.error && isMissingSupplierCompanySchema(sectionMealTypes.error)
     ? []
     : ensure(sectionMealTypes.data, sectionMealTypes.error);
+  const mealCategoryRows = mealCategories.error && isMissingMealCategorySchema(mealCategories.error)
+    ? []
+    : ensure(mealCategories.data, mealCategories.error);
   return {
     profiles: ensure(profiles.data, profiles.error),
     catalog: ensure(catalog.data, catalog.error),
@@ -357,7 +379,9 @@ export async function fetchApplicationData() {
     supplierCompanies: supplierCompanyRows,
     supplierCompanyUsers: supplierCompanyUserRows,
     supplierMealTypes: supplierMealTypeRows,
-    sectionMealTypes: sectionMealTypeRows
+    sectionMealTypes: sectionMealTypeRows,
+    mealCategories: mealCategoryRows,
+    mealCategoryFeatureAvailable: mealCategories.schemaMissing !== true
   };
 }
 
@@ -420,6 +444,30 @@ export async function saveMealTypeCatalog({ id = null, name, description = "", u
   return ensure(retry.data, retry.error);
 }
 
+export async function saveMealCategoryCatalog({ id, label, canRecordActuals = false, active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_meal_category", {
+    p_id: String(id ?? "").trim().toLowerCase(),
+    p_label: String(label ?? "").trim(),
+    p_can_record_actuals: Boolean(canRecordActuals),
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
+export async function deleteMealCategory(id) {
+  const { data, error } = await requireSupabase().rpc("delete_meal_category", {
+    p_id: String(id ?? "").trim().toLowerCase()
+  });
+  return ensure(data, error);
+}
+
+export async function deleteMealTypeCatalog(id) {
+  const { data, error } = await requireSupabase().rpc("delete_meal_type_catalog", {
+    p_id: id
+  });
+  return ensure(data, error);
+}
+
 export async function saveWorkSection({ id = null, name, headcount = 0, leaderId = null, active = true, areaType = "campo", mealTypeIds = null }) {
   const { data, error } = await requireSupabase().rpc("upsert_work_section", {
     p_id: id,
@@ -442,6 +490,22 @@ export async function saveWorkSection({ id = null, name, headcount = 0, leaderId
   return ensure(retry.data, retry.error);
 }
 
+export async function saveWorkSectionMealTypeLink({ sectionId, mealTypeId, active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_work_section_meal_type", {
+    p_work_section_id: sectionId,
+    p_meal_type_id: mealTypeId,
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
+export async function deleteWorkSection(id) {
+  const { data, error } = await requireSupabase().rpc("delete_work_section", {
+    p_id: id
+  });
+  return ensure(data, error);
+}
+
 export async function saveSupplierCompany(input) {
   const { data, error } = await requireSupabase().rpc("upsert_supplier_company", {
     p_id: input.id || null,
@@ -460,6 +524,13 @@ export async function saveSupplierCompany(input) {
     p_bank_details: String(input.bankDetails ?? "").trim(),
     p_notes: String(input.notes ?? "").trim(),
     p_active: input.active !== false
+  });
+  return ensure(data, error);
+}
+
+export async function deleteSupplierCompany(id) {
+  const { data, error } = await requireSupabase().rpc("delete_supplier_company", {
+    p_id: id
   });
   return ensure(data, error);
 }
@@ -735,8 +806,10 @@ export function subscribeToChanges(onChange) {
     .on("postgres_changes", { event: "*", schema: "public", table: "work_sections" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "daily_reports" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "meal_types" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "meal_categories" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_companies" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_meal_types" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "work_section_meal_types" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onChange)
     .subscribe();
 }

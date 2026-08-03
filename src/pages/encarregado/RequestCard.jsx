@@ -1,15 +1,16 @@
 import React from "react";
-import { getActualQuantity, getSupplierCompanyName, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
+import { getRecordedActualQuantity, getSupplierCompanyName, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 import { Icon, iconButtonClass, statusBadgeClass } from "./shared.jsx";
 
 export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, request, requestMealDescription, state, STATUS_LABEL, compact = false }) {
   const editable = canEditRequest(state, request);
   const composition = requestMealDescription(request);
   const operationalLabel = request.sectionName || "Equipe nao informada";
-  const actual = getActualQuantity(state, "", request);
+  const actual = getRecordedActualQuantity(state, "", request);
+  const showActual = actual !== null;
   const supplierName = getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId);
   const responsible = requestResponsibleName(state, request);
-  const category = mealCategoryLabel(request.mealCategory);
+  const category = mealCategoryLabel(request.mealCategory, state);
 
   return (
     <article className={`${compact ? "rounded-r-2xl rounded-l-md border-l-2 border-dashed bg-[#fffefa] p-3" : "rounded-2xl bg-white p-3 sm:p-4"} border border-stone-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(34,29,24,.12)]`}>
@@ -34,7 +35,7 @@ export function RequestCard({ canEditRequest, formatDate, formatDateTime, icon, 
         <div className="text-right">
           <strong className={`${compact ? "text-xl" : "text-2xl"} block font-black leading-none text-stone-950`}>{request.quantity}</strong>
           <span className="text-[10px] font-black uppercase text-stone-500">solicitadas</span>
-          <small className="mt-1 block text-[10px] font-black uppercase text-emerald-700">{actual} consumidas</small>
+          {showActual ? <small className="mt-1 block text-[10px] font-black uppercase text-emerald-700">{actual} consumidas</small> : null}
         </div>
       </div>
       <div className={`${compact ? "mt-2 pt-2" : "mt-3 pt-3"} flex flex-col gap-2 border-t border-stone-100 text-xs font-bold text-stone-500 sm:flex-row sm:items-center sm:justify-between`}>

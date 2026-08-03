@@ -472,14 +472,13 @@ function MeasurementExportMenu({ currentFilter, exportMenuOpen, icon, isAllPerio
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function previousDateKey(dateKey = localDateKey()) {
   const date = new Date(`${dateKey}T12:00:00`);
   date.setDate(date.getDate() - 1);
-  return date.toISOString().slice(0, 10);
+  return localDateKey(date);
 }
 
 function shortDate(value) {

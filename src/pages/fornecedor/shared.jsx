@@ -1,5 +1,5 @@
 import React from "react";
-import { getActualQuantity, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
+import { getRecordedActualQuantity, mealCategoryLabel, requestOriginLabel, requestResponsibleName } from "../../services/store-v2.js";
 
 export function Icon({ icon, name, size = 16 }) {
   return <span className="inline-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: icon(name, size) }} />;
@@ -84,6 +84,7 @@ export function supplierStatusCount(rows, status) {
 }
 
 export function supplierActionLabel(consolidation, nextSupplierStep) {
+  if (consolidation.status === "cancelamento_pendente") return "Confirmar cancelamento";
   if (consolidation.status === "cancelado_confirmado") return "Cancelado apos confirmacao";
   const next = nextSupplierStep(consolidation.status);
   return next?.label ?? "Entrega concluida";
@@ -97,6 +98,7 @@ export function supplierHomeAction(status) {
   if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento", iconName: "check" };
   if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar saida", iconName: "truck" };
   if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida", iconName: "truck" };
+  if (status === "cancelamento_pendente") return { step: "cancelado_confirmado", label: "Confirmar cancelamento", iconName: "check" };
   return null;
 }
 
@@ -170,13 +172,15 @@ export function ConsolidationTimeline({ consolidation, formatDateTime, state }) 
     ["confirmado", "Fornecedor confirmou recebimento"],
     ...(hasLegacyProduction ? [["producao", "Fornecedor confirmou producao"]] : []),
     ["saiu_entrega", "Saida registrada"],
+    ...(consolidation.status === "cancelamento_pendente" ? [["cancelamento_pendente", "Aguardando ciencia do fornecedor"]] : []),
     ...(consolidation.status === "cancelado_confirmado" ? [["cancelado_confirmado", "Cancelado apos confirmacao"]] : [])
   ];
   return (
     <div className="timeline">
       {steps.map(([step, label]) => {
         const confirmation = consolidation.confirmations.find((item) => item.step === step);
-        const cancelled = step === "cancelado_confirmado" && consolidation.status === "cancelado_confirmado";
+        const cancelled = ["cancelamento_pendente", "cancelado_confirmado"].includes(step)
+          && ["cancelamento_pendente", "cancelado_confirmado"].includes(consolidation.status);
         return <div className="timeline-item" key={step}><div className="timeline-dot" style={{ background: confirmation || cancelled ? "var(--orange)" : "var(--line)" }} /><div className="timeline-body"><strong>{label}</strong><br />{confirmation ? `${getUserName(state, confirmation.userId)} - ${formatDateTime(confirmation.at)}` : cancelled ? formatDateTime(consolidation.updatedAt) : "Aguardando"}</div></div>;
       })}
     </div>
@@ -188,16 +192,17 @@ export function OriginRequestCards({ formatDate, formatDateTime, rows, state, ST
   return (
     <div className="supplier-origin-list">
       {rows.map((request) => {
-        const actual = getActualQuantity(state, "", request);
+        const actual = getRecordedActualQuantity(state, "", request);
+        const showActual = actual !== null;
         return (
           <article className="supplier-origin-card" key={request.id}>
             <div><strong>{request.mealType}</strong><span className={`badge ${request.status}`}>{STATUS_LABEL[request.status] ?? request.status}</span></div>
             <p>{requestOriginLabel(request)} - {requestResponsibleName(state, request)} - {request.sectionName || request.location}</p>
             <footer>
               <span>{formatDate(request.date)}</span>
-              <span>{mealCategoryLabel(request.mealCategory)}</span>
+              <span>{mealCategoryLabel(request.mealCategory, state)}</span>
               <b>{request.quantity} ped.</b>
-              <b>{actual} cons.</b>
+              {showActual ? <b>{actual} cons.</b> : null}
               <small>{formatDateTime(request.updatedAt)}</small>
             </footer>
           </article>

@@ -6,8 +6,7 @@ function localDateKey(value) {
   if (arguments.length > 0 && !value) return "";
   const date = value instanceof Date ? value : new Date(arguments.length ? value : undefined);
   if (Number.isNaN(date.getTime())) return "";
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 export function Dashboard(props) {

@@ -49,6 +49,11 @@ const requestFinancialValue = (state, request) => resolveRequestFinancialValue(s
 const formatDateTime = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "-";
 const formatDate = (value) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(`${value}T12:00:00`)) : "-";
 const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0));
+const localDateKey = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 const auditEntityLabel = (entity) => ({
   pedido: "Pedido de refeição",
   meal_request: "Pedido de refeição",
@@ -126,7 +131,7 @@ export function exportAuditExcel(state) {
 }
 
 export async function exportDailyReportExcel(state, report) {
-  const reportDate = report?.date || new Date().toISOString().slice(0, 10);
+  const reportDate = report?.date || localDateKey();
   const model = buildMeasurementModel(state, dailyReportMeasurementRows(state, report), {
     periodLabel: formatDate(reportDate),
     filter: { start: reportDate, end: reportDate },
@@ -158,7 +163,7 @@ export function exportAuditPdf(state) {
 }
 
 export function exportDailyReportPdf(state, report) {
-  const reportDate = report?.date || new Date().toISOString().slice(0, 10);
+  const reportDate = report?.date || localDateKey();
   const model = buildMeasurementModel(state, dailyReportMeasurementRows(state, report), {
     periodLabel: formatDate(reportDate),
     filter: { start: reportDate, end: reportDate },
@@ -201,7 +206,7 @@ function buildMeasurementModel(state, rows, options = {}) {
   const activeRows = rows.filter((request) => !CANCELLED_STATUSES.has(request.status))
     .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"));
   const rowDates = activeRows.map((request) => request.date).filter(Boolean).sort();
-  const periodStart = options.filter?.start || rowDates[0] || state.settings?.defaultMealDate || new Date().toISOString().slice(0, 10);
+  const periodStart = options.filter?.start || rowDates[0] || state.settings?.defaultMealDate || localDateKey();
   const periodEnd = options.filter?.end || rowDates.at(-1) || periodStart;
   const dateRangeLabel = periodStart === periodEnd ? formatDate(periodStart) : `${formatDate(periodStart)} a ${formatDate(periodEnd)}`;
   const periodLabel = options.periodLabel || dateRangeLabel;
@@ -429,7 +434,7 @@ function dateRange(start, end) {
   const limit = new Date(`${end}T12:00:00`);
   if (Number.isNaN(cursor.getTime()) || Number.isNaN(limit.getTime())) return output;
   while (cursor <= limit && output.length < 370) {
-    output.push(cursor.toISOString().slice(0, 10));
+    output.push(localDateKey(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return output;

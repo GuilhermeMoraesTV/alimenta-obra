@@ -18,6 +18,7 @@ export function nextSupplierStep(status) {
   if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento" };
   if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar saida" };
   if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida" };
+  if (status === "cancelamento_pendente") return { step: "cancelado_confirmado", label: "Confirmar cancelamento", iconName: "check" };
   return null;
 }
 

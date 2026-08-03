@@ -10,6 +10,12 @@ const areaLabels = {
   misto: "Misto"
 };
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function TicketPanel({ children, number, title }) {
   return (
     <section className={ticketPanelClass}>
@@ -25,8 +31,7 @@ export function RequestForm({ icon, requestError = "", state, user }) {
   const sections = getActiveWorkSections(state, user.id);
   const [sectionId, setSectionId] = useState(sections[0]?.id ?? "");
   const [mealTypeId, setMealTypeId] = useState(state.mealTypes[0]?.id ?? "");
-  const now = new Date();
-  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = localDateKey();
   const mealsForSection = getMealsForSection(state, sectionId);
   const currentMeal = mealsForSection.find((meal) => meal.id === mealTypeId) ?? mealsForSection[0];
   const suppliers = currentMeal ? getSuppliersForMeal(state, currentMeal.id, { includeInactive: false }) : [];
@@ -95,7 +100,7 @@ export function RequestForm({ icon, requestError = "", state, user }) {
             <label className="grid cursor-pointer grid-cols-[34px_minmax(0,1fr)_18px] items-start gap-3 rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-200 bg-white p-3 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50" key={meal.id}>
               <input className="sr-only" type="radio" name="mealTypeId" value={meal.id} checked={currentMeal?.id === meal.id} onChange={() => setMealTypeId(meal.id)} />
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-stone-100 text-orange-700"><Icon icon={icon} name={index === 0 ? "package" : "utensils"} size={20} /></span>
-              <span className="min-w-0"><span className="block font-black text-stone-950">{meal.label}</span><span className="mt-1 block text-xs font-semibold text-stone-500">{mealCategoryLabel(meal.category)} - {meal.description || "Sem composicao cadastrada"}</span></span>
+              <span className="min-w-0"><span className="block font-black text-stone-950">{meal.label}</span><span className="mt-1 block text-xs font-semibold text-stone-500">{mealCategoryLabel(meal.category, state)} - {meal.description || "Sem composicao cadastrada"}</span></span>
               <span className="mt-1 h-4 w-4 rounded-full border border-stone-300 bg-white shadow-inner" />
             </label>
           ))}

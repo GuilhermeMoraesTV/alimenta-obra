@@ -1,12 +1,21 @@
 const UI_STORAGE_KEY = "alimenta-obra-ui-v2";
 
+export const DEFAULT_MEAL_CATEGORIES = [
+  { id: "marmita", label: "Marmita", active: true, canRecordActuals: false },
+  { id: "buffet", label: "Buffet", active: true, canRecordActuals: true },
+  { id: "janta", label: "Janta", active: true, canRecordActuals: true },
+  { id: "outro", label: "Outro", active: true, canRecordActuals: false }
+];
+
 export function createEmptyState() {
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   return {
     authenticatedUserId: null,
     activeUserId: null,
     activeView: "inicio",
     users: [],
+    mealCategories: DEFAULT_MEAL_CATEGORIES,
     mealCatalog: [],
     mealTypes: [],
     supplierCompanies: [],
@@ -97,13 +106,27 @@ export function getSuppliersForMeal(state, mealTypeId, { includeInactive = false
   });
 }
 
-export function mealCategoryLabel(category) {
-  return {
-    marmita: "Marmita",
-    buffet: "Buffet",
-    janta: "Janta",
-    outro: "Outro"
-  }[category] ?? "Outro";
+export function mealCategoryLabel(category, state = null) {
+  return state?.mealCategories?.find((item) => item.id === category)?.label
+    ?? DEFAULT_MEAL_CATEGORIES.find((item) => item.id === category)?.label
+    ?? category
+    ?? "Outro";
+}
+
+export function getMealCategory(state, category = "") {
+  return (state.mealCategories ?? DEFAULT_MEAL_CATEGORIES).find((item) => item.id === category)
+    ?? DEFAULT_MEAL_CATEGORIES.find((item) => item.id === category)
+    ?? DEFAULT_MEAL_CATEGORIES.find((item) => item.id === "outro");
+}
+
+export function mealCategoryAllowsActuals(state, category = "") {
+  return getMealCategory(state, category)?.canRecordActuals === true;
+}
+
+export function mealAllowsActuals(state, mealTypeId = "") {
+  const meal = state.mealCatalog?.find((item) => item.id === mealTypeId)
+    ?? state.mealTypes?.find((item) => item.id === mealTypeId);
+  return mealCategoryAllowsActuals(state, meal?.category);
 }
 
 export function sectionLabel(state, sectionId, fallback = "Sem equipe") {
@@ -130,7 +153,7 @@ export function getMealsForSection(state, sectionId = "") {
   const allowedIds = (state.sectionMealTypes ?? [])
     .filter((item) => item.sectionId === sectionId && item.active !== false)
     .map((item) => item.mealTypeId);
-  if (!allowedIds.length) return orderableMeals;
+  if (!allowedIds.length) return [];
   return orderableMeals.filter((meal) => allowedIds.includes(meal.id));
 }
 
@@ -249,11 +272,31 @@ export function getConsolidationSummary(state, consolidation) {
 }
 
 export function getActualQuantity(state, consolidationId, request) {
-  const actual = state.consolidationActuals?.find((item) => {
+  const recorded = getRecordedActualQuantity(state, consolidationId, request);
+  if (recorded !== null) return recorded;
+  return Number(request?.actualQuantity ?? request?.quantity ?? 0);
+}
+
+export function getRecordedActualQuantity(state, consolidationId, request) {
+  const category = request?.mealCategory ?? state.mealCatalog?.find((meal) => meal.id === request?.mealTypeId)?.category;
+  if (category && !mealCategoryAllowsActuals(state, category)) {
+    return null;
+  }
+  if (consolidationId) {
+    const consolidation = state.consolidations?.find((item) => item.id === consolidationId);
+    if (consolidation?.status === "cancelado_confirmado") return null;
+  }
+  const actualRows = (state.consolidationActuals ?? []).filter((item) => {
+    const itemConsolidation = item.consolidationId
+      ? state.consolidations?.find((consolidation) => consolidation.id === item.consolidationId)
+      : null;
+    if (itemConsolidation?.status === "cancelado_confirmado") return false;
     const sameConsolidation = !consolidationId || !item.consolidationId || item.consolidationId === consolidationId;
-    return sameConsolidation && item.teamId === request.teamId && item.mealTypeId === request.mealTypeId;
+    const sameDate = consolidationId || !item.date || item.date === request.date;
+    return sameConsolidation && sameDate && item.teamId === request.teamId && item.mealTypeId === request.mealTypeId;
   });
-  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+  if (actualRows.length) return actualRows.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0);
+  return null;
 }
 
 export function requestUnitPrice(state, request) {
@@ -263,12 +306,9 @@ export function requestUnitPrice(state, request) {
 }
 
 export function requestActualQuantity(state, request) {
-  const actual = state.consolidationActuals?.find((item) =>
-    item.date === request.date
-    && item.teamId === request.teamId
-    && item.mealTypeId === request.mealTypeId
-  );
-  return Number(actual?.quantity ?? request.actualQuantity ?? request.quantity ?? 0);
+  const recorded = getRecordedActualQuantity(state, "", request);
+  if (recorded !== null) return recorded;
+  return Number(request.actualQuantity ?? request.quantity ?? 0);
 }
 
 export function requestFinancialValue(state, request) {

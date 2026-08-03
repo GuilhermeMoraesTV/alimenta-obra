@@ -6,8 +6,7 @@ import { DailyBlockCard, dailyBlockStyles, groupRequestsByDate } from "./DailyBl
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function requestsCreatedOn(requests, dateKey) {
@@ -23,7 +22,7 @@ function WeeklyConsumptionChart({ adminConsumptionWeekOffset, countStatus, forma
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + index);
-    const key = date.toISOString().slice(0, 10);
+    const key = localDateKey(date);
     const rows = requestsForDate(state, key).filter((request) => request.status !== "cancelado");
     return {
       key,

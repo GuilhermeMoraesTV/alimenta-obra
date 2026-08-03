@@ -31,13 +31,17 @@ assert.deepEqual(getActiveWorkSections(workState, "u1").map((item) => item.id), 
 const supplierState = {
   ...workState,
   settings: { defaultMealUnitPrice: 18.5 },
+  mealCategories: [
+    { id: "marmita", label: "Marmita", canRecordActuals: false, active: true },
+    { id: "buffet", label: "Buffet", canRecordActuals: true, active: true }
+  ],
   mealCatalog: [
-    { id: "m1", label: "Marmita", active: true, unitPrice: 20 },
-    { id: "m2", label: "Buffet", active: true, unitPrice: 30 }
+    { id: "m1", label: "Marmita", active: true, unitPrice: 20, category: "marmita" },
+    { id: "m2", label: "Buffet", active: true, unitPrice: 30, category: "buffet" }
   ],
   mealTypes: [
-    { id: "m1", label: "Marmita", active: true, unitPrice: 20 },
-    { id: "m2", label: "Buffet", active: true, unitPrice: 30 }
+    { id: "m1", label: "Marmita", active: true, unitPrice: 20, category: "marmita" },
+    { id: "m2", label: "Buffet", active: true, unitPrice: 30, category: "buffet" }
   ],
   supplierCompanies: [
     { id: "sc1", legalName: "Fornecedor Ativo", active: true },
@@ -49,7 +53,13 @@ const supplierState = {
     { supplierCompanyId: "sc2", mealTypeId: "m1", active: true, unitPrice: 19 }
   ],
   consolidationActuals: [
-    { consolidationId: "c9", date: "2026-07-16", teamId: "s1", mealTypeId: "m1", quantity: 7 }
+    { consolidationId: "c9", date: "2026-07-16", teamId: "s1", mealTypeId: "m1", quantity: 7 },
+    { consolidationId: "c9", date: "2026-07-16", teamId: "s1", mealTypeId: "m2", quantity: 8 },
+    { consolidationId: "c10", date: "2026-07-16", teamId: "s1", mealTypeId: "m2", quantity: 24 }
+  ],
+  consolidations: [
+    { id: "c9", status: "saiu_entrega" },
+    { id: "c10", status: "cancelado_confirmado" }
   ]
 };
 
@@ -60,7 +70,8 @@ assert.deepEqual(getSuppliersForMeal(supplierState, "m2", { includeInactive: fal
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: null }), "Admin");
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: "u1" }), "Encarregado");
 assert.equal(requestUnitPrice(supplierState, { supplierCompanyId: "sc1", mealTypeId: "m1", unitPrice: 20 }), 21);
-assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m1", quantity: 100 }), 7);
+assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m1", mealCategory: "marmita", quantity: 100 }), 100);
+assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m2", mealCategory: "buffet", quantity: 100 }), 8);
 assert.deepEqual(getMealsForSection({
   mealTypes: supplierState.mealTypes,
   sectionMealTypes: [
@@ -71,7 +82,7 @@ assert.deepEqual(getMealsForSection({
 assert.deepEqual(getMealsForSection({
   mealTypes: supplierState.mealTypes,
   sectionMealTypes: []
-}, "s9").map((item) => item.id), ["m1", "m2"]);
+}, "s9").map((item) => item.id), []);
 assert.equal(requestResponsibleName({
   users: [{ id: "admin1", name: "Ana Admin" }, { id: "u1", name: "Lider Campo" }]
 }, { originRole: "admin", leaderId: null, createdBy: "admin1" }), "Ana Admin");

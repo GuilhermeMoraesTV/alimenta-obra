@@ -29,6 +29,7 @@ export const STATUS_LABEL = {
   saiu_entrega: "Saiu para entrega",
   entregue: "Entregue",
   cancelado: "Cancelado",
+  cancelamento_pendente: "Cancelamento pendente",
   cancelado_confirmado: "Cancelado apos confirmacao"
 };
 

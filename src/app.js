@@ -10,12 +10,14 @@ import { createPageRegistry } from "./pages/index.js";
 import {
   canEditRequest,
   createEmptyState,
+  DEFAULT_MEAL_CATEGORIES,
   getActiveWorkSections,
   getActiveUser,
   getConsolidationForDate,
   getConsolidationSummary,
   getLeaders,
   getMealsForSection,
+  getRecordedActualQuantity,
   getSupplierCompanies,
   getSupplierCompanyName,
   getSuppliersForMeal,
@@ -23,6 +25,7 @@ import {
   getUserName,
   loadUiState,
   mealCategoryLabel,
+  mealCategoryAllowsActuals,
   requestActualQuantity as resolveRequestActualQuantity,
   requestFinancialValue as resolveRequestFinancialValue,
   requestOriginLabel,
@@ -36,6 +39,10 @@ import {
   createAccessInvite,
   createAdminManagedUser,
   deleteAdminManagedUser,
+  deleteMealCategory,
+  deleteMealTypeCatalog,
+  deleteSupplierCompany,
+  deleteWorkSection,
   createDeliveryAddress,
   createMealRequest,
   fetchApplicationData,
@@ -47,11 +54,13 @@ import {
   logSupplierRomaneio,
   removeSubscription,
   saveConsolidationActuals,
+  saveMealCategoryCatalog,
   saveMealTypeCatalog,
   saveSupplierCompany,
   saveSupplierCompanyUser,
   saveSupplierMealTypeLink,
   saveWorkSection,
+  saveWorkSectionMealTypeLink,
   sendDailyConsolidation,
   signIn,
   signOut,
@@ -85,6 +94,7 @@ let settingsUserModalId = null;
 let settingsUserModalError = "";
 let settingsSupplierModalId = null;
 let settingsMealModalId = null;
+let settingsMealCategoryModalId = null;
 let settingsWorkSectionModalId = null;
 let draggedMealTypeId = "";
 let pendingCancelRequestId = null;
@@ -122,8 +132,10 @@ const pageMountModules = new Map();
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function parseCurrencyInput(value) {
@@ -140,11 +152,11 @@ function parseCurrencyInput(value) {
 function previousLocalDateKey(dateKey = localDateKey()) {
   const date = new Date(`${dateKey}T12:00:00`);
   date.setDate(date.getDate() - 1);
-  return date.toISOString().slice(0, 10);
+  return localDateKey(date);
 }
 
 function minimumMealDate() {
-  return state.settings.defaultMealDate || localDateKey();
+  return localDateKey();
 }
 
 function adminOrderSuppliers() {
@@ -188,6 +200,11 @@ function areaTypeLabel(value) {
     misto: "Misto"
   };
   return labels[value] ?? "Campo";
+}
+
+function stateMealCategoryLabel(category) {
+  return state.mealCategories?.find((item) => item.id === category)?.label
+    ?? mealCategoryLabel(category);
 }
 
 function assertMealDateIsNotPast(date) {
@@ -500,6 +517,7 @@ const pageRegistry = createPageRegistry({
     escapeHtml,
     getGeneratedInviteLink: () => generatedInviteLink,
     getSettingsActiveTab: () => settingsActiveTab,
+    getSettingsMealCategoryModalId: () => settingsMealCategoryModalId,
     getSettingsMealModalId: () => settingsMealModalId,
     getSettingsSupplierModalId: () => settingsSupplierModalId,
     getSettingsWorkSectionModalId: () => settingsWorkSectionModalId,
@@ -508,7 +526,7 @@ const pageRegistry = createPageRegistry({
     getSettingsUserModalOpen: () => settingsUserModalOpen,
     getState: () => state,
     icon,
-    mealCategoryLabel,
+    mealCategoryLabel: stateMealCategoryLabel,
     money,
     renderAdminBackButton,
     renderEmptyState,
@@ -570,7 +588,7 @@ function renderAdminOrderModal() {
   const canCreate = sections.length && suppliers.length && meals.length;
   const sectionOptions = sections.map((section) => `<option value="${section.id}">${escapeHtml(section.name)} - ${areaTypeLabel(section.areaType)}</option>`).join("") || `<option value="">Nenhum efetivo ativo</option>`;
   const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor com refeicao vinculada</option>`;
-  const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
+  const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${stateMealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
   const cartRows = adminOrderCartItems.map((item, index) => {
     const label = adminOrderCartItemLabel(item);
     return `<div class="admin-order-cart-row"><div><strong>${escapeHtml(label.meal)} - ${label.quantity} refeicoes</strong><small>${escapeHtml(label.supplier)} - ${escapeHtml(label.section)} - ${formatDate(item.date)}</small></div><button class="admin-order-remove-btn" type="button" data-remove-admin-order-item="${index}" aria-label="Remover ${escapeHtml(label.meal)} do carrinho" title="Remover">${icon("trash", 15)}</button></div>`;
@@ -584,7 +602,9 @@ function renderActualsModal() {
   if (!consolidation) return "";
   const summary = getConsolidationSummary(state, consolidation);
   const grouped = new Map();
-  summary.rows.forEach((request) => {
+  const actualableRows = summary.rows.filter((request) => mealCategoryAllowsActuals(state, request.mealCategory));
+  const skippedRows = summary.rows.length - actualableRows.length;
+  actualableRows.forEach((request) => {
     const key = `${request.teamId || request.sectionName || request.leaderId}:${request.mealTypeId}`;
     const current = grouped.get(key) ?? {
       teamId: request.teamId || "",
@@ -592,15 +612,24 @@ function renderActualsModal() {
       mealTypeId: request.mealTypeId,
       mealType: request.mealType,
       requested: 0,
-      actual: 0,
+      actual: null,
       headcount: request.sectionHeadcount ?? 0
     };
     current.requested += Number(request.quantity ?? 0);
-    current.actual += Number(request.actualQuantity ?? request.quantity ?? 0);
+    const savedActual = state.consolidationActuals?.find((item) =>
+      item.consolidationId === consolidation.id
+      && item.teamId === request.teamId
+      && item.mealTypeId === request.mealTypeId
+    );
+    if (savedActual) current.actual = Number(savedActual.quantity ?? 0);
     grouped.set(key, current);
   });
-  const rows = Array.from(grouped.values());
-  return `<div class="${modalBackdropClass}" data-close-actuals-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="actuals-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Consumo real</span><h2 class="${modalTitleClass}" id="actuals-title">Registrar saida do bloco</h2><p class="mt-1 text-sm text-stone-500">Informe o consumido por equipe/trecho e alimentacao antes de concluir a saida.</p></div><button class="${modalCloseClass}" type="button" data-close-actuals-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="actuals"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="grid gap-2">${rows.map((row, index) => `<div class="grid gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_110px] sm:items-end"><input type="hidden" name="teamId-${index}" value="${row.teamId}" /><input type="hidden" name="mealTypeId-${index}" value="${row.mealTypeId}" /><div><span class="${modalLabelClass}">Equipe / trecho</span><strong class="block text-sm">${escapeHtml(row.teamName)}</strong><small class="text-xs font-bold text-stone-500">Solicitado ${row.requested} - efetivo ${row.headcount || "-"}</small></div><div><span class="${modalLabelClass}">Alimentacao</span><strong class="block text-sm">${escapeHtml(row.mealType)}</strong></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="actual-${index}">Consumido</label><input class="${modalInputClass}" id="actual-${index}" name="quantity-${index}" type="number" min="0" value="${row.actual}" required /></div></div>`).join("")}</div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-actuals-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar e registrar saida</button></footer></form></section></div>`;
+  const rows = Array.from(grouped.values()).map((row) => ({ ...row, actual: row.actual ?? row.requested }));
+  if (!rows.length) return "";
+  const skippedNote = skippedRows
+    ? `<div class="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-orange-700">${skippedRows} item(ns) de categoria sem consumo real foram ignorados neste lancamento.</div>`
+    : "";
+  return `<div class="${modalBackdropClass}" data-close-actuals-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="actuals-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Consumo real</span><h2 class="${modalTitleClass}" id="actuals-title">Registrar saida do bloco</h2><p class="mt-1 text-sm text-stone-500">Informe o consumido apenas das categorias habilitadas antes de concluir a saida.</p></div><button class="${modalCloseClass}" type="button" data-close-actuals-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="actuals"><input type="hidden" name="consolidationId" value="${consolidation.id}" />${skippedNote}<div class="grid gap-2">${rows.map((row, index) => `<div class="grid gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] sm:items-end"><input type="hidden" name="teamId-${index}" value="${row.teamId}" /><input type="hidden" name="mealTypeId-${index}" value="${row.mealTypeId}" /><div><span class="${modalLabelClass}">Equipe / trecho</span><strong class="block text-sm">${escapeHtml(row.teamName)}</strong><small class="text-xs font-bold text-stone-500">Efetivo ${row.headcount || "-"}</small></div><div><span class="${modalLabelClass}">Alimentacao</span><strong class="block text-sm">${escapeHtml(row.mealType)}</strong></div><div class="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-center"><span class="${modalLabelClass} block text-orange-700">Solicitado</span><strong class="block text-2xl font-black leading-none text-orange-700">${row.requested}</strong></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="actual-${index}">Consumido</label><input class="${modalInputClass}" id="actual-${index}" name="quantity-${index}" type="number" min="0" value="${row.actual}" required /></div></div>`).join("")}</div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-actuals-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar e registrar saida</button></footer></form></section></div>`;
 }
 
 function renderConfirmedCancelModal() {
@@ -608,7 +637,7 @@ function renderConfirmedCancelModal() {
   const user = getActiveUser(state);
   if (!consolidation || user?.role !== "admin") return "";
   const summary = getConsolidationSummary(state, consolidation);
-  return `<div class="${modalBackdropClass}" data-close-confirmed-cancel-modal><section class="${modalPanelClass} max-w-lg" role="dialog" aria-modal="true" aria-labelledby="confirmed-cancel-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Cancelamento de envio</span><h2 class="${modalTitleClass}" id="confirmed-cancel-title">Cancelar envio ao fornecedor?</h2><p class="mt-1 text-sm text-stone-500">O pedido original continua no historico. O consumo real deste bloco sera registrado como zero.</p></div><button class="${modalCloseClass}" type="button" data-close-confirmed-cancel-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="confirmed-cancel"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800"><div class="flex items-center justify-between gap-3"><span>Pedido original</span><strong>${summary.total} refeicoes</strong></div><div class="mt-1 flex items-center justify-between gap-3"><span>Consumo real</span><strong>0 refeicoes</strong></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="confirmed-cancel-reason">Motivo obrigatorio</label><textarea class="${modalInputClass} min-h-24 py-2" id="confirmed-cancel-reason" name="reason" minlength="5" required placeholder="Ex.: obra paralisada, equipe dispensada, pedido feito em duplicidade"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-confirmed-cancel-modal>Voltar</button><button class="${modalButtonDangerClass}" type="submit">Cancelar envio</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-confirmed-cancel-modal><section class="${modalPanelClass} max-w-lg" role="dialog" aria-modal="true" aria-labelledby="confirmed-cancel-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Cancelamento de pedido</span><h2 class="${modalTitleClass}" id="confirmed-cancel-title">Cancelar pedido?</h2><p class="mt-1 text-sm text-stone-500">O fornecedor sera avisado e o card permanece na Home dele ate confirmar ciencia do cancelamento.</p></div><button class="${modalCloseClass}" type="button" data-close-confirmed-cancel-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="confirmed-cancel"><input type="hidden" name="consolidationId" value="${consolidation.id}" /><div class="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800"><div class="flex items-center justify-between gap-3"><span>Pedido original</span><strong>${summary.total} refeicoes</strong></div><div class="mt-1 flex items-center justify-between gap-3"><span>Status apos cancelar</span><strong>Aguardando ciencia</strong></div></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="confirmed-cancel-reason">Motivo obrigatorio</label><textarea class="${modalInputClass} min-h-24 py-2" id="confirmed-cancel-reason" name="reason" minlength="5" required placeholder="Ex.: obra paralisada, equipe dispensada, pedido feito em duplicidade"></textarea></div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-confirmed-cancel-modal>Voltar</button><button class="${modalButtonDangerClass}" type="submit">Cancelar pedido</button></footer></form></section></div>`;
 }
 
 function deleteConfirmationContent() {
@@ -630,6 +659,21 @@ function deleteConfirmationContent() {
       title: "Excluir refeicao?",
       message: `A refeicao ${meal.label} deixara de aparecer em novos pedidos e vinculos.`,
       confirmLabel: "Excluir refeicao"
+    };
+  }
+  if (type === "meal-category") {
+    const category = state.mealCategories.find((item) => item.id === id);
+    if (!category) return null;
+    const fallback = state.mealCategories
+      .filter((item) => item.id !== category.id)
+      .sort((a, b) => (a.id === "outro" ? -1 : b.id === "outro" ? 1 : (a.sortOrder ?? 0) - (b.sortOrder ?? 0)))[0];
+    const fallbackText = fallback
+      ? `Refeicoes que usavam esta categoria passam para ${fallback.label}.`
+      : "Refeicoes antigas preservam o vinculo historico ate uma nova categoria ser cadastrada.";
+    return {
+      title: "Excluir categoria?",
+      message: `A categoria ${category.label} sera removida da lista. ${fallbackText}`,
+      confirmLabel: "Excluir categoria"
     };
   }
   if (type === "admin-user") {
@@ -750,7 +794,7 @@ function renderWeeklyConsumptionChart(referenceDate) {
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + index);
-    const key = date.toISOString().slice(0, 10);
+    const key = localDateKey(date);
     const rows = state.requests.filter((request) => request.date === key && request.status !== "cancelado");
     return {
       date,
@@ -765,7 +809,7 @@ function renderWeeklyConsumptionChart(referenceDate) {
   const max = Math.max(...days.map((day) => day.total), 1);
   const weekTotal = days.reduce((sum, day) => sum + day.total, 0);
   const weekCost = days.reduce((sum, day) => sum + day.value, 0);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = localDateKey();
   const periodLabel = `${formatDate(days[0].key)} a ${formatDate(days[6].key)}`;
 
   return `
@@ -808,7 +852,7 @@ function getWeekStart(referenceDate, offset = 0) {
 }
 
 function toDateKey(date) {
-  return date.toISOString().slice(0, 10);
+  return localDateKey(date);
 }
 
 function normalizeReportFilter(nextFilter = reportFilter) {
@@ -1122,6 +1166,8 @@ function renderAdminRequestCards(rows) {
 
 function renderAdminRequestCard(request) {
   const editable = canEditRequest(state, request);
+  const recordedActual = getRecordedActualQuantity(state, "", request);
+  const showActual = recordedActual !== null;
   return `
     <article class="admin-request-card">
       <div class="admin-request-main">
@@ -1130,7 +1176,7 @@ function renderAdminRequestCard(request) {
           <div class="request-card-title"><strong>${getUserName(state, request.leaderId)}</strong><span class="badge ${request.status}">${STATUS_LABEL[request.status] ?? request.status}</span></div>
           <small>${request.mealType} · ${request.deliveryAddress || request.location}</small>
         </div>
-        <div class="request-card-quantity"><strong>${request.quantity}</strong><span>ref.</span></div>
+        <div class="request-card-quantity"><strong>${request.quantity}</strong><span>ref.</span>${showActual ? `<small class="block text-[10px] font-black uppercase text-emerald-700">${recordedActual} consumidas</small>` : ""}</div>
       </div>
       <footer>
         <span>${formatDate(request.date)} · ${formatDateTime(request.updatedAt)}</span>
@@ -1239,7 +1285,7 @@ function renderFornecedor() {
   const rows = supplierConsolidations();
   const activeRows = rows.filter((item) => !["entregue", "rascunho", "cancelado_confirmado"].includes(item.status));
   const priority = [...activeRows].sort((a, b) => {
-    const rank = { enviado: 0, confirmado: 1, producao: 2, saiu_entrega: 3 };
+    const rank = { cancelamento_pendente: 0, enviado: 1, confirmado: 2, producao: 3, saiu_entrega: 4 };
     return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || new Date(a.date) - new Date(b.date);
   })[0];
   const totalToday = rows
@@ -1487,12 +1533,13 @@ function renderConsolidationTimeline(consolidation) {
     ["saiu_entrega", "Saida para entrega registrada"],
     ["entregue", "Entrega concluida"]
   ];
+  if (consolidation.status === "cancelamento_pendente") steps.push(["cancelamento_pendente", "Aguardando ciencia do fornecedor"]);
   if (consolidation.status === "cancelado_confirmado") steps.push(["cancelado_confirmado", "Cancelado apos confirmacao"]);
   return `
     <div class="timeline">
       ${steps.map(([step, label]) => {
         const confirmation = consolidation.confirmations.find((item) => item.step === step);
-        const cancelled = step === "cancelado_confirmado" && consolidation.status === "cancelado_confirmado";
+        const cancelled = ["cancelamento_pendente", "cancelado_confirmado"].includes(step) && ["cancelamento_pendente", "cancelado_confirmado"].includes(consolidation.status);
         return `
           <div class="timeline-item">
             <div class="timeline-dot" style="background:${confirmation || cancelled ? "var(--orange)" : "var(--line)"}"></div>
@@ -1751,6 +1798,7 @@ function bindEvents() {
       settingsUserModalError = "";
       settingsSupplierModalId = null;
       settingsMealModalId = null;
+      settingsMealCategoryModalId = null;
       settingsWorkSectionModalId = null;
       render();
       keepActiveSettingsTabVisible();
@@ -1797,6 +1845,19 @@ function bindEvents() {
     button.addEventListener("click", (event) => {
       if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
       settingsMealModalId = null;
+      render();
+    });
+  });
+  root.querySelectorAll("[data-open-meal-category-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsMealCategoryModalId = button.dataset.openMealCategoryModal || "new";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-meal-category-modal]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
+      settingsMealCategoryModalId = null;
       render();
     });
   });
@@ -1875,11 +1936,34 @@ function bindEvents() {
       draggedMealTypeId = "";
     });
   });
+  root.querySelectorAll("[data-drop-section]").forEach((target) => {
+    target.addEventListener("dragover", (event) => {
+      if (!draggedMealTypeId) return;
+      event.preventDefault();
+      target.classList.add("is-drop-target");
+    });
+    target.addEventListener("dragleave", () => target.classList.remove("is-drop-target"));
+    target.addEventListener("drop", (event) => {
+      event.preventDefault();
+      target.classList.remove("is-drop-target");
+      handleTeamMealDrop(target, event.dataTransfer?.getData("text/plain") || draggedMealTypeId);
+      draggedMealTypeId = "";
+    });
+  });
   root.querySelectorAll("[data-meal-link-toggle]").forEach((button) => {
     button.addEventListener("click", () => handleSupplierMealLinkToggle(button));
   });
+  root.querySelectorAll("[data-team-meal-link-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleTeamMealLinkToggle(button));
+  });
   root.querySelectorAll("[data-meal-active-toggle]").forEach((button) => {
     button.addEventListener("click", () => handleMealCatalogActiveToggle(button));
+  });
+  root.querySelectorAll("[data-meal-category-active-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleMealCategoryActiveToggle(button));
+  });
+  root.querySelectorAll("[data-work-section-active-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleWorkSectionActiveToggle(button));
   });
   root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
   root.querySelectorAll("[data-form='work-section']").forEach((form) => {
@@ -1887,6 +1971,12 @@ function bindEvents() {
   });
   root.querySelectorAll("[data-delete-work-section]").forEach((button) => {
     button.addEventListener("click", () => handleWorkSectionDelete(button));
+  });
+  root.querySelectorAll("[data-form='meal-category']").forEach((form) => {
+    form.addEventListener("submit", handleMealCategorySubmit);
+  });
+  root.querySelectorAll("[data-delete-meal-category]").forEach((button) => {
+    button.addEventListener("click", () => handleMealCategoryDelete(button.dataset.deleteMealCategory));
   });
   root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
     form.addEventListener("submit", handleMealCatalogSubmit);
@@ -2250,7 +2340,7 @@ function updateAdminOrderOptions() {
   const meals = adminOrderMeals(teamId, supplierId);
   if (mealSelect) {
     const nextMealId = meals.some((meal) => meal.id === selectedMealId) ? selectedMealId : meals[0]?.id ?? "";
-    mealSelect.innerHTML = meals.map((meal) => `<option value="${meal.id}" ${meal.id === nextMealId ? "selected" : ""}>${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
+    mealSelect.innerHTML = meals.map((meal) => `<option value="${meal.id}" ${meal.id === nextMealId ? "selected" : ""}>${escapeHtml(meal.label)} - ${stateMealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
   }
   const meal = meals.find((item) => item.id === mealSelect?.value);
   if (locationInput) locationInput.value = meal?.locations?.[0]?.id ?? "";
@@ -2346,7 +2436,8 @@ async function handleWorkSectionSubmit(event) {
       headcount: form.get("headcount"),
       leaderId: adminResponsibleArea ? null : String(form.get("leaderId") ?? "") || null,
       areaType,
-      active: form.get("active") === "true"
+      active: form.get("active") === "true",
+      mealTypeIds: form.getAll("mealTypeIds").map((value) => String(value)).filter(Boolean)
     });
     if (!form.get("id")) formElement.reset();
     settingsWorkSectionModalId = null;
@@ -2365,23 +2456,151 @@ async function handleWorkSectionDelete(button) {
   render();
 }
 
-async function performWorkSectionDelete(id) {
-  const section = state.workSections.find((item) => item.id === id);
+async function handleWorkSectionActiveToggle(button) {
+  const section = state.workSections.find((item) => item.id === button.dataset.workSectionActiveToggle);
   if (!section) return;
+  const nextActive = button.dataset.nextActive === "true";
+  button.disabled = true;
   try {
     await saveWorkSection({
       id: section.id,
       name: section.name,
       headcount: section.headcount,
-      leaderId: section.leaderId,
+      leaderId: ["escritorio", "canteiro"].includes(section.areaType) ? null : section.leaderId,
       areaType: section.areaType,
-      active: false
+      active: nextActive
     });
     await refreshData();
-    toast("Efetivo removido dos novos pedidos.");
+    toast(nextActive ? "Efetivo ativado." : "Efetivo desativado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel atualizar o efetivo: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function saveSectionMealLink(sectionId, mealTypeId, active) {
+  const section = state.workSections.find((item) => item.id === sectionId);
+  if (!section || !mealTypeId) return;
+  await saveWorkSectionMealTypeLink({
+    sectionId: section.id,
+    mealTypeId,
+    active
+  });
+}
+
+async function handleTeamMealLinkToggle(button) {
+  const formElement = button.closest("[data-form='team-meal-link']");
+  if (!formElement) return;
+  const form = new FormData(formElement);
+  button.disabled = true;
+  try {
+    await saveSectionMealLink(String(form.get("sectionId") ?? ""), String(form.get("mealTypeId") ?? ""), button.value === "true");
+    await refreshData();
+    toast(button.value === "true" ? "Vinculo ativado." : "Vinculo desativado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel alterar vinculo da equipe: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function handleTeamMealDrop(target, mealTypeId) {
+  const sectionId = target.dataset.dropSection;
+  if (!sectionId || !mealTypeId) return;
+  try {
+    const linkedSections = new Set((state.sectionMealTypes ?? [])
+      .filter((item) => item.mealTypeId === mealTypeId && item.active !== false)
+      .map((item) => item.sectionId));
+    linkedSections.add(sectionId);
+    await Promise.all([...linkedSections].map((id) => saveSectionMealLink(id, mealTypeId, id === sectionId)));
+    await refreshData();
+    toast("Refeicao movida para a equipe.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel mover refeicao para a equipe: ${error.message}`);
+  }
+}
+
+async function performWorkSectionDelete(id) {
+  try {
+    await deleteWorkSection(id);
+    await refreshData();
+    toast("Efetivo excluido.");
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel excluir o efetivo: ${error.message}`);
+  }
+}
+
+async function handleMealCategorySubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const rawId = String(form.get("id") ?? "");
+  const id = normalizeCategoryId(rawId || form.get("label"));
+  const label = String(form.get("label") ?? "").trim();
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    if (!id) throw new Error("Informe um nome valido para a categoria.");
+    if (!label) throw new Error("Informe o nome da categoria.");
+    await saveMealCategoryCatalog({
+      id,
+      label,
+      canRecordActuals: form.get("canRecordActuals") === "true",
+      active: form.get("active") === "true"
+    });
+    if (!form.get("originalId")) formElement.reset();
+    settingsMealCategoryModalId = null;
+    await refreshData();
+    toast("Categoria salva.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar categoria: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleMealCategoryActiveToggle(button) {
+  const category = state.mealCategories.find((item) => item.id === button.dataset.mealCategoryActiveToggle);
+  if (!category) return;
+  button.disabled = true;
+  try {
+    await saveMealCategoryCatalog({
+      id: category.id,
+      label: category.label,
+      canRecordActuals: category.canRecordActuals,
+      active: button.dataset.nextActive === "true"
+    });
+    await refreshData();
+    toast(button.dataset.nextActive === "true" ? "Categoria ativada." : "Categoria desativada.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel atualizar categoria: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function handleMealCategoryDelete(id) {
+  const category = state.mealCategories.find((item) => item.id === id);
+  if (!category) return;
+  pendingDeleteConfirmation = { type: "meal-category", id: category.id };
+  render();
+}
+
+async function performMealCategoryDelete(id) {
+  try {
+    await deleteMealCategory(id);
+    await refreshData();
+    toast("Categoria removida dos novos cadastros.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel excluir categoria: ${error.message}`);
   }
 }
 
@@ -2414,6 +2633,12 @@ async function handleMealCatalogSubmit(event) {
         unitPrice: null,
         notes: ""
       })));
+      const sectionIds = new Set(form.getAll("workSectionIds").map((value) => String(value)));
+      const existingSectionIds = new Set((state.sectionMealTypes ?? [])
+        .filter((item) => item.mealTypeId === targetMealId && item.active !== false)
+        .map((item) => item.sectionId));
+      const sectionsToTouch = new Set([...sectionIds, ...existingSectionIds]);
+      await Promise.all([...sectionsToTouch].map((sectionId) => saveSectionMealLink(sectionId, targetMealId, sectionIds.has(sectionId))));
     }
     if (!form.get("id")) formElement.reset();
     settingsMealModalId = null;
@@ -2435,22 +2660,13 @@ async function handleMealCatalogDelete(id) {
 }
 
 async function performMealCatalogDelete(id) {
-  const meal = state.mealCatalog.find((item) => item.id === id);
-  if (!meal) return;
   try {
-    await saveMealTypeCatalog({
-      id: meal.id,
-      name: meal.label,
-      description: meal.description,
-      unitPrice: meal.unitPrice,
-      category: meal.category,
-      active: false
-    });
+    await deleteMealTypeCatalog(id);
     await refreshData();
-    toast("Tipo removido dos novos pedidos.");
+    toast("Tipo de alimentacao excluido.");
   } catch (error) {
     console.error(error);
-    toast(`Nao foi possivel remover o tipo: ${error.message}`);
+    toast(`Nao foi possivel excluir o tipo: ${error.message}`);
   }
 }
 
@@ -2687,45 +2903,10 @@ async function handleSupplierCompanyDelete(button) {
 }
 
 async function performSupplierCompanyDelete(id) {
-  const supplier = state.supplierCompanies.find((item) => item.id === id);
-  if (!supplier) return;
   try {
-    await saveSupplierCompany({
-      id: supplier.id,
-      legalName: supplier.legalName,
-      tradeName: supplier.tradeName,
-      cnpj: supplier.cnpj,
-      stateRegistration: supplier.stateRegistration,
-      municipalRegistration: supplier.municipalRegistration,
-      addressLine: supplier.addressLine,
-      city: supplier.city,
-      state: supplier.state,
-      zipCode: supplier.zipCode,
-      phone: supplier.phone,
-      email: supplier.email,
-      contactName: supplier.contactName,
-      bankDetails: supplier.bankDetails,
-      notes: supplier.notes,
-      active: false
-    });
-    await Promise.all((state.supplierMealTypes ?? [])
-      .filter((item) => item.supplierCompanyId === supplier.id)
-      .map((item) => saveSupplierMealTypeLink({
-        supplierCompanyId: supplier.id,
-        mealTypeId: item.mealTypeId,
-        active: false,
-        unitPrice: null,
-        notes: ""
-      })));
-    const linkedUsers = (state.supplierCompanyUsers ?? []).filter((item) => item.supplierCompanyId === supplier.id);
-    await Promise.all(linkedUsers.map((link) => saveSupplierCompanyUser({
-      supplierCompanyId: supplier.id,
-      userId: link.userId,
-      active: false
-    })));
-    await Promise.all(linkedUsers.map((link) => updateUserActiveStatus({ userId: link.userId, active: false })));
+    await deleteSupplierCompany(id);
     await refreshData();
-    toast("Fornecedor excluido dos novos pedidos.");
+    toast("Fornecedor excluido.");
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel excluir fornecedor: ${error.message}`);
@@ -2740,6 +2921,7 @@ async function handleConfirmedDelete(event) {
   try {
     pendingDeleteConfirmation = null;
     if (confirmation.type === "work-section") await performWorkSectionDelete(confirmation.id);
+    if (confirmation.type === "meal-category") await performMealCategoryDelete(confirmation.id);
     if (confirmation.type === "meal-type") await performMealCatalogDelete(confirmation.id);
     if (confirmation.type === "admin-user") await performAdminUserDelete(confirmation.id);
     if (confirmation.type === "supplier-company") await performSupplierCompanyDelete(confirmation.id);
@@ -2863,8 +3045,8 @@ async function handleConfirmedCancelSubmit(event) {
     pendingConfirmedCancelConsolidationId = null;
     await refreshData();
     operationNotice = {
-      title: "Pedido cancelado apos confirmacao",
-      message: `Historico preservado e consumo real zerado${Number(rows ?? 0) ? ` em ${rows} linhas` : ""}.`
+      title: "Cancelamento enviado ao fornecedor",
+      message: `O pedido segue visivel para o fornecedor ate ele confirmar ciencia do cancelamento${Number(rows ?? 0) ? ` (${rows} item(ns) afetados)` : ""}.`
     };
     render();
   } catch (error) {
@@ -2967,6 +3149,21 @@ async function sendConsolidationForDate(date) {
 
 async function supplierStep(id, step) {
   if (step === "saiu_entrega") {
+    const consolidation = state.consolidations.find((item) => item.id === id);
+    const summary = consolidation ? getConsolidationSummary(state, consolidation) : null;
+    const requiresActuals = summary?.rows.some((request) => mealCategoryAllowsActuals(state, request.mealCategory));
+    if (!requiresActuals) {
+      try {
+        await confirmSupplierStep(id, step);
+        await refreshData();
+        operationNotice = { title: "Saida registrada", message: "Categoria sem consumo real: bloco atualizado sem lancamento de consumido." };
+        render();
+      } catch (error) {
+        console.error(error);
+        toast(`Nao foi possivel confirmar: ${error.message}`);
+      }
+      return;
+    }
     pendingActualsConsolidationId = id;
     render();
     return;
@@ -3187,6 +3384,16 @@ function normalizeEmail(value) {
     .toLowerCase();
 }
 
+function normalizeCategoryId(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 function generateInviteToken() {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -3208,6 +3415,20 @@ function mapApplicationData(data, profile) {
     active: item.active
   }));
   const supplierUsers = state.users.filter((item) => item.role === "fornecedor");
+  const remoteMealCategories = (data.mealCategories ?? []).map((item) => ({
+    id: item.id,
+    label: item.label,
+    canRecordActuals: item.can_record_actuals === true,
+    active: item.active !== false,
+    sortOrder: item.sort_order ?? 0,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at
+  }));
+  const categorySource = data.mealCategoryFeatureAvailable === false
+    ? DEFAULT_MEAL_CATEGORIES.map((item, index) => ({ ...item, sortOrder: (index + 1) * 10 }))
+    : remoteMealCategories;
+  state.mealCategories = categorySource
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.label).localeCompare(String(b.label)));
   state.supplierCompanies = (data.supplierCompanies?.length ? data.supplierCompanies.map((item) => ({
     id: item.id,
     legalName: item.legal_name,
@@ -3248,18 +3469,22 @@ function mapApplicationData(data, profile) {
     active: user.active !== false
   })));
   const mappedCatalog = data.catalog
-    .map((item) => ({
-      id: item.id,
-      label: item.name,
-      description: item.description ?? "",
-      unitPrice: Number(item.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
-      category: item.category ?? (String(item.name ?? "").toLowerCase().includes("marmita") ? "marmita" : String(item.name ?? "").toLowerCase().includes("jantar") ? "janta" : "buffet"),
-      active: item.active,
-      locations: (item.meal_locations ?? [])
-        .filter((location) => location.active)
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map((location) => ({ id: location.id, name: location.name }))
-    }));
+    .map((item) => {
+      const inferredCategory = item.category ?? (String(item.name ?? "").toLowerCase().includes("marmita") ? "marmita" : String(item.name ?? "").toLowerCase().includes("jantar") ? "janta" : "buffet");
+      return {
+        id: item.id,
+        label: item.name,
+        description: item.description ?? "",
+        unitPrice: Number(item.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
+        category: inferredCategory,
+        canRecordActuals: mealCategoryAllowsActuals(state, inferredCategory),
+        active: item.active,
+        locations: (item.meal_locations ?? [])
+          .filter((location) => location.active)
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((location) => ({ id: location.id, name: location.name }))
+      };
+    });
   state.mealCatalog = mappedCatalog;
   state.mealTypes = mappedCatalog.filter((item) => item.active === true);
   state.supplierMealTypes = (data.supplierMealTypes?.length ? data.supplierMealTypes.map((item) => ({
@@ -3308,6 +3533,7 @@ function mapApplicationData(data, profile) {
     mealType: item.meal_types?.name ?? "",
     mealDescription: item.meal_types?.description ?? "",
     mealCategory: item.meal_types?.category ?? "",
+    canRecordActuals: mealCategoryAllowsActuals(state, item.meal_types?.category),
     unitPrice: Number(item.meal_types?.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
     locationId: item.location_id,
     location: item.meal_locations?.name ?? "",
