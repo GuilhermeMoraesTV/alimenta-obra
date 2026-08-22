@@ -1,5 +1,6 @@
 import { getConsolidationSummary, getSupplierCompanies, getSupplierCompanyName, getSuppliers, getUserName, requestActualQuantity as resolveRequestActualQuantity, requestFinancialValue as resolveRequestFinancialValue, requestOriginLabel, requestUnitPrice as resolveRequestUnitPrice } from "./store-v2.js";
 import { STATUS_LABEL } from "../core/navigation.js";
+import { auditDescription as describeAuditEvent, auditEntityLabel as auditEntityLabelShared, auditItemFacts, shouldShowAuditItem } from "../features/audit/descriptions.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const SYSTEM_LOGO_URL = new URL(`${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`, window.location.origin).href;
@@ -182,30 +183,12 @@ function openPrintDocument(html, title) {
   return true;
 }
 
-function auditDescription(item) {
-  const payload = item.payload ?? {};
-  if (item.action === "Fornecedor alterou status do pedido") {
-    const labels = {
-      confirmado: "Fornecedor confirmou o recebimento",
-      producao: "Fornecedor iniciou a producao",
-      saiu_entrega: "Fornecedor registrou a saida para entrega",
-      entregue: "Fornecedor confirmou a entrega"
-    };
-    return labels[payload.status] ?? `Fornecedor alterou o status para ${payload.status ?? "-"}`;
-  }
-  if (item.action === "Bloco diario enviado ou atualizado ao fornecedor") return "Admin enviou ou reenviou o bloco ao fornecedor";
-  if (item.action === "Bloco diario criado ou atualizado") return "Admin atualizou a composicao do pedido ao fornecedor";
-  if (item.action === "Pedido cancelado apos confirmacao") {
-    const reason = payload.reason ? ` Motivo: ${payload.reason}.` : "";
-    return `Admin cancelou o bloco apos confirmacao e registrou consumo real zero.${reason}`;
-  }
-  return auditEntityLabel(item.entity);
-}
-
 function buildMeasurementModel(state, rows, options = {}) {
+  const sortedRows = [...rows]
+    .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"));
   const activeRows = rows.filter((request) => !CANCELLED_STATUSES.has(request.status))
     .sort((a, b) => `${a.date}-${a.mealType}`.localeCompare(`${b.date}-${b.mealType}`, "pt-BR"));
-  const rowDates = activeRows.map((request) => request.date).filter(Boolean).sort();
+  const rowDates = sortedRows.map((request) => request.date).filter(Boolean).sort();
   const periodStart = options.filter?.start || rowDates[0] || state.settings?.defaultMealDate || localDateKey();
   const periodEnd = options.filter?.end || rowDates.at(-1) || periodStart;
   const dateRangeLabel = periodStart === periodEnd ? formatDate(periodStart) : `${formatDate(periodStart)} a ${formatDate(periodEnd)}`;
@@ -287,6 +270,27 @@ function buildMeasurementModel(state, rows, options = {}) {
       notes: request.notes ?? ""
     };
   });
+  const cancelledDetailRows = sortedRows
+    .filter((request) => CANCELLED_STATUSES.has(request.status))
+    .map((request) => {
+      const unitPrice = requestUnitPrice(state, request);
+      return {
+        date: request.date,
+        weekday: weekdayShort(request.date),
+        leader: request.originRole === "admin" ? getUserName(state, request.createdBy) : request.leader || request.leaderName || getUserName(state, request.leaderId),
+        section: request.sectionName || request.location || "Sem equipe",
+        meal: request.mealType || "Refeicao",
+        origin: requestOriginLabel(request),
+        supplier: getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId),
+        requested: Number(request.quantity ?? 0),
+        consumed: 0,
+        effective: 0,
+        unitPrice,
+        value: 0,
+        status: request.status,
+        notes: request.notes ? `${request.notes} - Cancelado sem impacto operacional` : "Cancelado sem impacto operacional"
+      };
+    });
 
   const sectionSummary = summarizeBy(detailRows, "section");
   const mealSummary = summarizeBy(detailRows, "meal");
@@ -312,6 +316,8 @@ function buildMeasurementModel(state, rows, options = {}) {
     meals,
     dayRows,
     detailRows,
+    allDetailRows: [...detailRows, ...cancelledDetailRows].sort((a, b) => `${a.date}-${a.meal}`.localeCompare(`${b.date}-${b.meal}`, "pt-BR")),
+    cancelledDetailRows,
     sectionSummary,
     mealSummary,
     totalQuantity,
@@ -728,7 +734,8 @@ function renderMeasurementPdfHtml(model) {
   }, []);
   const mealLimitPerPage = model.meals.length > 6 ? 3 : 4;
   const mealGroups = chunk(model.meals.map((meal, index) => ({ ...meal, index })), mealLimitPerPage);
-  const detailGroups = chunk(model.detailRows, 24);
+  const printableDetailRows = model.allDetailRows ?? model.detailRows;
+  const detailGroups = chunk(printableDetailRows, 24);
   const summaryGroups = chunk(model.sectionSummary, 22);
   const dayRows = model.dayRows.map((day) => `<tr><td>${escapeHtml(day.longDate)}</td></tr>`).join("");
   const coverMealCards = model.mealSummary.map((row) => `<article class="measurement-meal-card"><span>${escapeHtml(row.label)}</span><strong>${row.consumed}</strong><small>${money(row.value)} · solic. ${row.requested}</small></article>`).join("");
@@ -1270,10 +1277,13 @@ function renderExecutiveFinancialPdfHtml(state, rows, title) {
 }
 
 function renderAuditPdfHtml(state) {
-  const auditRows = [...state.auditLog];
+  const auditRows = [...(state.auditLog ?? [])].filter(shouldShowAuditItem);
   const userCount = new Set(auditRows.map((item) => item.userId)).size;
-  const entityCount = new Set(auditRows.map((item) => auditEntityLabel(item.entity))).size;
-  const timeline = auditRows.map((item) => `<div class="timeline-item"><div class="timeline-dot"></div><div><strong>${escapeHtml(item.action)}</strong><br>${escapeHtml(getUserName(state, item.userId))} - ${formatDateTime(item.at)} - ${escapeHtml(auditEntityLabel(item.entity))}</div></div>`).join("");
+  const entityCount = new Set(auditRows.map((item) => auditEntityLabelShared(item.entity))).size;
+  const timeline = auditRows.map((item) => {
+    const requestFacts = auditItemFacts(state, item);
+    return `<div class="timeline-item"><div class="timeline-dot"></div><div><strong>${escapeHtml(describeAuditEvent(state, item))}</strong>${requestFacts ? `<br><span>${escapeHtml(requestFacts)}</span>` : ""}<br>${formatDateTime(item.at)} - ${escapeHtml(auditEntityLabelShared(item.entity))}</div></div>`;
+  }).join("");
 
   return renderPrintablePage({
     title: "Auditoria do sistema",
@@ -1509,6 +1519,7 @@ function buildOrdersDailySheet(model) {
 
 function buildMeasurementDetailSheet(model) {
   const rows = [];
+  const printableRows = model.allDetailRows ?? model.detailRows;
   applyMeasurementHeader(rows, {
     logoEnd: 3,
     titleStart: 4,
@@ -1517,12 +1528,12 @@ function buildMeasurementDetailSheet(model) {
     rightEnd: 12,
     title: "Detalhamento da Medicao",
     leftLines: [`Empresa: ${model.supplierName}`, `Periodo: ${model.periodLabel}`, `Gerado: ${model.generatedAt}`],
-    rightLines: ["AlimentaObra", `Registros: ${model.detailRows.length}`, "", ""]
+    rightLines: ["AlimentaObra", `Registros: ${printableRows.length}`, "", ""]
   });
   ["Data", "Dia", "Encarregado", "Equipe/Trecho", "Tipo", "Solicitado", "Realizado", "Efetivo", "Valor unitario", "Valor total", "Status", "Observacoes"].forEach((label, index) => {
     setStyledCell(rows, 6, index + 1, label, 5);
   });
-  model.detailRows.forEach((item, index) => {
+  printableRows.forEach((item, index) => {
     const row = index + 7;
     setStyledCell(rows, row, 1, longDate(item.date), 8);
     setStyledCell(rows, row, 2, item.weekday, 8);
@@ -1533,14 +1544,14 @@ function buildMeasurementDetailSheet(model) {
     setStyledCell(rows, row, 11, item.status, 4);
     setStyledCell(rows, row, 12, item.notes, 4);
   });
-  ensureRangeStyle(rows, 1, 1, Math.max(6, model.detailRows.length + 6), 12, 4);
+  ensureRangeStyle(rows, 1, 1, Math.max(6, printableRows.length + 6), 12, 4);
   return {
     name: "Detalhamento",
     rows,
     columnWidths: [34, 16, 28, 28, 24, 12, 12, 12, 14, 14, 16, 34],
-    rowHeights: standardHeaderRowHeights(Math.max(6, model.detailRows.length + 6)),
+    rowHeights: standardHeaderRowHeights(Math.max(6, printableRows.length + 6)),
     freezeRows: 6,
-    autoFilter: `A6:L${Math.max(6, model.detailRows.length + 6)}`,
+    autoFilter: `A6:L${Math.max(6, printableRows.length + 6)}`,
     merges: ["A1:C4", "D1:I1", "J1:L1", "D2:I2", "J2:L2", "D3:I3", "J3:L3", "D4:I4", "J4:L4"],
     pageSetup: true
   };
@@ -1548,40 +1559,42 @@ function buildMeasurementDetailSheet(model) {
 
 function buildAuditSheet(state) {
   const rows = [];
-  const auditRows = state.auditLog ?? [];
+  const auditRows = (state.auditLog ?? []).filter(shouldShowAuditItem);
   const users = new Set(auditRows.map((item) => item.userId).filter(Boolean));
-  const areas = new Set(auditRows.map((item) => auditEntityLabel(item.entity)));
+  const areas = new Set(auditRows.map((item) => auditEntityLabelShared(item.entity)));
   applyMeasurementHeader(rows, {
     logoEnd: 2,
     titleStart: 3,
     titleEnd: 5,
-    rightStart: 5,
-    rightEnd: 5,
+    rightStart: 6,
+    rightEnd: 6,
     title: "Auditoria do Sistema",
     leftLines: [`Eventos: ${auditRows.length}`, `Usuarios: ${users.size}`, `Areas: ${areas.size}`],
     rightLines: ["AlimentaObra", `Gerado: ${formatDateTime(new Date().toISOString())}`, "", ""]
   });
-  ["Data/Hora", "Usuario", "Acao", "Area", "Descricao"].forEach((label, index) => {
+  ["Data/Hora", "Usuario", "Acao", "Area", "Pedido", "Descricao"].forEach((label, index) => {
     setStyledCell(rows, 6, index + 1, label, 5);
   });
   auditRows.forEach((item, index) => {
     const row = index + 7;
+    const requestFacts = auditItemFacts(state, item);
     setStyledCell(rows, row, 1, formatDateTime(item.at), 4);
     setStyledCell(rows, row, 2, getUserName(state, item.userId), 4);
-    setStyledCell(rows, row, 3, item.action, 4);
-    setStyledCell(rows, row, 4, auditEntityLabel(item.entity), 4);
-    setStyledCell(rows, row, 5, auditDescription(item), 4);
+    setStyledCell(rows, row, 3, describeAuditEvent(state, item), 4);
+    setStyledCell(rows, row, 4, auditEntityLabelShared(item.entity), 4);
+    setStyledCell(rows, row, 5, requestFacts || "-", 4);
+    setStyledCell(rows, row, 6, describeAuditEvent(state, item), 4);
   });
   const rowCount = Math.max(6, auditRows.length + 6);
-  ensureRangeStyle(rows, 1, 1, rowCount, 5, 4);
+  ensureRangeStyle(rows, 1, 1, rowCount, 6, 4);
   return {
     name: "Auditoria",
     rows,
-    columnWidths: [20, 24, 34, 22, 54],
+    columnWidths: [20, 24, 34, 22, 38, 54],
     rowHeights: standardHeaderRowHeights(rowCount),
     freezeRows: 6,
-    autoFilter: `A6:E${rowCount}`,
-    merges: ["A1:B4", "C1:D1", "C2:D2", "C3:D3", "C4:D4"],
+    autoFilter: `A6:F${rowCount}`,
+    merges: ["A1:B4", "C1:E1", "C2:E2", "C3:E3", "C4:E4"],
     pageSetup: true
   };
 }

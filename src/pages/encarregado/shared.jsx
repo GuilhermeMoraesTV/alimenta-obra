@@ -31,18 +31,40 @@ export function Metric({ label, value }) {
 export function statusBadgeClass(status) {
   const variants = {
     cancelado: "border-red-200 bg-red-50 text-red-700",
+    cancelado_confirmado: "border-red-200 bg-red-50 text-red-700",
+    cancelamento_pendente: "border-rose-200 bg-rose-50 text-rose-700",
     confirmado: "border-blue-200 bg-blue-50 text-blue-700",
     entregue: "border-emerald-200 bg-emerald-50 text-emerald-700",
     enviado: "border-orange-200 bg-orange-50 text-orange-700",
     producao: "border-amber-200 bg-amber-50 text-amber-700",
     rascunho: "border-stone-200 bg-stone-100 text-stone-600",
-    saiu_entrega: "border-sky-200 bg-sky-50 text-sky-700"
+    saiu_entrega: "border-emerald-200 bg-emerald-50 text-emerald-700"
   };
   return `inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-black uppercase ${variants[status] ?? variants.rascunho}`;
+}
+
+const CONSOLIDATION_STATUS_PRIORITY = [
+  "cancelamento_pendente",
+  "cancelado_confirmado",
+  "entregue",
+  "saiu_entrega",
+  "producao",
+  "confirmado",
+  "enviado"
+];
+
+export function projectLeaderRequestStatus(state, request) {
+  if (request.status === "cancelado") return "cancelado";
+  const linked = (state.consolidations ?? [])
+    .filter((consolidation) => consolidation.status !== "rascunho" && consolidation.requestIds?.includes(request.id))
+    .map((consolidation) => consolidation.status);
+  if (!linked.length) return request.status;
+  return CONSOLIDATION_STATUS_PRIORITY.find((status) => linked.includes(status)) ?? request.status;
 }
 
 export function leaderRequests(state, user, includeCancelled = true) {
   return state.requests
     .filter((request) => request.leaderId === user.id && (includeCancelled || request.status !== "cancelado"))
+    .map((request) => ({ ...request, status: projectLeaderRequestStatus(state, request) }))
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 }

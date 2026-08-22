@@ -96,8 +96,8 @@ export function statusLabel(STATUS_LABEL, status) {
 
 export function supplierHomeAction(status) {
   if (status === "enviado") return { step: "confirmado", label: "Confirmar recebimento", iconName: "check" };
-  if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar saida", iconName: "truck" };
-  if (status === "producao") return { step: "saiu_entrega", label: "Confirmar saida", iconName: "truck" };
+  if (status === "confirmado") return { step: "saiu_entrega", label: "Registrar entrega", iconName: "truck" };
+  if (status === "producao") return { step: "saiu_entrega", label: "Confirmar entrega", iconName: "truck" };
   if (status === "cancelamento_pendente") return { step: "cancelado_confirmado", label: "Confirmar cancelamento", iconName: "check" };
   return null;
 }
@@ -171,7 +171,7 @@ export function ConsolidationTimeline({ consolidation, formatDateTime, state }) 
     ["enviado", "Enviado ao fornecedor"],
     ["confirmado", "Fornecedor confirmou recebimento"],
     ...(hasLegacyProduction ? [["producao", "Fornecedor confirmou producao"]] : []),
-    ["saiu_entrega", "Saida registrada"],
+    ["saiu_entrega", "Entrega registrada"],
     ...(consolidation.status === "cancelamento_pendente" ? [["cancelamento_pendente", "Aguardando ciencia do fornecedor"]] : []),
     ...(consolidation.status === "cancelado_confirmado" ? [["cancelado_confirmado", "Cancelado apos confirmacao"]] : [])
   ];

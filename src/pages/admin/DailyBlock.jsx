@@ -69,6 +69,14 @@ function dailyBlockStatusPresentation({ activeRequests, consolidation, extraWait
   return { label: "Pendente", status: "pendente" };
 }
 
+function compactDailyStatusLabel(status, labels = {}) {
+  if (status === "cancelado_confirmado") return "Cancelado";
+  if (status === "cancelamento_pendente") return "Cancel. pendente";
+  if (status === "aguardando_confirmacao") return "A confirmar";
+  if (status === "aguardando_entrega") return "A entregar";
+  return labels[status] ?? status;
+}
+
 export const dailyBlockStyles = `
   .admin-page .daily-block-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); justify-items: center; align-items: stretch; gap: .75rem; }
   .admin-page .daily-block-card { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: 100%; max-width: 27rem; min-height: 34rem; max-height: 34rem; min-width: 0; overflow: hidden; border-radius: 14px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
@@ -92,13 +100,34 @@ export const dailyBlockStyles = `
   .admin-page .daily-request-title { min-width: 0; }
   .admin-page .daily-request-title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; color: #1c1917; }
   .admin-page .daily-request-title small { display: block; margin-top: .1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #78716c; font-size: .64rem; font-weight: 800; }
-  .admin-page .daily-request-side { display: flex; align-items: center; justify-content: flex-end; gap: .32rem; }
+  .admin-page .daily-request-side { display: flex; align-items: center; justify-content: flex-end; gap: .42rem; }
   .admin-page .daily-request-qty { min-width: 2.35rem; text-align: right; }
   .admin-page .daily-request-qty strong { display: block; font-size: .95rem; line-height: 1; font-weight: 950; color: #1c1917; }
   .admin-page .daily-request-qty small { font-size: 9px; font-weight: 900; color: #78716c; text-transform: uppercase; }
-  .admin-page .daily-request-actions { display: flex; gap: .2rem; }
+  .admin-page .daily-request-actions { display: flex; align-items: center; justify-content: flex-end; gap: .2rem; }
   .admin-page .daily-request-actions .btn { min-height: 1.85rem; width: 1.85rem; padding: 0; }
   .admin-page .daily-request-actions .daily-action-label { display: none; }
+  .admin-page .daily-request-row .badge,
+  .admin-page .daily-status-line .badge { display: inline-flex; height: 1.55rem; min-width: 5rem; max-width: 9.4rem; flex: 0 0 auto; align-items: center; justify-content: center; overflow: hidden; border-radius: 999px; border: 1px solid #e7e5e4; background: #f5f5f4; padding: 0 .58rem; color: #57534e; font-size: 9px; font-weight: 950; line-height: 1; text-align: center; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+  .admin-page .daily-request-row .badge.enviado,
+  .admin-page .daily-status-line .badge.enviado { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
+  .admin-page .daily-request-row .badge.confirmado,
+  .admin-page .daily-status-line .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+  .admin-page .daily-request-row .badge.producao,
+  .admin-page .daily-status-line .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
+  .admin-page .daily-request-row .badge.saiu_entrega,
+  .admin-page .daily-request-row .badge.entregue,
+  .admin-page .daily-status-line .badge.saiu_entrega,
+  .admin-page .daily-status-line .badge.entregue { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+  .admin-page .daily-request-row .badge.cancelado,
+  .admin-page .daily-request-row .badge.cancelado_confirmado,
+  .admin-page .daily-request-row .badge.cancelamento_pendente,
+  .admin-page .daily-status-line .badge.cancelado,
+  .admin-page .daily-status-line .badge.cancelado_confirmado,
+  .admin-page .daily-status-line .badge.cancelamento_pendente { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+  .admin-page .daily-cancel-status { display: inline-flex; height: 1.55rem; min-width: 5rem; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid #fecaca; background: #fff; padding: 0 .58rem; color: #991b1b; font-size: 9px; font-weight: 950; line-height: 1; text-align: center; text-transform: uppercase; white-space: nowrap; }
+  .admin-page .daily-cancel-status.cancelamento_pendente { border-color: #fda4af; background: #fff1f2; color: #9f1239; }
+  .admin-page .daily-cancel-detail { color: #991b1b !important; }
   .admin-page .daily-block-footer { display: grid; gap: .42rem; border-top: 1px solid #f5f5f4; padding: .58rem .7rem .68rem; }
   .admin-page .daily-final-summary { display: flex; flex-wrap: wrap; gap: .35rem; }
   .admin-page .daily-final-row { display: inline-flex; align-items: center; gap: .32rem; border-radius: 999px; border: 1px solid #fed7aa; background: #fff7ed; color: #c2410c; font-size: .7rem; font-weight: 950; }
@@ -243,10 +272,12 @@ export function DailyBlockCard(props) {
                 <div className="daily-request-title">
                   <strong>{mealDistributionName(state, request)}</strong>
                   <small>{requestOriginLabel(request)} - {request.sectionName || request.location} - {getSupplierCompanyName(state, request.supplierCompanyId, request.supplierId)}</small>
+                  {request.status === "cancelado_confirmado" ? <small className="daily-cancel-detail">Apos confirmacao</small> : null}
+                  {request.status === "cancelamento_pendente" ? <small className="daily-cancel-detail">Aguardando ciencia do fornecedor</small> : null}
                 </div>
                 <div className="daily-request-side">
                   <div className="daily-request-qty"><strong>{request.quantity}</strong></div>
-                  <span className={`badge ${request.status}`}>{statusLabel(STATUS_LABEL, request.status)}</span>
+                  <span className={`daily-cancel-status ${request.status}`}>{compactDailyStatusLabel(request.status, STATUS_LABEL)}</span>
                 </div>
               </div>
             ))}
@@ -268,7 +299,7 @@ export function DailyBlockCard(props) {
           <>
             <div className="daily-status-line">
               <span>{consolidations.length > 1 ? `${consolidations.length} pedidos ao fornecedor` : "Status do fornecedor"}</span>
-              <span className={`badge ${statusPresentation.status}`}>{statusPresentation.label}</span>
+              <span className={`badge ${statusPresentation.status}`} title={statusPresentation.label}>{compactDailyStatusLabel(statusPresentation.status, STATUS_LABEL)}</span>
             </div>
             {extraWaitingRequests.length ? (
               <button className="btn primary" type="button" data-send-request-date={date}>

@@ -143,7 +143,11 @@ const relatoriosHeroStyles = `
   .admin-page .report-bar-track { overflow: hidden; height: .72rem; border-radius: 999px; background: #e7e5e4; }
   .admin-page .report-bar-fill { display: block; height: 100%; min-width: 3px; border-radius: inherit; background: var(--bar-color, #c2410c); }
   .admin-page .report-bar-value { color: #1c1917; font-size: .76rem; font-weight: 950; text-align: right; white-space: nowrap; }
+  .admin-page .report-grouped-chart { display: grid; gap: .68rem; }
   .admin-page .report-grouped-bars { display: grid; gap: .68rem; }
+  .admin-page .report-series-legend { display: flex; flex-wrap: wrap; gap: .45rem .75rem; }
+  .admin-page .report-series-legend span { display: inline-flex; align-items: center; gap: .32rem; color: #57534e; font-size: .68rem; font-weight: 950; text-transform: uppercase; }
+  .admin-page .report-series-legend i { width: .65rem; height: .65rem; border-radius: 999px; background: var(--series-color, #ea580c); }
   .admin-page .report-group-row { display: grid; grid-template-columns: minmax(5.8rem,.62fr) minmax(0,1fr); gap: .65rem; align-items: center; }
   .admin-page .report-group-stack { display: grid; gap: .28rem; }
   .admin-page .report-mini-track { height: .55rem; overflow: hidden; border-radius: 999px; background: #e7e5e4; }
@@ -154,19 +158,15 @@ const relatoriosHeroStyles = `
   .admin-page .report-legend { display: grid; gap: .45rem; }
   .admin-page .report-legend-row { display: grid; grid-template-columns: .55rem minmax(0,1fr) auto; align-items: center; gap: .45rem; color: #57534e; font-size: .76rem; font-weight: 850; }
   .admin-page .report-legend-dot { width: .55rem; height: .55rem; border-radius: 999px; background: var(--dot-color, #c2410c); }
-  .admin-page .report-column-chart { min-height: 12rem; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(1.8rem,1fr); align-items: end; gap: .38rem; border-bottom: 1px solid #d6d3d1; padding-top: .5rem; }
+  .admin-page .report-column-chart { min-height: 12rem; display: grid; grid-template-columns: repeat(var(--column-count, 1), minmax(0,1fr)); justify-content: stretch; align-items: end; gap: .7rem; border-bottom: 1px solid #d6d3d1; padding-top: .5rem; overflow-x: visible; }
   .admin-page .report-column { min-width: 0; display: grid; grid-template-rows: auto minmax(1rem,1fr) auto; align-items: end; gap: .32rem; height: 100%; text-align: center; }
   .admin-page .report-column strong { color: #44403c; font-size: .62rem; font-weight: 900; }
-  .admin-page .report-column i { display: block; width: 100%; min-height: .18rem; border-radius: .45rem .45rem 0 0; background: linear-gradient(180deg, #ea580c, #9a3412); }
+  .admin-page .report-column i { display: block; width: .55rem; justify-self: center; min-height: .18rem; border-radius: 999px 999px 0 0; background: var(--column-color, #ea580c); box-shadow: 0 0 0 1px rgba(28,25,23,.04); }
   .admin-page .report-column span { overflow: hidden; color: #78716c; font-size: .62rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
   .admin-page .report-heatmap { display: grid; gap: .38rem; }
   .admin-page .report-heat-row { display: grid; grid-template-columns: 5.5rem repeat(var(--heat-count), minmax(2.2rem,1fr)); gap: .32rem; align-items: center; }
   .admin-page .report-heat-row strong { color: #44403c; font-size: .7rem; font-weight: 950; }
   .admin-page .report-heat-cell { min-height: 2rem; display: grid; place-items: center; border-radius: .45rem; background: color-mix(in srgb, #ea580c var(--heat, 0%), #f5f5f4); color: #1c1917; font-size: .68rem; font-weight: 950; }
-  .admin-page .report-insights { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; }
-  .admin-page .report-insight { display: grid; gap: .25rem; border-radius: 14px; border: 1px solid #e7e5e4; background: #fff; padding: .85rem; }
-  .admin-page .report-insight span { color: #c2410c; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
-  .admin-page .report-insight strong { color: #1c1917; font-size: 1.15rem; line-height: 1; }
   .admin-page .report-empty { border-radius: .9rem; border: 1px dashed #d6d3d1; background: #fafaf9; padding: 1rem; color: #78716c; font-size: .82rem; font-weight: 800; text-align: center; }
 
   @media (max-width: 767px) {
@@ -192,15 +192,14 @@ const relatoriosHeroStyles = `
     .admin-page .daily-report-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
     .admin-page .daily-report-actions .btn { width: 100%; }
     .admin-page .report-chart-grid,
-    .admin-page .report-chart-grid.wide,
-    .admin-page .report-insights { grid-template-columns: 1fr; }
+    .admin-page .report-chart-grid.wide { grid-template-columns: 1fr; }
     .admin-page .report-chart-card { padding: .75rem; border-radius: 14px; }
     .admin-page .report-chart-head { display: grid; }
     .admin-page .report-chart-chip { justify-self: start; }
     .admin-page .report-bar-row { grid-template-columns: minmax(4.9rem,.64fr) minmax(0,1fr) auto; gap: .4rem; }
     .admin-page .report-donut-wrap { grid-template-columns: 1fr; justify-items: center; }
     .admin-page .report-legend { width: 100%; }
-    .admin-page .report-column-chart { overflow-x: auto; grid-auto-columns: 2.2rem; }
+    .admin-page .report-column-chart { grid-template-columns: repeat(var(--column-count, 1), minmax(2.05rem,1fr)); gap: .5rem; overflow-x: auto; }
     .admin-page .report-heat-row { grid-template-columns: 4.6rem repeat(var(--heat-count), minmax(2rem,1fr)); gap: .24rem; }
     .admin-page .report-heat-row strong,
     .admin-page .report-heat-cell { font-size: .62rem; }
@@ -333,17 +332,24 @@ function GroupedMealBars({ items }) {
   const max = Math.max(...safeItems.flatMap((item) => [item.requested, item.consumed, item.effective]).map(Number), 1);
   if (!safeItems.length) return <EmptyChart />;
   return (
-    <div className="report-grouped-bars">
-      {safeItems.map((item) => (
-        <div className="report-group-row" key={item.label}>
-          <span className="report-bar-label" title={item.label}>{item.label}</span>
-          <div className="report-group-stack">
-            <span className="report-mini-track" title={`Solicitado: ${item.requested}`}><b style={{ background: "#ea580c", width: `${clampPercent((item.requested / max) * 100)}%` }} /></span>
-            <span className="report-mini-track" title={`Consumido: ${item.consumed}`}><b style={{ background: "#1c1917", width: `${clampPercent((item.consumed / max) * 100)}%` }} /></span>
-            <span className="report-mini-track" title={`Efetivo: ${item.effective || 0}`}><b style={{ background: "#0f766e", width: `${clampPercent(((item.effective || 0) / max) * 100)}%` }} /></span>
+    <div className="report-grouped-chart">
+      <div className="report-grouped-bars">
+        {safeItems.map((item) => (
+          <div className="report-group-row" key={item.label}>
+            <span className="report-bar-label" title={item.label}>{item.label}</span>
+            <div className="report-group-stack">
+              <span className="report-mini-track" title={`Solicitado: ${item.requested}`}><b style={{ background: "#ea580c", width: `${clampPercent((item.requested / max) * 100)}%` }} /></span>
+              <span className="report-mini-track" title={`Consumido: ${item.consumed}`}><b style={{ background: "#1c1917", width: `${clampPercent((item.consumed / max) * 100)}%` }} /></span>
+              <span className="report-mini-track" title={`Efetivo: ${item.effective || 0}`}><b style={{ background: "#0f766e", width: `${clampPercent(((item.effective || 0) / max) * 100)}%` }} /></span>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="report-series-legend">
+        <span><i style={{ "--series-color": "#ea580c" }} />Solicitado</span>
+        <span><i style={{ "--series-color": "#1c1917" }} />Consumido real</span>
+        <span><i style={{ "--series-color": "#0f766e" }} />Efetivo</span>
+      </div>
     </div>
   );
 }
@@ -380,12 +386,12 @@ function DonutChart({ items, center }) {
   );
 }
 
-function ColumnChart({ items, valueKey = "consumed", format = formatNumber, limit = 14 }) {
+function ColumnChart({ color = "#ea580c", items, valueKey = "consumed", format = formatNumber, limit = 14 }) {
   const safeItems = items.slice(-limit);
   const max = Math.max(...safeItems.map((item) => Number(item[valueKey] ?? 0)), 1);
   if (!safeItems.length) return <EmptyChart />;
   return (
-    <div className="report-column-chart">
+    <div className="report-column-chart" style={{ "--column-color": color, "--column-count": safeItems.length }}>
       {safeItems.map((item) => {
         const value = Number(item[valueKey] ?? 0);
         return (
@@ -420,19 +426,6 @@ function HeatmapChart({ meals, heatmap }) {
         </div>
       ))}
     </div>
-  );
-}
-
-function FinanceMetric({ accent = false, icon, iconName, label, value, hint }) {
-  return (
-    <article className={`finance-metric ${accent ? "accent" : ""}`}>
-      {iconName ? <span className="data-card-icon"><Icon icon={icon} name={iconName} size={15} /></span> : null}
-      <div className="data-card-copy">
-        <strong>{value}</strong>
-        <span>{label}</span>
-        {hint ? <small>{hint}</small> : null}
-      </div>
-    </article>
   );
 }
 
@@ -508,7 +501,7 @@ function DailyReportCard({ icon, report, reportDate }) {
 }
 
 export function Relatorios(props) {
-  const { icon, reportFilter, reportPeriodLabel, reportRows, reportRowsWithCancelled, state, sumQty, totalsByMeal } = props;
+  const { icon, reportFilter, reportPeriodLabel, reportRows, reportRowsWithCancelled, state, sumQty } = props;
   const rows = reportRows ?? state.requests.filter((request) => request.status !== "cancelado");
   const rowsWithCancelled = reportRowsWithCancelled ?? rows;
   const analytics = summarizeRows(state, rows, props.STATUS_LABEL ?? {});
@@ -517,13 +510,9 @@ export function Relatorios(props) {
   const yesterdayReport = state.dailyReports?.find((report) => report.date === yesterday);
   const currentFilter = reportFilter ?? { range: "all", start: state.settings.defaultMealDate, end: state.settings.defaultMealDate };
   const total = sumQty(rows);
-  const mealTotals = totalsByMeal(rows);
   const isAllPeriod = currentFilter.range === "all";
   const isCustomPeriod = currentFilter.range === "custom";
-  const adherence = analytics.requested ? `${Math.round((analytics.consumed / analytics.requested) * 100)}%` : "-";
   const serviceRate = analytics.effective ? `${Math.round((analytics.consumed / analytics.effective) * 100)}%` : "-";
-  const averageTicket = analytics.consumed ? formatMoney(analytics.value / analytics.consumed) : formatMoney(0);
-  const cancelledConfirmedCount = rowsWithCancelled.filter((request) => request.status === "cancelado_confirmado").length;
 
   return (
     <>
@@ -578,82 +567,16 @@ export function Relatorios(props) {
           </>
         )}
         metrics={[
-          { icon, iconName: "utensils", label: "Refeições", value: total },
+          { icon, iconName: "utensils", label: "Refeicoes", value: analytics.meals.length },
           { icon, iconName: "clipboard", label: "Pedidos", value: rows.length },
-          { icon, iconName: "box", label: "Marmitas", value: mealTotals["Marmita Campo"] ?? 0 },
-          { icon, iconName: "utensils", label: "Almoços", value: mealTotals["Buffer Almoço"] ?? mealTotals["Buffer Almoco"] ?? 0 },
-          { icon, iconName: "moon", label: "Jantas", value: mealTotals.Jantar ?? 0 },
-          { icon, iconName: "trash", label: "Cancel. confirm.", value: cancelledConfirmedCount },
+          { icon, iconName: "box", label: "Solicitados", value: analytics.requested },
+          { icon, iconName: "chart", label: "Consumo real", value: analytics.consumed },
         ]}
       />
 
       <DailyReportCard icon={icon} report={yesterdayReport} reportDate={yesterday} />
 
-      {false ? (
-      <div className="finance-hero mt-2">
-        <div className="finance-hero-head">
-
-          {/* Botão de voltar acima do título */}
-          <div>
-            <button className="sleek-back-btn" data-view="admin">
-              <Icon icon={icon} name="arrow-left" size={12} /> Voltar
-            </button>
-          </div>
-
-          <div className="finance-hero-row">
-            <div>
-              <span className="compact-kicker">Relatórios</span>
-              <h1>Visão geral e desempenho</h1>
-              <p>Filtre por período diário, semanal, mensal ou personalizado.</p>
-            </div>
-
-            {/* Ações Redesenhadas */}
-            <div className="finance-hero-actions">
-              <AdminFilterMenu icon={icon}>
-                <select data-report-range value={currentFilter.range} onChange={() => {}}>
-                  <option value="all">Todo periodo</option>
-                  <option value="day">Dia</option>
-                  <option value="week">Semana</option>
-                  <option value="month">Mês</option>
-                  <option value="custom">Período personalizado</option>
-                </select>
-                <input type="date" value={currentFilter.start || state.settings.defaultMealDate} data-report-start aria-label={isCustomPeriod ? "Inicio do periodo" : "Data de referencia"} disabled={isAllPeriod} onChange={() => {}} />
-                <input type="date" value={currentFilter.end || currentFilter.start || state.settings.defaultMealDate} data-report-end aria-label="Fim do periodo" disabled={!isCustomPeriod} onChange={() => {}} />
-              </AdminFilterMenu>
-
-              <button className="btn primary small" type="button" data-export-kpi><Icon icon={icon} name="chart" size={14} />KPI PDF</button>
-              <MeasurementExportMenu
-                currentFilter={currentFilter}
-                exportMenuOpen={props.exportMenuOpen}
-                icon={icon}
-                isAllPeriod={isAllPeriod}
-                isCustomPeriod={isCustomPeriod}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="finance-holes">
-          {Array.from({ length: 14 }).map((_, index) => <span key={index} />)}
-        </div>
-
-        <div className="finance-metrics-strip">
-          <FinanceMetric accent icon={icon} iconName="clipboard" label="Total" value={total} hint="refeições no período" />
-          <FinanceMetric icon={icon} iconName="box" label="Marmitas" value={totalsByMeal(rows)["Marmita Campo"] ?? 0} hint="entregas em campo" />
-          <FinanceMetric icon={icon} iconName="utensils" label="Almoços" value={totalsByMeal(rows)["Buffer Almoço"] ?? totalsByMeal(rows)["Buffer Almoco"] ?? 0} hint="refeições no buffer" />
-          <FinanceMetric icon={icon} iconName="moon" label="Jantas" value={totalsByMeal(rows).Jantar ?? 0} hint="período noturno" />
-        </div>
-      </div>
-
-      ) : null}
-
       <section className="report-analytics mt-3">
-        <div className="report-insights">
-          <article className="report-insight"><span>Consumido real</span><strong>{formatNumber(analytics.consumed)}</strong><p>{adherence} do solicitado no filtro.</p></article>
-          <article className="report-insight"><span>Diferenca</span><strong>{formatNumber(analytics.consumed - analytics.requested)}</strong><p>refeicoes entre consumo real e solicitado.</p></article>
-          <article className="report-insight"><span>Custo estimado</span><strong>{formatMoney(analytics.value)}</strong><p>{averageTicket} por refeicao consumida.</p></article>
-        </div>
-
         <div className="report-chart-grid wide">
           <ChartCard className="is-emphasis" kicker="KPI operacional" title="Solicitado x consumido x efetivo" subtitle="Comparacao por tipo de refeicao, seguindo a mesma leitura do KPI em PDF." chip={`${analytics.meals.length} tipos`}>
             <GroupedMealBars items={analytics.meals} />
@@ -668,7 +591,7 @@ export function Relatorios(props) {
             <DonutChart items={statusAnalytics.statuses} center={String(rowsWithCancelled.length)} />
           </ChartCard>
           <ChartCard kicker="Evolucao" title="Consumo diario" subtitle="Ultimos dias do periodo filtrado para identificar picos e quedas." chip={`${analytics.days.length} dias`}>
-            <ColumnChart items={analytics.days} />
+            <ColumnChart items={analytics.days} color="#ea580c" />
           </ChartCard>
         </div>
 
@@ -677,7 +600,7 @@ export function Relatorios(props) {
             <HorizontalBars items={analytics.sections} valueKey="consumed" />
           </ChartCard>
           <ChartCard kicker="Efetivo" title="Atendimento diario" subtitle="Percentual do efetivo atendido por refeicoes consumidas." chip={serviceRate}>
-            <ColumnChart items={analytics.days.map((day) => ({ ...day, occupancy: day.effective ? Math.round((day.consumed / day.effective) * 100) : 0 }))} valueKey="occupancy" format={(value) => `${value}%`} />
+            <ColumnChart items={analytics.days.map((day) => ({ ...day, occupancy: day.effective ? Math.round((day.consumed / day.effective) * 100) : 0 }))} valueKey="occupancy" format={(value) => `${value}%`} color="#0f766e" />
           </ChartCard>
         </div>
       </section>

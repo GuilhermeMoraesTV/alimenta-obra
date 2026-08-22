@@ -91,7 +91,7 @@ const baseAdminScreenStyles = `
   .admin-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .admin-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .admin-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
-  .admin-page .badge.saiu_entrega { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
+  .admin-page .badge.saiu_entrega { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
   .admin-page .table-wrap { overflow-x: auto; border-radius: .75rem; border: 1px solid #e7e5e4; background: #fff; }
   .admin-page table { width: 100%; border-collapse: collapse; }
   .admin-page th { background: #fafaf9; padding: .75rem; text-align: left; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #78716c; }
@@ -249,7 +249,7 @@ function ConsolidatedSummary({ requestMealDescription, state, summary }) {
 }
 
 function ConsolidationTimeline({ consolidation, formatDateTime, state }) {
-  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou produção"], ["saiu_entrega", "Saída para entrega registrada"], ["entregue", "Entrega concluída"]];
+  const steps = [["enviado", "Enviado ao fornecedor"], ["confirmado", "Fornecedor confirmou recebimento"], ["producao", "Fornecedor confirmou producao"], ["saiu_entrega", "Entrega registrada"], ["entregue", "Entrega concluida"]];
   if (consolidation.status === "cancelado_confirmado") steps.push(["cancelado_confirmado", "Cancelado apos confirmacao"]);
   return (
     <div className="timeline">

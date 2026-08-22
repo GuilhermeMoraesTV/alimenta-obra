@@ -1,0 +1,227 @@
+{
+  "adminPreserved": "admin@gmail.com",
+  "authUsersToRemove": [
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "admin@admin.com",
+      "id": "0b3eeba8-a8e4-4aa8-b1e0-56efde88ab32"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "encarregado.campo@teste.com",
+      "id": "6b1728f7-6bb8-4839-8ba4-349268b1916a"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "encarregado.canteiro@teste.com",
+      "id": "053fde10-b1e4-4561-84c4-ddc3e6903039"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "encarregado.escritorio@teste.com",
+      "id": "15fa4e10-2417-402d-b317-66e74891787e"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "encarregado.noite@teste.com",
+      "id": "002338ae-4011-4471-857c-35c876d6059e"
+    },
+    {
+      "createdAt": "2026-06-25T18:10:13.14786+00:00",
+      "email": "encarregado@gmail.com",
+      "id": "f37b8ea1-b55d-434e-b0aa-829d74ffbe76"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "fornecedor.buffet@teste.com",
+      "id": "aee654cd-af61-4306-a862-1db3b02d260f"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "fornecedor.janta@teste.com",
+      "id": "019c9a75-d1e6-4cd3-87c6-4abd1609bf59"
+    },
+    {
+      "createdAt": "2026-07-20T19:53:08.819878+00:00",
+      "email": "fornecedor.marmita@teste.com",
+      "id": "3e0f0f3e-ca83-451f-be33-dc32dfacfc12"
+    },
+    {
+      "createdAt": "2026-08-02T16:15:00.069505+00:00",
+      "email": "fornecedorteste@gmail.com",
+      "id": "938bbc2c-bc76-47df-bfda-5eb839260751"
+    },
+    {
+      "createdAt": "2026-07-13T20:27:37.101341+00:00",
+      "email": "joao@gmail.com",
+      "id": "ba0a08bf-62ea-43f0-badc-2cdc27262a72"
+    },
+    {
+      "createdAt": "2026-07-04T12:41:50.592927+00:00",
+      "email": "jorge@gmail.com",
+      "id": "de3075e0-d09c-428e-906f-665673fc79cf"
+    },
+    {
+      "createdAt": "2026-08-02T16:16:50.916135+00:00",
+      "email": "jotinha@gmail.com",
+      "id": "8126e5c4-ed9d-4abc-90a7-221ec617e158"
+    },
+    {
+      "createdAt": "2026-06-21T19:51:40.766812+00:00",
+      "email": "marmitas@gmail.com",
+      "id": "9d237b89-9915-481c-b5e3-1ea464b38bf9"
+    },
+    {
+      "createdAt": "2026-07-20T16:37:03.241663+00:00",
+      "email": "vini@gmail.com",
+      "id": "aa61627d-d0ce-4fe1-8e9e-be3d32fbdd2f"
+    }
+  ],
+  "capturedAt": "2026-08-05T12:24:07.174158+00:00",
+  "profilesToRemove": [
+    {
+      "active": true,
+      "email": "admin@admin.com",
+      "id": "0b3eeba8-a8e4-4aa8-b1e0-56efde88ab32",
+      "name": "Admin QA Fluxo",
+      "role": "admin",
+      "team": "Administracao"
+    },
+    {
+      "active": true,
+      "email": "encarregado.campo@teste.com",
+      "id": "6b1728f7-6bb8-4839-8ba4-349268b1916a",
+      "name": "Encarregado Campo Norte",
+      "role": "encarregado",
+      "team": "Campo Norte"
+    },
+    {
+      "active": true,
+      "email": "encarregado.canteiro@teste.com",
+      "id": "053fde10-b1e4-4561-84c4-ddc3e6903039",
+      "name": "Encarregado Canteiro",
+      "role": "encarregado",
+      "team": "Canteiro Central"
+    },
+    {
+      "active": true,
+      "email": "encarregado.escritorio@teste.com",
+      "id": "15fa4e10-2417-402d-b317-66e74891787e",
+      "name": "Encarregado Escritorio",
+      "role": "encarregado",
+      "team": "Escritorio Administrativo"
+    },
+    {
+      "active": true,
+      "email": "encarregado.noite@teste.com",
+      "id": "002338ae-4011-4471-857c-35c876d6059e",
+      "name": "Encarregado Turno Noite",
+      "role": "encarregado",
+      "team": "Turno Noite"
+    },
+    {
+      "active": true,
+      "email": "encarregado@gmail.com",
+      "id": "f37b8ea1-b55d-434e-b0aa-829d74ffbe76",
+      "name": "Anderson Silva",
+      "role": "encarregado",
+      "team": "Teste"
+    },
+    {
+      "active": true,
+      "email": "fornecedor.buffet@teste.com",
+      "id": "aee654cd-af61-4306-a862-1db3b02d260f",
+      "name": "Login Buffet QA",
+      "role": "fornecedor",
+      "team": "Buffet QA"
+    },
+    {
+      "active": true,
+      "email": "fornecedor.janta@teste.com",
+      "id": "019c9a75-d1e6-4cd3-87c6-4abd1609bf59",
+      "name": "Login Janta QA",
+      "role": "fornecedor",
+      "team": "Janta QA"
+    },
+    {
+      "active": true,
+      "email": "fornecedor.marmita@teste.com",
+      "id": "3e0f0f3e-ca83-451f-be33-dc32dfacfc12",
+      "name": "Login Marmitaria QA",
+      "role": "fornecedor",
+      "team": "Marmitaria QA"
+    },
+    {
+      "active": true,
+      "email": "fornecedorteste@gmail.com",
+      "id": "938bbc2c-bc76-47df-bfda-5eb839260751",
+      "name": "teste fornecedor",
+      "role": "fornecedor",
+      "team": "ervrerve"
+    },
+    {
+      "active": true,
+      "email": "joao@gmail.com",
+      "id": "ba0a08bf-62ea-43f0-badc-2cdc27262a72",
+      "name": "João da Cunha",
+      "role": "encarregado",
+      "team": "wwefwe"
+    },
+    {
+      "active": true,
+      "email": "jorge@gmail.com",
+      "id": "de3075e0-d09c-428e-906f-665673fc79cf",
+      "name": "Jorge",
+      "role": "encarregado",
+      "team": "Frente"
+    },
+    {
+      "active": false,
+      "email": "jotinha@gmail.com",
+      "id": "8126e5c4-ed9d-4abc-90a7-221ec617e158",
+      "name": "jotinha",
+      "role": "encarregado",
+      "team": "brt rbrtbrtbrtb"
+    },
+    {
+      "active": true,
+      "email": "marmitas@gmail.com",
+      "id": "9d237b89-9915-481c-b5e3-1ea464b38bf9",
+      "name": "Marmitas Prime",
+      "role": "fornecedor",
+      "team": null
+    },
+    {
+      "active": false,
+      "email": "vini@gmail.com",
+      "id": "aa61627d-d0ce-4fe1-8e9e-be3d32fbdd2f",
+      "name": "Vinicios",
+      "role": "encarregado",
+      "team": "fwefwefw"
+    }
+  ],
+  "projectRef": "nahretmwgwuqjhhqwjpd",
+  "tableCounts": {
+    "access_invites": 5,
+    "audit_log": 359,
+    "auth.users": 16,
+    "consolidation_actuals": 50,
+    "consolidation_documents": 2,
+    "consolidation_items": 68,
+    "consolidation_revisions": 11,
+    "consolidations": 43,
+    "daily_reports": 21,
+    "meal_categories": 2,
+    "meal_locations": 17,
+    "meal_requests": 71,
+    "meal_types": 8,
+    "profiles": 16,
+    "storage.objects:supplier-documents": 3,
+    "supplier_companies": 4,
+    "supplier_company_users": 4,
+    "supplier_confirmations": 83,
+    "supplier_meal_types": 13,
+    "work_section_meal_types": 24,
+    "work_sections": 9
+  }
+}

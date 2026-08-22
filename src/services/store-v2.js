@@ -7,6 +7,13 @@ export const DEFAULT_MEAL_CATEGORIES = [
   { id: "outro", label: "Outro", active: true, canRecordActuals: false }
 ];
 
+export const DEFAULT_WORK_AREA_TYPES = [
+  { id: "campo", label: "Campo", active: true, categoryIds: ["marmita", "janta"] },
+  { id: "canteiro", label: "Canteiro", active: true, categoryIds: ["buffet", "janta"] },
+  { id: "escritorio", label: "Escritorio", active: true, categoryIds: ["buffet", "janta"] },
+  { id: "misto", label: "Misto", active: true, categoryIds: ["marmita", "buffet", "janta"] }
+];
+
 export function createEmptyState() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -21,6 +28,12 @@ export function createEmptyState() {
     supplierCompanies: [],
     supplierCompanyUsers: [],
     supplierMealTypes: [],
+    workAreaTypes: DEFAULT_WORK_AREA_TYPES,
+    workAreaTypeCategories: DEFAULT_WORK_AREA_TYPES.flatMap((area) => area.categoryIds.map((categoryId) => ({
+      areaTypeId: area.id,
+      categoryId,
+      active: true
+    }))),
     workSections: [],
     sectionMealTypes: [],
     deliveryAddresses: [],
@@ -123,6 +136,26 @@ export function mealCategoryAllowsActuals(state, category = "") {
   return getMealCategory(state, category)?.canRecordActuals === true;
 }
 
+export function getWorkAreaTypes(state, { includeInactive = true } = {}) {
+  const areaTypes = state.workAreaTypes?.length ? state.workAreaTypes : DEFAULT_WORK_AREA_TYPES;
+  return includeInactive ? areaTypes : areaTypes.filter((item) => item.active !== false);
+}
+
+export function workAreaTypeLabel(state, areaType = "campo") {
+  return getWorkAreaTypes(state).find((item) => item.id === areaType)?.label
+    ?? DEFAULT_WORK_AREA_TYPES.find((item) => item.id === areaType)?.label
+    ?? areaType
+    ?? "Campo";
+}
+
+export function getCategoryIdsForAreaType(state, areaType = "") {
+  const linked = (state.workAreaTypeCategories ?? [])
+    .filter((item) => item.areaTypeId === areaType && item.active !== false)
+    .map((item) => item.categoryId);
+  if (linked.length) return linked;
+  return DEFAULT_WORK_AREA_TYPES.find((item) => item.id === areaType)?.categoryIds ?? [];
+}
+
 export function mealAllowsActuals(state, mealTypeId = "") {
   const meal = state.mealCatalog?.find((item) => item.id === mealTypeId)
     ?? state.mealTypes?.find((item) => item.id === mealTypeId);
@@ -150,11 +183,15 @@ export function getMealsForSection(state, sectionId = "") {
     ? activeMeals.filter((meal) => getSuppliersForMeal(state, meal.id, { includeInactive: false }).length > 0)
     : activeMeals;
   if (!sectionId) return orderableMeals;
+  const section = state.workSections?.find((item) => item.id === sectionId);
   const allowedIds = (state.sectionMealTypes ?? [])
     .filter((item) => item.sectionId === sectionId && item.active !== false)
     .map((item) => item.mealTypeId);
   if (!allowedIds.length) return [];
-  return orderableMeals.filter((meal) => allowedIds.includes(meal.id));
+  const scopedMeals = orderableMeals.filter((meal) => allowedIds.includes(meal.id));
+  const categoryIds = getCategoryIdsForAreaType(state, section?.areaType);
+  if (!categoryIds.length) return scopedMeals;
+  return scopedMeals.filter((meal) => categoryIds.includes(meal.category));
 }
 
 export function requestOriginLabel(request) {
@@ -234,7 +271,7 @@ export function getConsolidationSummary(state, consolidation) {
     acc[request.mealType].rows.push(request);
     const sectionName = request.sectionName || request.location;
     const actual = getActualQuantity(state, consolidation.id, request);
-    const headcount = sectionHeadcount(state, request.teamId);
+    const headcount = Number(request.sectionHeadcount ?? sectionHeadcount(state, request.teamId));
     acc[request.mealType].actual += actual;
     acc[request.mealType].headcount += headcount;
     acc[request.mealType].byLocation[sectionName] ??= 0;
@@ -253,13 +290,13 @@ export function getConsolidationSummary(state, consolidation) {
     acc[sectionName] ??= { requested: 0, actual: 0, headcount: 0, rows: [] };
     acc[sectionName].requested += Number(request.quantity);
     acc[sectionName].actual += actual;
-    acc[sectionName].headcount += sectionHeadcount(state, request.teamId);
+    acc[sectionName].headcount += Number(request.sectionHeadcount ?? sectionHeadcount(state, request.teamId));
     acc[sectionName].rows.push(request);
     return acc;
   }, {});
 
   const actualTotal = rows.reduce((sum, request) => sum + getActualQuantity(state, consolidation.id, request), 0);
-  const headcountTotal = rows.reduce((sum, request) => sum + sectionHeadcount(state, request.teamId), 0);
+  const headcountTotal = rows.reduce((sum, request) => sum + Number(request.sectionHeadcount ?? sectionHeadcount(state, request.teamId)), 0);
 
   return {
     rows,
@@ -279,7 +316,10 @@ export function getActualQuantity(state, consolidationId, request) {
 
 export function getRecordedActualQuantity(state, consolidationId, request) {
   const category = request?.mealCategory ?? state.mealCatalog?.find((meal) => meal.id === request?.mealTypeId)?.category;
-  if (category && !mealCategoryAllowsActuals(state, category)) {
+  if (request?.canRecordActuals === false) {
+    return null;
+  }
+  if (request?.canRecordActuals !== true && category && !mealCategoryAllowsActuals(state, category)) {
     return null;
   }
   if (consolidationId) {
@@ -300,9 +340,12 @@ export function getRecordedActualQuantity(state, consolidationId, request) {
 }
 
 export function requestUnitPrice(state, request) {
+  if (request?.unitPrice !== null && request?.unitPrice !== undefined && request?.unitPrice !== "") {
+    return Number(request.unitPrice);
+  }
   const supplierId = request.supplierCompanyId;
   const link = supplierId ? getSupplierMealLink(state, supplierId, request.mealTypeId) : null;
-  return Number(link?.unitPrice ?? request.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
+  return Number(link?.unitPrice ?? state.mealCatalog?.find((meal) => meal.id === request.mealTypeId)?.unitPrice ?? state.settings?.defaultMealUnitPrice ?? 0);
 }
 
 export function requestActualQuantity(state, request) {

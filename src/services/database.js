@@ -50,6 +50,14 @@ function isMissingMealCategorySchema(error) {
     || String(error?.message ?? "").includes("can_record_actuals");
 }
 
+function isMissingWorkAreaTypeSchema(error) {
+  return Number(error?.status) === 404
+    || ["42703", "42P01", "PGRST200", "PGRST202", "PGRST205"].includes(error?.code)
+    || String(error?.message ?? "").includes("work_area_types")
+    || String(error?.message ?? "").includes("work_area_type_categories")
+    || String(error?.message ?? "").includes("upsert_work_area_type");
+}
+
 function deliveryAddressErrorMessage(error) {
   const message = String(error?.message ?? "");
   if (error?.code === "23505" || message.includes("delivery_addresses_leader_id_label_key")) {
@@ -90,6 +98,8 @@ function mealRequestsQuery(client, includeDeliveryAddress = true) {
     .from("meal_requests")
     .select(`
       id, meal_date, meal_type_id, location_id, team_id, supplier_company_id, origin_role, ${includeDeliveryAddress ? "delivery_address_id," : ""} leader_id, quantity,
+      meal_name_snapshot, meal_description_snapshot, meal_category_snapshot, can_record_actuals_snapshot, unit_price_snapshot,
+      section_name_snapshot, section_headcount_snapshot, supplier_name_snapshot,
       status, notes, created_by, created_at, updated_at,
       meal_types(id, name, description, unit_price, category),
       meal_locations!meal_requests_location_id_fkey(id, name),
@@ -185,6 +195,26 @@ async function fetchMealCategoriesWithCompatibility(client) {
     .order("sort_order");
   if (!response.error) return response;
   if (!isMissingMealCategorySchema(response.error)) return response;
+  return { data: [], error: null, schemaMissing: true };
+}
+
+async function fetchWorkAreaTypesWithCompatibility(client) {
+  const response = await client
+    .from("work_area_types")
+    .select("id, label, active, sort_order, created_at, updated_at")
+    .order("sort_order");
+  if (!response.error) return response;
+  if (!isMissingWorkAreaTypeSchema(response.error)) return response;
+  return { data: [], error: null, schemaMissing: true };
+}
+
+async function fetchWorkAreaTypeCategoriesWithCompatibility(client) {
+  const response = await client
+    .from("work_area_type_categories")
+    .select("area_type_id, meal_category_id, active, created_at")
+    .order("area_type_id");
+  if (!response.error) return response;
+  if (!isMissingWorkAreaTypeSchema(response.error)) return response;
   return { data: [], error: null, schemaMissing: true };
 }
 
@@ -309,6 +339,8 @@ export async function fetchApplicationData() {
     .from("work_section_meal_types")
     .select("work_section_id, meal_type_id, active");
   const mealCategoriesPromise = fetchMealCategoriesWithCompatibility(client);
+  const workAreaTypesPromise = fetchWorkAreaTypesWithCompatibility(client);
+  const workAreaTypeCategoriesPromise = fetchWorkAreaTypeCategoriesWithCompatibility(client);
   const results = await Promise.all([
     client.from("profiles").select("id, name, email, role, team, active").order("name"),
     fetchMealCatalogWithCompatibility(client),
@@ -329,9 +361,11 @@ export async function fetchApplicationData() {
     supplierCompanyUsersPromise,
     supplierMealTypesPromise,
     sectionMealTypesPromise,
-    mealCategoriesPromise
+    mealCategoriesPromise,
+    workAreaTypesPromise,
+    workAreaTypeCategoriesPromise
   ]);
-  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports, supplierCompanies, supplierCompanyUsers, supplierMealTypes, sectionMealTypes, mealCategories] = results;
+  const [profiles, catalog, settings, requests, consolidations, audit, documents, addresses, workSections, actuals, reports, supplierCompanies, supplierCompanyUsers, supplierMealTypes, sectionMealTypes, mealCategories, workAreaTypes, workAreaTypeCategories] = results;
   const documentRows = documents.error && ["42P01", "PGRST205"].includes(documents.error.code)
     ? []
     : ensure(documents.data, documents.error);
@@ -363,6 +397,12 @@ export async function fetchApplicationData() {
   const mealCategoryRows = mealCategories.error && isMissingMealCategorySchema(mealCategories.error)
     ? []
     : ensure(mealCategories.data, mealCategories.error);
+  const workAreaTypeRows = workAreaTypes.error && isMissingWorkAreaTypeSchema(workAreaTypes.error)
+    ? []
+    : ensure(workAreaTypes.data, workAreaTypes.error);
+  const workAreaTypeCategoryRows = workAreaTypeCategories.error && isMissingWorkAreaTypeSchema(workAreaTypeCategories.error)
+    ? []
+    : ensure(workAreaTypeCategories.data, workAreaTypeCategories.error);
   return {
     profiles: ensure(profiles.data, profiles.error),
     catalog: ensure(catalog.data, catalog.error),
@@ -381,7 +421,10 @@ export async function fetchApplicationData() {
     supplierMealTypes: supplierMealTypeRows,
     sectionMealTypes: sectionMealTypeRows,
     mealCategories: mealCategoryRows,
-    mealCategoryFeatureAvailable: mealCategories.schemaMissing !== true
+    mealCategoryFeatureAvailable: mealCategories.schemaMissing !== true,
+    workAreaTypes: workAreaTypeRows,
+    workAreaTypeCategories: workAreaTypeCategoryRows,
+    workAreaTypeFeatureAvailable: workAreaTypes.schemaMissing !== true
   };
 }
 
@@ -456,6 +499,23 @@ export async function saveMealCategoryCatalog({ id, label, canRecordActuals = fa
 
 export async function deleteMealCategory(id) {
   const { data, error } = await requireSupabase().rpc("delete_meal_category", {
+    p_id: String(id ?? "").trim().toLowerCase()
+  });
+  return ensure(data, error);
+}
+
+export async function saveWorkAreaTypeCatalog({ id, label, categoryIds = [], active = true }) {
+  const { data, error } = await requireSupabase().rpc("upsert_work_area_type", {
+    p_id: String(id ?? "").trim().toLowerCase(),
+    p_label: String(label ?? "").trim(),
+    p_category_ids: Array.isArray(categoryIds) ? categoryIds.map((item) => String(item)) : [],
+    p_active: Boolean(active)
+  });
+  return ensure(data, error);
+}
+
+export async function deleteWorkAreaType(id) {
+  const { data, error } = await requireSupabase().rpc("delete_work_area_type", {
     p_id: String(id ?? "").trim().toLowerCase()
   });
   return ensure(data, error);
@@ -807,6 +867,8 @@ export function subscribeToChanges(onChange) {
     .on("postgres_changes", { event: "*", schema: "public", table: "daily_reports" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "meal_types" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "meal_categories" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "work_area_types" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "work_area_type_categories" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_companies" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "supplier_meal_types" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "work_section_meal_types" }, onChange)

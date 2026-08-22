@@ -69,7 +69,7 @@ assert.deepEqual(getSuppliersForMeal(supplierState, "m1", { includeInactive: fal
 assert.deepEqual(getSuppliersForMeal(supplierState, "m2", { includeInactive: false }).map((item) => item.id), []);
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: null }), "Admin");
 assert.equal(requestOriginLabel({ originRole: "admin", leaderId: "u1" }), "Encarregado");
-assert.equal(requestUnitPrice(supplierState, { supplierCompanyId: "sc1", mealTypeId: "m1", unitPrice: 20 }), 21);
+assert.equal(requestUnitPrice(supplierState, { supplierCompanyId: "sc1", mealTypeId: "m1", unitPrice: 20 }), 20);
 assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m1", mealCategory: "marmita", quantity: 100 }), 100);
 assert.equal(getActualQuantity(supplierState, "c9", { date: "2026-07-16", teamId: "s1", mealTypeId: "m2", mealCategory: "buffet", quantity: 100 }), 8);
 assert.deepEqual(getMealsForSection({

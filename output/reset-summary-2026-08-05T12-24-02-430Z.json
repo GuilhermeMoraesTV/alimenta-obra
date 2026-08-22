@@ -1,0 +1,227 @@
+{
+  "projectRef": "nahretmwgwuqjhhqwjpd",
+  "snapshotPath": "output\\reset-snapshot-before-2026-08-05T12-24-02-430Z.json",
+  "removedStorageObjects": [
+    "394870af-ea9e-484a-9e9d-4460c507f7c5/8604a311-64c8-4f3f-90ca-e5c48abebba1/bf366bb1-74f6-49e3-8c8e-806bff0951e5-Algoritmo_Rotina_Diaria_Academico.pdf",
+    "394870af-ea9e-484a-9e9d-4460c507f7c5/8604a311-64c8-4f3f-90ca-e5c48abebba1/ea180653-2b00-49ae-bd59-e9ec5f34f4d1-Lei-de-Execu--es-Penais---Parte-02.pdf",
+    "394870af-ea9e-484a-9e9d-4460c507f7c5/8b60ec8d-ac60-415a-86d7-979e756f03aa/87fcd794-16f1-4eff-aa53-8ef6a9531687-lista_simples_documentos_habilitacao.pdf"
+  ],
+  "createdUsers": [
+    {
+      "email": "fornecedor.marmita@alimentaobra.com",
+      "role": "fornecedor",
+      "id": "c26c37d4-e30f-42ce-ad33-571b75fb20a1"
+    },
+    {
+      "email": "fornecedor.buffer@alimentaobra.com",
+      "role": "fornecedor",
+      "id": "edc94ca2-b87e-4bf4-89b7-094ffd23a356"
+    },
+    {
+      "email": "fornecedor.janta@alimentaobra.com",
+      "role": "fornecedor",
+      "id": "ac0d9dce-7bb1-4b67-881e-b7f3619faa7e"
+    },
+    {
+      "email": "encarregado.campo1@alimentaobra.com",
+      "role": "encarregado",
+      "id": "86dd60fa-fc32-442f-915f-20e24fdeac12"
+    },
+    {
+      "email": "encarregado.campo2@alimentaobra.com",
+      "role": "encarregado",
+      "id": "af132868-47cf-4bcf-b9ee-528b9ef0b698"
+    },
+    {
+      "email": "encarregado.canteiro1@alimentaobra.com",
+      "role": "encarregado",
+      "id": "4ce044a4-5b45-4f49-9e4a-f3185ea9b2d9"
+    },
+    {
+      "email": "encarregado.canteiro2@alimentaobra.com",
+      "role": "encarregado",
+      "id": "b7b1a96b-3148-48d7-ba85-7d7773b956f9"
+    },
+    {
+      "email": "encarregado.escritorio@alimentaobra.com",
+      "role": "encarregado",
+      "id": "b8e357a9-a6f3-49f5-80b9-8c0386796c15"
+    }
+  ],
+  "verification": {
+    "actualsRows": 40,
+    "capturedAt": "2026-08-05T12:24:43.092823+00:00",
+    "categoryActualRules": {
+      "buffet": true,
+      "janta": true,
+      "marmita": false
+    },
+    "consolidationStatusCounts": {
+      "cancelado_confirmado": 3,
+      "cancelamento_pendente": 3,
+      "confirmado": 3,
+      "entregue": 3,
+      "enviado": 3,
+      "producao": 3,
+      "saiu_entrega": 3
+    },
+    "distinctConsolidationDates": 7,
+    "leadersByDate": [
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-01"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-02"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-03"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-04"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-05"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-06"
+      },
+      {
+        "leaders": 5,
+        "mealDate": "2026-08-07"
+      }
+    ],
+    "marmitaActualRows": 0,
+    "mealCategories": 3,
+    "mealLocations": 9,
+    "mealRequests": 70,
+    "mealTypes": 9,
+    "profileCountsByRole": {
+      "admin": 1,
+      "encarregado": 5,
+      "fornecedor": 3
+    },
+    "projectRef": "nahretmwgwuqjhhqwjpd",
+    "sectionAllowedCategories": {
+      "Campo Norte": [
+        "janta",
+        "marmita"
+      ],
+      "Campo Sul": [
+        "janta",
+        "marmita"
+      ],
+      "Canteiro Apoio": [
+        "buffet",
+        "janta"
+      ],
+      "Canteiro Central": [
+        "buffet",
+        "janta"
+      ],
+      "Escritorio Administrativo": [
+        "buffet",
+        "janta"
+      ]
+    },
+    "supplierCompanies": 3,
+    "supplierConsolidationRows": 21,
+    "workSections": 5
+  },
+  "loginChecks": [
+    {
+      "email": "admin@gmail.com",
+      "ok": true,
+      "userId": "394870af-ea9e-484a-9e9d-4460c507f7c5",
+      "profile": {
+        "id": "394870af-ea9e-484a-9e9d-4460c507f7c5",
+        "name": "Administrador",
+        "email": "admin@gmail.com",
+        "role": "admin",
+        "team": "Administracao",
+        "active": true
+      },
+      "error": null
+    },
+    {
+      "email": "fornecedor.marmita@alimentaobra.com",
+      "ok": true,
+      "userId": "c26c37d4-e30f-42ce-ad33-571b75fb20a1",
+      "profile": {
+        "id": "c26c37d4-e30f-42ce-ad33-571b75fb20a1",
+        "name": "Fornecedor Marmitas",
+        "email": "fornecedor.marmita@alimentaobra.com",
+        "role": "fornecedor",
+        "team": "Fornecedor Marmitas",
+        "active": true
+      },
+      "error": null
+    },
+    {
+      "email": "encarregado.campo1@alimentaobra.com",
+      "ok": true,
+      "userId": "86dd60fa-fc32-442f-915f-20e24fdeac12",
+      "profile": {
+        "id": "86dd60fa-fc32-442f-915f-20e24fdeac12",
+        "name": "Encarregado Campo Norte",
+        "email": "encarregado.campo1@alimentaobra.com",
+        "role": "encarregado",
+        "team": "Campo Norte",
+        "active": true
+      },
+      "error": null
+    }
+  ],
+  "credentials": [
+    {
+      "email": "admin@gmail.com",
+      "password": "admin123",
+      "role": "admin"
+    },
+    {
+      "email": "fornecedor.marmita@alimentaobra.com",
+      "password": "FornMarmita#2026",
+      "role": "fornecedor"
+    },
+    {
+      "email": "fornecedor.buffer@alimentaobra.com",
+      "password": "FornBuffer#2026",
+      "role": "fornecedor"
+    },
+    {
+      "email": "fornecedor.janta@alimentaobra.com",
+      "password": "FornJanta#2026",
+      "role": "fornecedor"
+    },
+    {
+      "email": "encarregado.campo1@alimentaobra.com",
+      "password": "EncCampo1#2026",
+      "role": "encarregado"
+    },
+    {
+      "email": "encarregado.campo2@alimentaobra.com",
+      "password": "EncCampo2#2026",
+      "role": "encarregado"
+    },
+    {
+      "email": "encarregado.canteiro1@alimentaobra.com",
+      "password": "EncCant1#2026",
+      "role": "encarregado"
+    },
+    {
+      "email": "encarregado.canteiro2@alimentaobra.com",
+      "password": "EncCant2#2026",
+      "role": "encarregado"
+    },
+    {
+      "email": "encarregado.escritorio@alimentaobra.com",
+      "password": "EncEscrit#2026",
+      "role": "encarregado"
+    }
+  ]
+}

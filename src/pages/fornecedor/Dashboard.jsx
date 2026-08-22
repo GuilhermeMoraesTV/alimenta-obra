@@ -33,8 +33,8 @@ export function Dashboard(props) {
         metrics={[
           { icon, iconName: "utensils", label: "Refeicoes ativas", value: totalToday },
           { icon, iconName: "clipboard", label: "A confirmar", value: waitingCount },
-          { icon, iconName: "clock", label: "Prontos p/ saida", value: readyToExitCount },
-          { icon, iconName: "check", label: "Saidas", value: deliveredCount },
+          { icon, iconName: "clock", label: "Prontos p/ entrega", value: readyToExitCount },
+          { icon, iconName: "check", label: "Entregues", value: deliveredCount },
         ]}
       />
       {activeRows.length ? (

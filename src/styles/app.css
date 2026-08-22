@@ -51,6 +51,81 @@ button:disabled {
   opacity: .56;
 }
 
+#install-prompt-root {
+  position: relative;
+  z-index: 45;
+}
+
+.install-app-floating {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 45;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
+  width: min(calc(100vw - 2rem), 30rem);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 1rem;
+  background: rgba(28, 29, 27, .96);
+  padding: .75rem;
+  color: #fff;
+  box-shadow: 0 18px 46px rgba(25, 27, 24, .28);
+  backdrop-filter: blur(14px);
+}
+
+.install-app-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: .85rem;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.install-app-copy {
+  min-width: 0;
+}
+
+.install-app-copy strong,
+.install-app-copy span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.install-app-copy strong {
+  font-size: .92rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.install-app-copy span {
+  margin-top: .12rem;
+  color: rgba(255, 255, 255, .66);
+  font-size: .76rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.install-app-button {
+  display: inline-flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  gap: .38rem;
+  border: 1px solid #fb923c;
+  border-radius: .8rem;
+  background: #ea580c;
+  padding: 0 .85rem;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 950;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(234, 88, 12, .24);
+}
+
 .admin-order-modal-panel {
   display: grid !important;
   grid-template-rows: auto minmax(0, 1fr);
@@ -547,6 +622,38 @@ button:disabled {
   html,
   body {
     font-size: 13px;
+  }
+
+  .install-app-floating {
+    right: .75rem;
+    bottom: calc(5.4rem + env(safe-area-inset-bottom));
+    left: .75rem;
+    grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+    width: auto;
+    gap: .55rem;
+    border-radius: .9rem;
+    padding: .62rem;
+  }
+
+  .install-app-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: .72rem;
+  }
+
+  .install-app-copy strong {
+    font-size: .82rem;
+  }
+
+  .install-app-copy span {
+    font-size: .68rem;
+    line-height: 1.16;
+  }
+
+  .install-app-button {
+    min-height: 2.25rem;
+    padding: 0 .62rem;
+    font-size: .7rem;
   }
 
   .fixed.top-0.role-admin,
@@ -1420,6 +1527,97 @@ button:disabled {
     width: 100% !important;
     min-width: 0 !important;
     padding-inline: .42rem !important;
+    white-space: normal !important;
+    line-height: 1.05 !important;
+  }
+
+  .app-modal-panel.actuals-modal-panel {
+    padding: .68rem !important;
+  }
+
+  .actuals-modal-panel .actuals-list {
+    gap: .42rem !important;
+    max-height: min(58dvh, 26rem) !important;
+    overflow-y: auto !important;
+    padding-right: .1rem !important;
+  }
+
+  .actuals-modal-panel .actuals-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .38rem !important;
+    align-items: stretch !important;
+    border-radius: .82rem !important;
+    padding: .5rem !important;
+  }
+
+  .actuals-modal-panel .actuals-row > div:first-of-type {
+    grid-column: 1 / -1 !important;
+  }
+
+  .actuals-modal-panel .actuals-row > div:nth-of-type(2) {
+    grid-column: 1 / -1 !important;
+    order: 2 !important;
+  }
+
+  .actuals-modal-panel .actuals-requested,
+  .actuals-modal-panel .actuals-consumed-field {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .actuals-modal-panel .actuals-row strong {
+    overflow-wrap: anywhere !important;
+    font-size: .76rem !important;
+    line-height: 1.08 !important;
+  }
+
+  .actuals-modal-panel .actuals-row small,
+  .actuals-modal-panel .actuals-row span {
+    font-size: .58rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .actuals-modal-panel .actuals-requested {
+    display: grid !important;
+    min-height: 3rem !important;
+    align-content: center !important;
+    padding: .4rem !important;
+  }
+
+  .actuals-modal-panel .actuals-requested strong {
+    font-size: 1.05rem !important;
+  }
+
+  .actuals-modal-panel .actuals-consumed-field {
+    gap: .18rem !important;
+  }
+
+  .actuals-modal-panel .actuals-consumed-field label {
+    display: block !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .actuals-modal-panel .actuals-consumed-field input {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 3rem !important;
+    padding-inline: .28rem !important;
+    text-align: center !important;
+    font-size: 1rem !important;
+    font-weight: 950 !important;
+  }
+
+  .actuals-modal-panel .actuals-footer {
+    display: grid !important;
+    grid-template-columns: .72fr 1fr !important;
+    margin-top: .5rem !important;
+  }
+
+  .actuals-modal-panel .actuals-footer button {
+    width: 100% !important;
+    min-width: 0 !important;
     white-space: normal !important;
     line-height: 1.05 !important;
   }

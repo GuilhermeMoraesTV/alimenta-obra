@@ -1,32 +1,6 @@
 import React, { useMemo } from "react";
-import { RequestCard } from "./RequestCard.jsx";
+import { DailyBlockCard, dailyBlockStyles, groupRequestsByDate } from "../admin/DailyBlock.jsx";
 import { Icon, leaderRequests, primaryButtonClass, shellClass } from "./shared.jsx";
-
-function mealGroupLabel(request) {
-  if (request.mealCategory === "marmita") return "Marmita";
-  if (request.mealCategory === "buffet") return "Buffer";
-  if (request.mealCategory === "janta") return "Janta";
-  return request.mealType || "Outras refeicoes";
-}
-
-function groupByDate(rows) {
-  return Object.entries(rows.reduce((acc, request) => {
-    acc[request.date] ??= [];
-    acc[request.date].push(request);
-    return acc;
-  }, {})).sort(([dateA], [dateB]) => dateB.localeCompare(dateA));
-}
-
-function groupByMeal(rows) {
-  const order = { marmita: 0, buffet: 1, janta: 2 };
-  return Object.values(rows.reduce((acc, request) => {
-    const key = request.mealCategory || request.mealType || "outro";
-    acc[key] ??= { key, label: mealGroupLabel(request), rows: [], total: 0 };
-    acc[key].rows.push(request);
-    acc[key].total += Number(request.quantity ?? 0);
-    return acc;
-  }, {})).sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9) || a.label.localeCompare(b.label));
-}
 
 function HistoryChip({ icon, iconName, label, value }) {
   return (
@@ -49,10 +23,11 @@ export function Historico(props) {
   const lastRequest = rows[0];
   const totalQty = sumQty(activeRows);
   const draftCount = countStatus(rows, "rascunho");
-  const dailyBlocks = groupByDate(rows);
+  const dailyBlocks = groupRequestsByDate(rows);
 
   return (
-    <div className={shellClass}>
+    <div className={`${shellClass} admin-page max-w-7xl`}>
+      <style>{dailyBlockStyles}</style>
       <section className="overflow-hidden rounded-[22px] border border-stone-800 bg-[#242622] shadow-[0_18px_40px_-22px_rgba(0,0,0,0.55)]">
         <div className="relative px-4 pb-7 pt-4 text-white sm:px-6 sm:pt-5">
           <div
@@ -97,40 +72,10 @@ export function Historico(props) {
       {!rows.length ? (
         <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-white px-6 py-8 text-center shadow-sm"><span className="grid h-12 w-12 place-items-center rounded-xl bg-orange-50 text-orange-700"><Icon icon={icon} name="clipboard" size={22} /></span><strong>Histórico vazio</strong><p className="m-0 text-sm text-stone-500">Os pedidos enviados ou salvos como rascunho aparecerão aqui.</p><button className={primaryButtonClass} data-view="pedido"><Icon icon={icon} name="plus" size={15} />Novo pedido</button></div>
       ) : (
-        <section className="grid gap-3">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {dailyBlocks.map(([date, dateRows]) => {
-              const activeDateRows = dateRows.filter((request) => request.status !== "cancelado");
-              const total = sumQty(activeDateRows);
-              const mealGroups = groupByMeal(dateRows);
-              return (
-                <article className="overflow-hidden rounded-r-2xl rounded-l-md border border-l-2 border-dashed border-stone-200 bg-[#fffefa] shadow-sm" key={date}>
-                  <header className="flex items-start justify-between gap-3 border-b border-stone-100 px-3 py-3">
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-black uppercase tracking-[.1em] text-orange-700">Bloco diario</span>
-                      <h2 className="m-0 mt-1 text-base font-black leading-none text-stone-950">{formatDate(date)}</h2>
-                      <p className="m-0 mt-1 text-xs font-bold text-stone-500">{dateRows.length} pedidos registrados</p>
-                    </div>
-                    <div className="shrink-0 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-right">
-                      <strong className="block text-sm font-black leading-none text-orange-700">{total}</strong>
-                      <span className="text-[9px] font-black uppercase text-orange-600">refeicoes</span>
-                    </div>
-                  </header>
-                  <div className="grid gap-2 p-3">
-                    {mealGroups.map((group) => (
-                      <section className="grid gap-2 rounded-xl border border-stone-200 bg-white p-2" key={group.key}>
-                        <div className="flex items-center justify-between gap-2">
-                          <strong className="min-w-0 truncate text-sm font-black text-stone-950">{group.label}</strong>
-                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-black text-orange-700">{group.total}</span>
-                        </div>
-                        {group.rows.map((request) => <RequestCard {...props} request={request} compact key={request.id} />)}
-                      </section>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+        <section className="daily-block-list">
+          {dailyBlocks.map(([date, dateRows]) => (
+            <DailyBlockCard {...props} date={date} requests={dateRows} key={date} />
+          ))}
         </section>
       )}
     </div>

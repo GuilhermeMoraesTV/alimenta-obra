@@ -11,6 +11,7 @@ import {
   canEditRequest,
   createEmptyState,
   DEFAULT_MEAL_CATEGORIES,
+  DEFAULT_WORK_AREA_TYPES,
   getActiveWorkSections,
   getActiveUser,
   getConsolidationForDate,
@@ -23,6 +24,7 @@ import {
   getSuppliersForMeal,
   getSuppliers,
   getUserName,
+  getWorkAreaTypes,
   loadUiState,
   mealCategoryLabel,
   mealCategoryAllowsActuals,
@@ -72,10 +74,12 @@ import {
   updateUserActiveStatus,
   updateMealRequest,
   updateUserPassword,
+  deleteWorkAreaType,
+  saveWorkAreaTypeCatalog,
   uploadSupplierInvoice,
   validateAlimentaObraSchema
 } from "./services/database.js";
-import { isSupabaseConfigured, supabase } from "./services/supabase.js";
+import { clearLocalSupabaseSession, isSupabaseConfigured, supabase } from "./services/supabase.js";
 import { escapeHtml, formatDate, formatDateTime, money } from "./utils/formatters.js";
 
 const uiState = loadUiState();
@@ -95,6 +99,7 @@ let settingsUserModalError = "";
 let settingsSupplierModalId = null;
 let settingsMealModalId = null;
 let settingsMealCategoryModalId = null;
+let settingsAreaTypeModalId = null;
 let settingsWorkSectionModalId = null;
 let draggedMealTypeId = "";
 let pendingCancelRequestId = null;
@@ -180,6 +185,28 @@ function adminOrderMeals(sectionId = "", supplierCompanyId = "") {
   ));
 }
 
+function resolveAdminOrderDefaults(sections = [], suppliers = []) {
+  for (const section of sections) {
+    for (const supplier of suppliers) {
+      const meals = adminOrderMeals(section.id, supplier.id);
+      if (meals.length) {
+        return {
+          sectionId: section.id,
+          supplierId: supplier.id,
+          meals
+        };
+      }
+    }
+  }
+  const sectionId = sections[0]?.id ?? "";
+  const supplierId = suppliers[0]?.id ?? "";
+  return {
+    sectionId,
+    supplierId,
+    meals: adminOrderMeals(sectionId, supplierId)
+  };
+}
+
 function adminOrderCartItemLabel(item) {
   const meal = state.mealTypes.find((row) => row.id === item.mealTypeId);
   const section = state.workSections.find((row) => row.id === item.teamId);
@@ -221,6 +248,10 @@ const root = document.querySelector("#app-root");
 const toastRoot = document.querySelector("#toast-root");
 const initialInviteToken = new URLSearchParams(window.location.search).get("invite") ?? "";
 const appLogoAsset = `${import.meta.env.BASE_URL}assets/logo-alimentaobra.png`;
+const installPromptRoot = document.createElement("div");
+installPromptRoot.id = "install-prompt-root";
+document.body.appendChild(installPromptRoot);
+const pwaInstalledStorageKey = "alimentaobra:pwa-installed";
 const modalBackdropClass = "app-modal-backdrop fixed inset-0 z-50 grid place-items-center bg-stone-950/50 p-3 backdrop-blur-sm sm:p-4";
 const modalPanelClass = "app-modal-panel max-h-[92vh] w-full max-w-2xl overflow-auto rounded-3xl border border-white/70 bg-white p-4 shadow-2xl sm:p-5 [&_header]:mb-4 [&_header]:flex [&_header]:items-start [&_header]:justify-between [&_header]:gap-3 [&_header]:border-b [&_header]:border-stone-100 [&_header]:pb-3 [&_.eyebrow]:text-[10px] [&_.eyebrow]:font-black [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.12em] [&_.eyebrow]:text-orange-700 [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-none [&_p]:m-0 [&_p]:text-sm [&_p]:text-stone-500 [&_.modal-close]:grid [&_.modal-close]:h-9 [&_.modal-close]:w-9 [&_.modal-close]:place-items-center [&_.modal-close]:rounded-full [&_.modal-close]:border [&_.modal-close]:border-stone-200 [&_.modal-close]:bg-white [&_.modal-close]:text-xl [&_.modal-close]:font-black [&_.modal-close]:text-stone-500 [&_.admin-request-detail-card]:grid [&_.admin-request-detail-card]:gap-3 [&_.admin-request-detail-hero]:grid [&_.admin-request-detail-hero]:grid-cols-[48px_minmax(0,1fr)] [&_.admin-request-detail-hero]:gap-3 [&_.admin-request-detail-hero]:rounded-2xl [&_.admin-request-detail-hero]:border [&_.admin-request-detail-hero]:border-stone-200 [&_.admin-request-detail-hero]:bg-stone-50 [&_.admin-request-detail-hero]:p-3 [&_.request-meal-icon]:grid [&_.request-meal-icon]:h-12 [&_.request-meal-icon]:w-12 [&_.request-meal-icon]:place-items-center [&_.request-meal-icon]:rounded-xl [&_.request-meal-icon]:bg-orange-50 [&_.request-meal-icon]:text-orange-700 [&_.badge]:inline-flex [&_.badge]:min-h-7 [&_.badge]:items-center [&_.badge]:rounded-full [&_.badge]:border [&_.badge]:border-stone-200 [&_.badge]:bg-white [&_.badge]:px-2.5 [&_.badge]:text-[11px] [&_.badge]:font-black [&_.badge]:uppercase [&_.badge]:text-stone-600 [&_.admin-request-detail-grid]:grid [&_.admin-request-detail-grid]:gap-2 sm:[&_.admin-request-detail-grid]:grid-cols-2 [&_.admin-request-detail-grid>div]:rounded-xl [&_.admin-request-detail-grid>div]:border [&_.admin-request-detail-grid>div]:border-stone-200 [&_.admin-request-detail-grid>div]:bg-white [&_.admin-request-detail-grid>div]:p-3 [&_.admin-request-detail-grid_span]:text-[10px] [&_.admin-request-detail-grid_span]:font-black [&_.admin-request-detail-grid_span]:uppercase [&_.admin-request-detail-grid_span]:text-stone-500 [&_.admin-request-detail-grid_strong]:block [&_.admin-request-notes]:rounded-xl [&_.admin-request-notes]:border [&_.admin-request-notes]:border-stone-200 [&_.admin-request-notes]:bg-white [&_.admin-request-notes]:p-3 [&_.admin-request-notes_span]:text-[10px] [&_.admin-request-notes_span]:font-black [&_.admin-request-notes_span]:uppercase [&_.admin-request-notes_span]:text-stone-500 [&_footer]:mt-4 [&_footer]:flex [&_footer]:justify-end [&_footer]:gap-2 [&_footer]:border-t [&_footer]:border-stone-100 [&_footer]:pt-3 [&_.btn]:inline-flex [&_.btn]:min-h-10 [&_.btn]:items-center [&_.btn]:justify-center [&_.btn]:gap-2 [&_.btn]:rounded-lg [&_.btn]:border [&_.btn]:px-4 [&_.btn]:text-sm [&_.btn]:font-extrabold [&_.btn.primary]:border-orange-600 [&_.btn.primary]:bg-orange-600 [&_.btn.primary]:text-white [&_.btn.outline]:border-stone-300 [&_.btn.outline]:bg-white [&_.btn.outline]:text-stone-900";
 const modalHeaderClass = "mb-4 flex items-start justify-between gap-3 border-b border-stone-100 pb-3";
@@ -240,6 +271,8 @@ let supplierOrderStatus = "todos";
 let supplierOrderDate = "";
 let selectedSupplierConsolidationId = null;
 let pendingActualsConsolidationId = null;
+let deferredInstallPrompt = null;
+let installManualHelpVisible = false;
 
 const {
   consolidationValue,
@@ -278,6 +311,94 @@ function toast(message) {
   setTimeout(() => item.remove(), 3400);
 }
 
+function isStandaloneDisplay() {
+  return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+}
+
+function isIosInstallSurface() {
+  const userAgent = window.navigator.userAgent || "";
+  return /iphone|ipad|ipod/i.test(userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+}
+
+function isAppMarkedInstalled() {
+  return isStandaloneDisplay() || window.localStorage.getItem(pwaInstalledStorageKey) === "true";
+}
+
+function shouldShowInstallPrompt() {
+  if (isAppMarkedInstalled()) return false;
+  return Boolean(deferredInstallPrompt || installManualHelpVisible || isIosInstallSurface());
+}
+
+function installPromptCopy() {
+  if (deferredInstallPrompt) {
+    return {
+      action: "Baixar app",
+      detail: "Instale o AlimentaObra neste dispositivo.",
+      title: "Baixe nosso app"
+    };
+  }
+  if (isIosInstallSurface()) {
+    return {
+      action: "Como baixar",
+      detail: "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.",
+      title: "Baixe nosso app"
+    };
+  }
+  return {
+    action: "Como baixar",
+    detail: "No menu do navegador, escolha Instalar app ou Adicionar à tela inicial.",
+    title: "Baixe nosso app"
+  };
+}
+
+function renderInstallPrompt() {
+  if (!installPromptRoot) return;
+  if (!shouldShowInstallPrompt()) {
+    installPromptRoot.innerHTML = "";
+    return;
+  }
+  const copy = installPromptCopy();
+  installPromptRoot.innerHTML = `
+    <section class="install-app-floating" aria-label="Instalar AlimentaObra">
+      <div class="install-app-icon">${icon("smartphone", 18)}</div>
+      <div class="install-app-copy">
+        <strong>${escapeHtml(copy.title)}</strong>
+        <span>${escapeHtml(copy.detail)}</span>
+      </div>
+      <button class="install-app-button" type="button" data-install-app>
+        ${icon(deferredInstallPrompt ? "download" : "arrow", 16)}
+        <span>${escapeHtml(copy.action)}</span>
+      </button>
+    </section>`;
+  installPromptRoot.querySelector("[data-install-app]")?.addEventListener("click", handleInstallAppClick);
+}
+
+async function handleInstallAppClick() {
+  if (isAppMarkedInstalled()) {
+    renderInstallPrompt();
+    return;
+  }
+  if (!deferredInstallPrompt) {
+    toast(isIosInstallSurface()
+      ? "No Safari: Compartilhar > Adicionar à Tela de Início."
+      : "Use o menu do navegador e escolha Instalar app.");
+    return;
+  }
+  const promptEvent = deferredInstallPrompt;
+  deferredInstallPrompt = null;
+  installManualHelpVisible = true;
+  promptEvent.prompt();
+  const choice = await promptEvent.userChoice;
+  if (choice?.outcome === "accepted") {
+    window.localStorage.setItem(pwaInstalledStorageKey, "true");
+    installManualHelpVisible = false;
+    toast("App instalado com sucesso.");
+  } else {
+    toast("Tudo bem. O atalho de instalação continua disponível no navegador.");
+  }
+  renderInstallPrompt();
+}
+
 function activeDate() {
   const currentValue = document.querySelector("[data-filter-date]")?.value;
   if (state.activeView === "pedidos") return currentValue ?? adminRequestDateFilter;
@@ -303,6 +424,7 @@ function render() {
   unmountLoadedReactPages(root);
   if (state.loading) {
     root.innerHTML = `<section class="grid min-h-screen place-content-center justify-items-center gap-4 bg-[#1b1c1a] p-6 text-white" aria-live="polite"><img class="h-24 w-auto max-w-[360px] object-contain brightness-110" src="${appLogoAsset}" alt="AlimentaObra" /><div class="h-1 w-40 overflow-hidden rounded-full bg-white/15" aria-hidden="true"><i class="block h-full w-1/2 animate-pulse rounded-full bg-orange-600"></i></div><p class="m-0 text-xs font-black uppercase tracking-[.08em] text-white/60">Preparando sua operação</p></section>`;
+    renderInstallPrompt();
     return;
   }
   const user = getActiveUser(state);
@@ -331,6 +453,7 @@ function render() {
     user,
     workspaceIntro: renderWorkspaceIntro(user)
   });
+  renderInstallPrompt();
   const leaderProps = {
     STATUS_LABEL,
     canEditRequest,
@@ -426,6 +549,7 @@ async function mountActiveReactPage(role, props, cycle) {
 
 function renderLogin() {
   root.innerHTML = renderLoginScreen({ initialInviteToken, isSupabaseConfigured, loginMode, loginError });
+  renderInstallPrompt();
   bindEvents();
 }
 
@@ -517,6 +641,7 @@ const pageRegistry = createPageRegistry({
     escapeHtml,
     getGeneratedInviteLink: () => generatedInviteLink,
     getSettingsActiveTab: () => settingsActiveTab,
+    getSettingsAreaTypeModalId: () => settingsAreaTypeModalId,
     getSettingsMealCategoryModalId: () => settingsMealCategoryModalId,
     getSettingsMealModalId: () => settingsMealModalId,
     getSettingsSupplierModalId: () => settingsSupplierModalId,
@@ -580,14 +705,15 @@ function renderAdminOrderModal() {
   if (!adminOrderFormOpen || user?.role !== "admin") return "";
   const sections = getActiveWorkSections(state);
   const suppliers = adminOrderSuppliers();
-  const selectedSupplierId = suppliers[0]?.id ?? "";
-  const selectedSectionId = sections[0]?.id ?? "";
-  const meals = adminOrderMeals(selectedSectionId, selectedSupplierId);
+  const defaults = resolveAdminOrderDefaults(sections, suppliers);
+  const selectedSupplierId = defaults.supplierId;
+  const selectedSectionId = defaults.sectionId;
+  const meals = defaults.meals;
   const selectedMeal = meals[0] ?? null;
   const fallbackLocationId = selectedMeal?.locations?.[0]?.id ?? "";
   const canCreate = sections.length && suppliers.length && meals.length;
-  const sectionOptions = sections.map((section) => `<option value="${section.id}">${escapeHtml(section.name)} - ${areaTypeLabel(section.areaType)}</option>`).join("") || `<option value="">Nenhum efetivo ativo</option>`;
-  const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor com refeicao vinculada</option>`;
+  const sectionOptions = sections.map((section) => `<option value="${section.id}" ${section.id === selectedSectionId ? "selected" : ""}>${escapeHtml(section.name)} - ${areaTypeLabel(section.areaType)}</option>`).join("") || `<option value="">Nenhum efetivo ativo</option>`;
+  const supplierOptions = suppliers.map((supplier) => `<option value="${supplier.id}" ${supplier.id === selectedSupplierId ? "selected" : ""}>${escapeHtml(supplier.tradeName || supplier.legalName)}</option>`).join("") || `<option value="">Nenhum fornecedor com refeicao vinculada</option>`;
   const mealOptions = meals.map((meal) => `<option value="${meal.id}">${escapeHtml(meal.label)} - ${stateMealCategoryLabel(meal.category)}</option>`).join("") || `<option value="">Nenhuma refeicao ativa</option>`;
   const cartRows = adminOrderCartItems.map((item, index) => {
     const label = adminOrderCartItemLabel(item);
@@ -629,7 +755,7 @@ function renderActualsModal() {
   const skippedNote = skippedRows
     ? `<div class="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-orange-700">${skippedRows} item(ns) de categoria sem consumo real foram ignorados neste lancamento.</div>`
     : "";
-  return `<div class="${modalBackdropClass}" data-close-actuals-modal><section class="${modalPanelClass}" role="dialog" aria-modal="true" aria-labelledby="actuals-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Consumo real</span><h2 class="${modalTitleClass}" id="actuals-title">Registrar saida do bloco</h2><p class="mt-1 text-sm text-stone-500">Informe o consumido apenas das categorias habilitadas antes de concluir a saida.</p></div><button class="${modalCloseClass}" type="button" data-close-actuals-modal aria-label="Fechar">x</button></header><form class="grid gap-3" data-form="actuals"><input type="hidden" name="consolidationId" value="${consolidation.id}" />${skippedNote}<div class="grid gap-2">${rows.map((row, index) => `<div class="grid gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] sm:items-end"><input type="hidden" name="teamId-${index}" value="${row.teamId}" /><input type="hidden" name="mealTypeId-${index}" value="${row.mealTypeId}" /><div><span class="${modalLabelClass}">Equipe / trecho</span><strong class="block text-sm">${escapeHtml(row.teamName)}</strong><small class="text-xs font-bold text-stone-500">Efetivo ${row.headcount || "-"}</small></div><div><span class="${modalLabelClass}">Alimentacao</span><strong class="block text-sm">${escapeHtml(row.mealType)}</strong></div><div class="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-center"><span class="${modalLabelClass} block text-orange-700">Solicitado</span><strong class="block text-2xl font-black leading-none text-orange-700">${row.requested}</strong></div><div class="${modalFieldClass}"><label class="${modalLabelClass}" for="actual-${index}">Consumido</label><input class="${modalInputClass}" id="actual-${index}" name="quantity-${index}" type="number" min="0" value="${row.actual}" required /></div></div>`).join("")}</div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3"><button class="${modalButtonOutlineClass}" type="button" data-close-actuals-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar e registrar saida</button></footer></form></section></div>`;
+  return `<div class="${modalBackdropClass}" data-close-actuals-modal><section class="${modalPanelClass} actuals-modal-panel" role="dialog" aria-modal="true" aria-labelledby="actuals-title" onclick="event.stopPropagation()"><header class="${modalHeaderClass}"><div><span class="${modalKickerClass}">Consumo real</span><h2 class="${modalTitleClass}" id="actuals-title">Registrar entrega do bloco</h2><p class="mt-1 text-sm text-stone-500">Informe o consumido apenas das categorias habilitadas antes de concluir a entrega.</p></div><button class="${modalCloseClass}" type="button" data-close-actuals-modal aria-label="Fechar">x</button></header><form class="grid gap-3 actuals-form" data-form="actuals"><input type="hidden" name="consolidationId" value="${consolidation.id}" />${skippedNote}<div class="grid gap-2 actuals-list">${rows.map((row, index) => `<div class="grid gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 actuals-row sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px_120px] sm:items-end"><input type="hidden" name="teamId-${index}" value="${row.teamId}" /><input type="hidden" name="mealTypeId-${index}" value="${row.mealTypeId}" /><div><span class="${modalLabelClass}">Equipe / trecho</span><strong class="block text-sm">${escapeHtml(row.teamName)}</strong><small class="text-xs font-bold text-stone-500">Efetivo ${row.headcount || "-"}</small></div><div><span class="${modalLabelClass}">Alimentacao</span><strong class="block text-sm">${escapeHtml(row.mealType)}</strong></div><div class="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-center actuals-requested"><span class="${modalLabelClass} block text-orange-700">Solicitado</span><strong class="block text-2xl font-black leading-none text-orange-700">${row.requested}</strong></div><div class="${modalFieldClass} actuals-consumed-field"><label class="${modalLabelClass}" for="actual-${index}">Consumido</label><input class="${modalInputClass}" id="actual-${index}" name="quantity-${index}" type="number" min="0" value="${row.actual}" required /></div></div>`).join("")}</div><footer class="flex justify-end gap-2 border-t border-stone-100 pt-3 actuals-footer"><button class="${modalButtonOutlineClass}" type="button" data-close-actuals-modal>Cancelar</button><button class="${modalButtonPrimaryClass}" type="submit">Salvar e registrar entrega</button></footer></form></section></div>`;
 }
 
 function renderConfirmedCancelModal() {
@@ -674,6 +800,18 @@ function deleteConfirmationContent() {
       title: "Excluir categoria?",
       message: `A categoria ${category.label} sera removida da lista. ${fallbackText}`,
       confirmLabel: "Excluir categoria"
+    };
+  }
+  if (type === "area-type") {
+    const area = getWorkAreaTypes(state).find((item) => item.id === id);
+    if (!area) return null;
+    const usageCount = (state.workSections ?? []).filter((section) => section.areaType === area.id).length;
+    return {
+      title: "Excluir tipo de area?",
+      message: usageCount
+        ? `${area.label} esta vinculado a ${usageCount} efetivo(s). Ele sera desativado para novos cadastros.`
+        : `${area.label} deixara de aparecer para novos efetivos.`,
+      confirmLabel: "Excluir tipo de area"
     };
   }
   if (type === "admin-user") {
@@ -1283,7 +1421,7 @@ function renderSupplierMetric(label, value, detail, accent = "") {
 
 function renderFornecedor() {
   const rows = supplierConsolidations();
-  const activeRows = rows.filter((item) => !["entregue", "rascunho", "cancelado_confirmado"].includes(item.status));
+  const activeRows = rows.filter((item) => !["saiu_entrega", "entregue", "rascunho", "cancelado_confirmado"].includes(item.status));
   const priority = [...activeRows].sort((a, b) => {
     const rank = { cancelamento_pendente: 0, enviado: 1, confirmado: 2, producao: 3, saiu_entrega: 4 };
     return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || new Date(a.date) - new Date(b.date);
@@ -1302,8 +1440,7 @@ function renderFornecedor() {
         ${renderSupplierMetric("Refeições do dia", totalToday, `para ${formatDate(state.settings.defaultMealDate)}`, "accent")}
         ${renderSupplierMetric("A confirmar", supplierStatusCount(rows, "enviado"), "pedidos recebidos")}
         ${renderSupplierMetric("Em produção", supplierStatusCount(rows, "confirmado") + supplierStatusCount(rows, "producao"), "em preparo")}
-        ${renderSupplierMetric("Em rota", supplierStatusCount(rows, "saiu_entrega"), "aguardando entrega")}
-        ${renderSupplierMetric("Entregues", supplierStatusCount(rows, "entregue"), "histórico total")}
+        ${renderSupplierMetric("Entregues", supplierStatusCount(rows, "saiu_entrega") + supplierStatusCount(rows, "entregue"), "historico total")}
       </div>
       ${priority ? renderSupplierNextAction(priority) : renderSupplierEmptyState()}
       <section class="supplier-panel-card supplier-queue-card">
@@ -1336,14 +1473,19 @@ function renderSupplierQueueRow(consolidation) {
 }
 
 function renderSupplierOrders() {
+  const normalizedSupplierOrderStatus = supplierOrderStatus === "saiu_entrega" ? "entregue" : supplierOrderStatus;
   const rows = supplierConsolidations().filter((item) => {
-    const matchesStatus = supplierOrderStatus === "todos"
-      || (supplierOrderStatus === "ativos" ? !["entregue", "rascunho", "cancelado_confirmado"].includes(item.status) : item.status === supplierOrderStatus);
+    const matchesStatus = normalizedSupplierOrderStatus === "todos"
+      || (normalizedSupplierOrderStatus === "ativos"
+        ? !["saiu_entrega", "entregue", "rascunho", "cancelado_confirmado"].includes(item.status)
+        : normalizedSupplierOrderStatus === "entregue"
+          ? ["saiu_entrega", "entregue"].includes(item.status)
+          : item.status === normalizedSupplierOrderStatus);
     return matchesStatus && (!supplierOrderDate || item.date === supplierOrderDate);
   });
   const selected = rows.find((item) => item.id === selectedSupplierConsolidationId) ?? rows[0] ?? null;
   return `<section class="supplier-workspace">
-    ${topbar("Pedidos", "Fila de produção, entrega e acompanhamento", `<div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${supplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${supplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${supplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${supplierOrderStatus === "confirmado" ? "selected" : ""}>Em produção</option><option value="saiu_entrega" ${supplierOrderStatus === "saiu_entrega" ? "selected" : ""}>Em rota</option><option value="entregue" ${supplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option><option value="cancelado_confirmado" ${supplierOrderStatus === "cancelado_confirmado" ? "selected" : ""}>Cancelados apos confirmacao</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>`)}
+    ${topbar("Pedidos", "Fila de produção, entrega e acompanhamento", `<div class="filter-bar supplier-filter-bar"><select data-supplier-status><option value="ativos" ${normalizedSupplierOrderStatus === "ativos" ? "selected" : ""}>Pedidos ativos</option><option value="todos" ${normalizedSupplierOrderStatus === "todos" ? "selected" : ""}>Todos os pedidos</option><option value="enviado" ${normalizedSupplierOrderStatus === "enviado" ? "selected" : ""}>A confirmar</option><option value="confirmado" ${normalizedSupplierOrderStatus === "confirmado" ? "selected" : ""}>A registrar entrega</option><option value="entregue" ${normalizedSupplierOrderStatus === "entregue" ? "selected" : ""}>Entregues</option><option value="cancelado_confirmado" ${normalizedSupplierOrderStatus === "cancelado_confirmado" ? "selected" : ""}>Cancelados apos confirmacao</option></select><input type="date" value="${supplierOrderDate}" data-supplier-date /><button class="btn outline small" data-supplier-clear-filter>Limpar filtros</button></div>`)}
     <div class="supplier-orders-layout"><div class="supplier-order-list">${rows.map((item) => renderSupplierOrderListItem(item, item.id === selected?.id)).join("") || `<div class="empty">Nenhum pedido encontrado.</div>`}</div>${selected ? renderSupplierOrderDetail(selected) : `<div class="empty supplier-detail-empty">Selecione um pedido para ver os detalhes.</div>`}</div>
   </section>`;
 }
@@ -1530,7 +1672,7 @@ function renderConsolidationTimeline(consolidation) {
     ["enviado", "Enviado ao fornecedor"],
     ["confirmado", "Fornecedor confirmou recebimento"],
     ["producao", "Fornecedor confirmou produção"],
-    ["saiu_entrega", "Saida para entrega registrada"],
+    ["saiu_entrega", "Entrega registrada"],
     ["entregue", "Entrega concluida"]
   ];
   if (consolidation.status === "cancelamento_pendente") steps.push(["cancelamento_pendente", "Aguardando ciencia do fornecedor"]);
@@ -1799,6 +1941,7 @@ function bindEvents() {
       settingsSupplierModalId = null;
       settingsMealModalId = null;
       settingsMealCategoryModalId = null;
+      settingsAreaTypeModalId = null;
       settingsWorkSectionModalId = null;
       render();
       keepActiveSettingsTabVisible();
@@ -1861,6 +2004,19 @@ function bindEvents() {
       render();
     });
   });
+  root.querySelectorAll("[data-open-area-type-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      settingsAreaTypeModalId = button.dataset.openAreaTypeModal || "new";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-close-area-type-modal]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      if (event.currentTarget.classList?.contains("settings-modal-backdrop")) return;
+      settingsAreaTypeModalId = null;
+      render();
+    });
+  });
   root.querySelectorAll("[data-open-work-section-modal]").forEach((button) => {
     button.addEventListener("click", () => {
       settingsWorkSectionModalId = button.dataset.openWorkSectionModal || "new";
@@ -1875,6 +2031,7 @@ function bindEvents() {
     });
   });
   root.querySelector("[data-form='admin-user']")?.addEventListener("submit", handleAdminUserSubmit);
+  root.querySelector("[data-form='area-type']")?.addEventListener("submit", handleAreaTypeSubmit);
   root.querySelectorAll("[data-multi-select], [data-team-multi-select]").forEach((menu) => {
     updateCheckboxMultiSelectSummary(menu);
     menu.querySelector("[data-multi-select-all], [data-team-select-all]")?.addEventListener("change", (event) => {
@@ -1962,8 +2119,16 @@ function bindEvents() {
   root.querySelectorAll("[data-meal-category-active-toggle]").forEach((button) => {
     button.addEventListener("click", () => handleMealCategoryActiveToggle(button));
   });
+  root.querySelectorAll("[data-area-type-active-toggle]").forEach((button) => {
+    button.addEventListener("click", () => handleAreaTypeActiveToggle(button));
+  });
   root.querySelectorAll("[data-work-section-active-toggle]").forEach((button) => {
     button.addEventListener("click", () => handleWorkSectionActiveToggle(button));
+  });
+  root.querySelectorAll("[data-work-section-area]").forEach((select) => {
+    const syncAreaMeals = () => updateWorkSectionMealAvailability(select);
+    syncAreaMeals();
+    select.addEventListener("change", syncAreaMeals);
   });
   root.querySelector("[data-copy-invite-link]")?.addEventListener("click", copyGeneratedInviteLink);
   root.querySelectorAll("[data-form='work-section']").forEach((form) => {
@@ -1977,6 +2142,9 @@ function bindEvents() {
   });
   root.querySelectorAll("[data-delete-meal-category]").forEach((button) => {
     button.addEventListener("click", () => handleMealCategoryDelete(button.dataset.deleteMealCategory));
+  });
+  root.querySelectorAll("[data-delete-area-type]").forEach((button) => {
+    button.addEventListener("click", () => handleAreaTypeDelete(button.dataset.deleteAreaType));
   });
   root.querySelectorAll("[data-form='meal-catalog']").forEach((form) => {
     form.addEventListener("submit", handleMealCatalogSubmit);
@@ -2130,10 +2298,9 @@ async function handleLoginSubmit(event) {
     const isExpectedAuthError = String(error?.status ?? "") === "400"
       || message.toLowerCase().includes("invalid login credentials");
     const isInactiveUser = message.toLowerCase().includes("desativado");
-    loginError = isInactiveUser
-      ? inactiveUserLoginMessage()
-      : "E-mail ou senha invalidos. Confira os dados e tente novamente.";
-    if (!isExpectedAuthError && !isInactiveUser) console.error(error);
+    if (isRefreshSessionError(error)) clearLocalSupabaseSession();
+    loginError = isInactiveUser ? inactiveUserLoginMessage() : loginFailureMessage(error);
+    if (!isExpectedAuthError && !isInactiveUser && !isSupabaseConnectionError(error)) console.error(error);
     renderLogin();
   } finally {
     if (button) button.disabled = false;
@@ -2187,6 +2354,7 @@ async function handleLogout() {
   } catch (error) {
     console.error(error);
   }
+  clearLocalSupabaseSession();
   state = { ...createEmptyState(), loading: false };
   renderLogin();
 }
@@ -2388,6 +2556,9 @@ async function handleAdminOrderSubmit(event) {
   const button = event.submitter;
   if (button) button.disabled = true;
   try {
+    const adminUser = state.users.find((item) => item.id === state.authenticatedUserId && item.role === "admin")
+      ?? state.users.find((item) => item.id === state.activeUserId && item.role === "admin");
+    if (!adminUser) throw new Error("Apenas administradores podem criar pedido administrativo.");
     const directItem = adminOrderItemFromForm(form);
     const items = adminOrderCartItems.length ? adminOrderCartItems : [directItem];
     items.forEach(validateAdminOrderItem);
@@ -2402,7 +2573,7 @@ async function handleAdminOrderSubmit(event) {
       quantity: item.quantity,
       status: "enviado",
       notes: item.notes
-    }, null)));
+    }, adminUser.id)));
     const createdCount = items.length;
     adminOrderCartItems = [];
     adminOrderFormOpen = false;
@@ -2447,6 +2618,24 @@ async function handleWorkSectionSubmit(event) {
     console.error(error);
     toast(`Nao foi possivel salvar a equipe: ${error.message}`);
   }
+}
+
+function updateWorkSectionMealAvailability(select) {
+  const form = select.closest("[data-form='work-section']");
+  if (!form) return;
+  const selectedOption = select.selectedOptions?.[0];
+  const categoryIds = new Set(String(selectedOption?.dataset.areaCategories ?? "").split(",").filter(Boolean));
+  const rows = form.querySelectorAll("[data-meal-category]");
+  rows.forEach((row) => {
+    const input = row.querySelector("input[type='checkbox']");
+    const allowed = !categoryIds.size || categoryIds.has(row.dataset.mealCategory);
+    row.classList.toggle("is-disabled", !allowed);
+    if (input) {
+      input.disabled = !allowed;
+      if (!allowed) input.checked = false;
+    }
+  });
+  form.querySelectorAll("[data-multi-select]").forEach((menu) => updateCheckboxMultiSelectSummary(menu));
 }
 
 async function handleWorkSectionDelete(button) {
@@ -2601,6 +2790,90 @@ async function performMealCategoryDelete(id) {
   } catch (error) {
     console.error(error);
     toast(`Nao foi possivel excluir categoria: ${error.message}`);
+  }
+}
+
+function normalizeAreaTypeId(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+async function handleAreaTypeSubmit(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const rawId = String(form.get("id") ?? "");
+  const id = normalizeAreaTypeId(rawId || form.get("label"));
+  const label = String(form.get("label") ?? "").trim();
+  const categoryIds = form.getAll("categoryIds").map((value) => String(value)).filter(Boolean);
+  const button = event.submitter;
+  if (button) button.disabled = true;
+  try {
+    if (!id) throw new Error("Informe um nome valido para o tipo de area.");
+    if (!label) throw new Error("Informe o nome do tipo de area.");
+    if (!categoryIds.length) throw new Error("Vincule pelo menos uma categoria de refeicao.");
+    await saveWorkAreaTypeCatalog({
+      id,
+      label,
+      categoryIds,
+      active: form.get("active") === "true"
+    });
+    if (!form.get("originalId")) formElement.reset();
+    settingsAreaTypeModalId = null;
+    await refreshData();
+    toast("Tipo de area salvo.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel salvar tipo de area: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handleAreaTypeActiveToggle(button) {
+  const area = getWorkAreaTypes(state).find((item) => item.id === button.dataset.areaTypeActiveToggle);
+  if (!area) return;
+  const categoryIds = (state.workAreaTypeCategories ?? [])
+    .filter((item) => item.areaTypeId === area.id && item.active !== false)
+    .map((item) => item.categoryId);
+  button.disabled = true;
+  try {
+    await saveWorkAreaTypeCatalog({
+      id: area.id,
+      label: area.label,
+      categoryIds,
+      active: button.dataset.nextActive === "true"
+    });
+    await refreshData();
+    toast(button.dataset.nextActive === "true" ? "Tipo de area ativado." : "Tipo de area desativado.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel atualizar tipo de area: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function handleAreaTypeDelete(id) {
+  const area = getWorkAreaTypes(state).find((item) => item.id === id);
+  if (!area) return;
+  pendingDeleteConfirmation = { type: "area-type", id: area.id };
+  render();
+}
+
+async function performAreaTypeDelete(id) {
+  try {
+    await deleteWorkAreaType(id);
+    await refreshData();
+    toast("Tipo de area removido dos novos cadastros.");
+  } catch (error) {
+    console.error(error);
+    toast(`Nao foi possivel excluir tipo de area: ${error.message}`);
   }
 }
 
@@ -2922,6 +3195,7 @@ async function handleConfirmedDelete(event) {
     pendingDeleteConfirmation = null;
     if (confirmation.type === "work-section") await performWorkSectionDelete(confirmation.id);
     if (confirmation.type === "meal-category") await performMealCategoryDelete(confirmation.id);
+    if (confirmation.type === "area-type") await performAreaTypeDelete(confirmation.id);
     if (confirmation.type === "meal-type") await performMealCatalogDelete(confirmation.id);
     if (confirmation.type === "admin-user") await performAdminUserDelete(confirmation.id);
     if (confirmation.type === "supplier-company") await performSupplierCompanyDelete(confirmation.id);
@@ -3155,8 +3429,9 @@ async function supplierStep(id, step) {
     if (!requiresActuals) {
       try {
         await confirmSupplierStep(id, step);
+        await confirmSupplierStep(id, "entregue");
         await refreshData();
-        operationNotice = { title: "Saida registrada", message: "Categoria sem consumo real: bloco atualizado sem lancamento de consumido." };
+        operationNotice = { title: "Entrega registrada", message: "Categoria sem consumo real: bloco atualizado sem lancamento de consumido." };
         render();
       } catch (error) {
         console.error(error);
@@ -3247,7 +3522,7 @@ async function handleExport(type) {
   }
   const date = activeDate();
   const rows = state.activeView === "relatorios"
-    ? getReportRows()
+    ? getReportRows({ includeCancelled: true })
     : state.requests.filter((request) => {
       const leader = document.querySelector("[data-filter-leader]")?.value ?? "";
       const meal = document.querySelector("[data-filter-meal]")?.value ?? "";
@@ -3357,9 +3632,10 @@ async function handleActualsSubmit(event) {
       throw new Error("Nem todas as linhas de consumo real foram salvas. Revise equipe e alimentacao antes de concluir.");
     }
     await confirmSupplierStep(consolidationId, "saiu_entrega");
+    await confirmSupplierStep(consolidationId, "entregue");
     pendingActualsConsolidationId = null;
     await refreshData();
-    operationNotice = { title: "Saida registrada", message: "Consumo real salvo e bloco diario concluido para os indicadores." };
+    operationNotice = { title: "Entrega registrada", message: "Consumo real salvo e bloco diario concluido para os indicadores." };
     render();
   } catch (error) {
     console.error(error);
@@ -3382,6 +3658,44 @@ function normalizeEmail(value) {
     .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
     .replace(/[^\x21-\x7E]/g, "")
     .toLowerCase();
+}
+
+function isSupabaseConnectionError(error) {
+  const message = String(error?.message ?? error ?? "").toLowerCase();
+  const name = String(error?.name ?? "").toLowerCase();
+  return name === "typeerror"
+    || message.includes("failed to fetch")
+    || message.includes("fetch failed")
+    || message.includes("networkerror")
+    || message.includes("load failed")
+    || message.includes("err_name_not_resolved")
+    || message.includes("name_not_resolved");
+}
+
+function isRefreshSessionError(error) {
+  const message = String(error?.message ?? error ?? "").toLowerCase();
+  return message.includes("refresh token")
+    || message.includes("invalid refresh")
+    || message.includes("session from session_id claim");
+}
+
+function loginFailureMessage(error) {
+  const message = String(error?.message ?? "");
+  const lower = message.toLowerCase();
+  if (isSupabaseConnectionError(error)) {
+    return "Não foi possível conectar ao Supabase agora. Verifique internet, DNS ou se o projeto Supabase está ativo e tente novamente.";
+  }
+  if (lower.includes("supabase configurado")
+    || lower.includes("não possui o banco")
+    || lower.includes("nao possui o banco")
+    || lower.includes("ainda não existem")
+    || lower.includes("ainda nao existem")) {
+    return message;
+  }
+  if (String(error?.status ?? "") === "400" || lower.includes("invalid login credentials")) {
+    return "E-mail ou senha inválidos. Confira os dados e tente novamente.";
+  }
+  return message || "Não foi possível entrar agora. Tente novamente.";
 }
 
 function normalizeCategoryId(value) {
@@ -3429,6 +3743,28 @@ function mapApplicationData(data, profile) {
     : remoteMealCategories;
   state.mealCategories = categorySource
     .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.label).localeCompare(String(b.label)));
+  const remoteAreaTypes = (data.workAreaTypes ?? []).map((item) => ({
+    id: item.id,
+    label: item.label,
+    active: item.active !== false,
+    sortOrder: item.sort_order ?? 0,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at
+  }));
+  const areaSource = data.workAreaTypeFeatureAvailable === false || !remoteAreaTypes.length
+    ? DEFAULT_WORK_AREA_TYPES.map((item, index) => ({ ...item, sortOrder: (index + 1) * 10 }))
+    : remoteAreaTypes;
+  state.workAreaTypes = areaSource
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.label).localeCompare(String(b.label)));
+  state.workAreaTypeCategories = (data.workAreaTypeFeatureAvailable === false || !(data.workAreaTypeCategories ?? []).length
+    ? DEFAULT_WORK_AREA_TYPES.flatMap((area) => area.categoryIds.map((categoryId) => ({ area_type_id: area.id, meal_category_id: categoryId, active: true })))
+    : data.workAreaTypeCategories
+  ).map((item) => ({
+    areaTypeId: item.area_type_id,
+    categoryId: item.meal_category_id,
+    active: item.active !== false,
+    createdAt: item.created_at
+  }));
   state.supplierCompanies = (data.supplierCompanies?.length ? data.supplierCompanies.map((item) => ({
     id: item.id,
     legalName: item.legal_name,
@@ -3526,34 +3862,37 @@ function mapApplicationData(data, profile) {
       active: true,
       derived: true
     })));
-  state.requests = data.requests.map((item) => ({
-    id: item.id,
-    date: item.meal_date,
-    mealTypeId: item.meal_type_id,
-    mealType: item.meal_types?.name ?? "",
-    mealDescription: item.meal_types?.description ?? "",
-    mealCategory: item.meal_types?.category ?? "",
-    canRecordActuals: mealCategoryAllowsActuals(state, item.meal_types?.category),
-    unitPrice: Number(item.meal_types?.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
-    locationId: item.location_id,
-    location: item.meal_locations?.name ?? "",
-    supplierCompanyId: item.supplier_company_id ?? "",
-    supplierName: item.supplier_companies?.trade_name || item.supplier_companies?.legal_name || "",
-    originRole: item.origin_role === "admin" && !item.leader_id ? "admin" : "encarregado",
-    teamId: item.team_id ?? "",
-    sectionName: item.work_sections?.name ?? item.meal_locations?.name ?? "",
-    sectionHeadcount: Number(item.work_sections?.headcount ?? 0),
-    deliveryAddressId: item.delivery_address_id,
-    deliveryAddress: item.delivery_addresses?.label ?? "",
-    deliveryAddressLine: item.delivery_addresses?.address_line ?? "",
-    leaderId: item.leader_id,
-    createdBy: item.created_by,
-    quantity: item.quantity,
-    status: item.status,
-    notes: item.notes ?? "",
-    createdAt: item.created_at,
-    updatedAt: item.updated_at
-  }));
+  state.requests = data.requests.map((item) => {
+    const mealCategory = item.meal_category_snapshot ?? item.meal_types?.category ?? "";
+    return {
+      id: item.id,
+      date: item.meal_date,
+      mealTypeId: item.meal_type_id,
+      mealType: item.meal_name_snapshot ?? item.meal_types?.name ?? "",
+      mealDescription: item.meal_description_snapshot ?? item.meal_types?.description ?? "",
+      mealCategory,
+      canRecordActuals: item.can_record_actuals_snapshot ?? mealCategoryAllowsActuals(state, mealCategory),
+      unitPrice: Number(item.unit_price_snapshot ?? item.meal_types?.unit_price ?? data.settings?.default_meal_unit_price ?? 0),
+      locationId: item.location_id,
+      location: item.meal_locations?.name ?? "",
+      supplierCompanyId: item.supplier_company_id ?? "",
+      supplierName: item.supplier_name_snapshot ?? item.supplier_companies?.trade_name ?? item.supplier_companies?.legal_name ?? "",
+      originRole: item.origin_role === "admin" && !item.leader_id ? "admin" : "encarregado",
+      teamId: item.team_id ?? "",
+      sectionName: item.section_name_snapshot ?? item.work_sections?.name ?? item.meal_locations?.name ?? "",
+      sectionHeadcount: Number(item.section_headcount_snapshot ?? item.work_sections?.headcount ?? 0),
+      deliveryAddressId: item.delivery_address_id,
+      deliveryAddress: item.delivery_addresses?.label ?? "",
+      deliveryAddressLine: item.delivery_addresses?.address_line ?? "",
+      leaderId: item.leader_id,
+      createdBy: item.created_by,
+      quantity: item.quantity,
+      status: item.status,
+      notes: item.notes ?? "",
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    };
+  });
   state.consolidations = data.consolidations.map((item) => ({
     id: item.id,
     date: item.meal_date,
@@ -3710,10 +4049,12 @@ async function bootstrapApp() {
     }
     await bootstrapAuthenticatedApp();
   } catch (error) {
-    console.error(error);
+    if (isRefreshSessionError(error) || isSupabaseConnectionError(error)) clearLocalSupabaseSession();
+    if (!isSupabaseConnectionError(error)) console.error(error);
     state.loading = false;
+    loginError = loginFailureMessage(error);
     renderLogin();
-    toast(`Falha ao iniciar: ${error.message}`);
+    if (!isSupabaseConnectionError(error)) toast(`Falha ao iniciar: ${error.message}`);
   }
 }
 
@@ -3722,6 +4063,23 @@ window.addEventListener("online", () => {
   refreshData({ silent: true });
 });
 window.addEventListener("offline", render);
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installManualHelpVisible = false;
+  renderInstallPrompt();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  installManualHelpVisible = false;
+  window.localStorage.setItem(pwaInstalledStorageKey, "true");
+  renderInstallPrompt();
+  toast("App instalado com sucesso.");
+});
+
+window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", renderInstallPrompt);
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`).catch(() => {

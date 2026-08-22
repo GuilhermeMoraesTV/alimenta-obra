@@ -65,7 +65,7 @@ const supplierPageStyles = `
   .supplier-page .badge.cancelado_confirmado { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
   .supplier-page .badge.confirmado { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .supplier-page .badge.producao { border-color: #fde68a; background: #fffbeb; color: #b45309; }
-  .supplier-page .badge.saiu_entrega { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
+  .supplier-page .badge.saiu_entrega { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
   .supplier-page .supplier-dashboard,
   .supplier-page .supplier-workspace,
   .supplier-page .supplier-queue,

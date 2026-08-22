@@ -26,7 +26,7 @@ export const STATUS_LABEL = {
   enviado: "Enviado",
   confirmado: "Confirmado",
   producao: "Em producao",
-  saiu_entrega: "Saiu para entrega",
+  saiu_entrega: "Entregue",
   entregue: "Entregue",
   cancelado: "Cancelado",
   cancelamento_pendente: "Cancelamento pendente",

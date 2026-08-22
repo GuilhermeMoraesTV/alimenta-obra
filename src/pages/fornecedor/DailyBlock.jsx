@@ -3,8 +3,8 @@ import { getRecordedActualQuantity, requestOriginLabel } from "../../services/st
 import { Icon, mealDistributionName, mealGroups, statusLabel } from "./shared.jsx";
 
 export const supplierDailyBlockStyles = `
-  .supplier-page .supplier-daily-block-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,22rem),1fr)); align-items: stretch; gap: .75rem; }
-  .supplier-page .supplier-daily-block-card { display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 34rem; max-height: 34rem; min-width: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .supplier-page .supplier-daily-block-list { display: grid; grid-template-columns: repeat(3,minmax(0,27rem)); justify-content: start; align-items: stretch; gap: .75rem; }
+  .supplier-page .supplier-daily-block-card { display: grid; width: 100%; max-width: 27rem; grid-template-rows: auto minmax(0,1fr) auto; min-height: 34rem; max-height: 34rem; min-width: 0; overflow: hidden; border-radius: 16px; border: 1px solid #e7e5e4; border-left: 2px dashed #d6d3d1; background: #fffefa; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
   .supplier-page .supplier-daily-block-card.is-extra { border-color: #fdba74; border-left-color: #ea580c; background: #fff7ed; }
   .supplier-page .supplier-daily-block-card.is-cancelled { border-color: #fecaca; border-left-color: #ef4444; background: #fff7f7; }
   .supplier-page .supplier-daily-block-head { display: grid; gap: .55rem; border-bottom: 1px solid #f5f5f4; padding: .75rem; }
@@ -44,9 +44,10 @@ export const supplierDailyBlockStyles = `
   .supplier-page .supplier-daily-actions .btn { width: 100%; min-height: 2.35rem; }
   @media (max-width: 767px) {
     .supplier-page .supplier-daily-block-list { grid-template-columns: 1fr; }
+    .supplier-page .supplier-daily-block-card { max-width: none; }
   }
   @media (min-width: 768px) and (max-width: 1180px) {
-    .supplier-page .supplier-daily-block-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .supplier-page .supplier-daily-block-list { grid-template-columns: repeat(2,minmax(0,27rem)); }
   }
 `;
 

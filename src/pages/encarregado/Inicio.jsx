@@ -2,18 +2,16 @@ import React, { useMemo } from "react";
 import { RequestCard } from "./RequestCard.jsx";
 import { Icon, leaderRequests, primaryButtonClass, shellClass } from "./shared.jsx";
 
-const STATUS_LABEL = {
-  rascunho: "Rascunho",
-  pendente: "Pendente",
-  aprovado: "Aprovado",
-  cancelado: "Cancelado",
-};
-
 const STATUS_STAMP = {
   rascunho: "border-stone-400/60 text-stone-300",
-  pendente: "border-amber-300/70 text-amber-300",
-  aprovado: "border-emerald-300/70 text-emerald-300",
+  enviado: "border-orange-300/70 text-orange-200",
+  confirmado: "border-blue-300/70 text-blue-200",
+  producao: "border-amber-300/70 text-amber-200",
+  saiu_entrega: "border-emerald-300/70 text-emerald-200",
+  entregue: "border-emerald-300/70 text-emerald-200",
   cancelado: "border-rose-300/70 text-rose-300",
+  cancelamento_pendente: "border-rose-300/70 text-rose-200",
+  cancelado_confirmado: "border-rose-300/70 text-rose-200",
 };
 
 function StubChip({ icon, iconName, value, label }) {
@@ -31,7 +29,7 @@ function StubChip({ icon, iconName, value, label }) {
 }
 
 export function Inicio(props) {
-  const { countStatus, formatDate, icon, state, sumQty, user } = props;
+  const { countStatus, formatDate, icon, state, sumQty, user, STATUS_LABEL } = props;
   const rows = useMemo(() => leaderRequests(state, user), [state, user]);
   const activeRows = rows.filter((request) => request.status !== "cancelado");
   const mealDate = state.settings.defaultMealDate;

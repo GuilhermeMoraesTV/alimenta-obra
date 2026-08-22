@@ -2,6 +2,7 @@ export function createSettingsPage(ctx) {
   const {
     escapeHtml,
     getGeneratedInviteLink,
+    getSettingsAreaTypeModalId,
     getSettingsMealCategoryModalId,
     getSettingsMealModalId,
     getSettingsSupplierModalId,
@@ -98,7 +99,7 @@ export function createSettingsPage(ctx) {
     [&_.team-checkbox-grid]:grid [&_.team-checkbox-grid]:grid-cols-1 [&_.team-checkbox-grid]:gap-2 sm:[&_.team-checkbox-grid]:grid-cols-2
     [&_.team-checkbox]:grid [&_.team-checkbox]:cursor-pointer [&_.team-checkbox]:grid-cols-[18px_minmax(0,1fr)] [&_.team-checkbox]:items-start [&_.team-checkbox]:gap-2 [&_.team-checkbox]:rounded-xl [&_.team-checkbox]:border [&_.team-checkbox]:border-stone-200 [&_.team-checkbox]:bg-stone-50/70 [&_.team-checkbox]:p-3 [&_.team-checkbox_strong]:block [&_.team-checkbox_strong]:text-xs [&_.team-checkbox_strong]:font-black [&_.team-checkbox_small]:mt-0.5 [&_.team-checkbox_small]:block [&_.team-checkbox_small]:text-[10px] [&_.team-checkbox_small]:font-bold [&_.team-checkbox_small]:text-stone-500
     [&_.team-multi-select]:relative [&_.team-multi-select]:w-full [&_.team-multi-select]:max-w-md [&_.team-multi-select_summary]:flex [&_.team-multi-select_summary]:min-h-11 [&_.team-multi-select_summary]:cursor-pointer [&_.team-multi-select_summary]:list-none [&_.team-multi-select_summary]:items-center [&_.team-multi-select_summary]:justify-between [&_.team-multi-select_summary]:gap-2 [&_.team-multi-select_summary]:rounded-lg [&_.team-multi-select_summary]:border [&_.team-multi-select_summary]:border-stone-300 [&_.team-multi-select_summary]:bg-white [&_.team-multi-select_summary]:px-3 [&_.team-multi-select_summary]:text-sm [&_.team-multi-select_summary]:font-bold [&_.team-multi-select_summary]:text-stone-700
-    [&_.team-multi-list]:absolute [&_.team-multi-list]:left-0 [&_.team-multi-list]:top-full [&_.team-multi-list]:z-20 [&_.team-multi-list]:mt-1 [&_.team-multi-list]:grid [&_.team-multi-list]:w-full [&_.team-multi-list]:max-h-60 [&_.team-multi-list]:overflow-auto [&_.team-multi-list]:rounded-md [&_.team-multi-list]:border [&_.team-multi-list]:border-stone-200 [&_.team-multi-list]:bg-white [&_.team-multi-list]:shadow-lg [&_.team-multi-row]:grid [&_.team-multi-row]:cursor-pointer [&_.team-multi-row]:grid-cols-[18px_minmax(0,1fr)] [&_.team-multi-row]:items-center [&_.team-multi-row]:gap-2 [&_.team-multi-row]:px-3 [&_.team-multi-row]:py-2 [&_.team-multi-row]:text-sm [&_.team-multi-row]:font-bold [&_.team-multi-row]:text-stone-700 hover:[&_.team-multi-row]:bg-stone-50 [&_.team-multi-row.is-selected]:bg-stone-300 [&_.team-multi-row.is-selected]:text-stone-900 [&_.team-multi-row.is-strong]:font-black
+    [&_.team-multi-list]:absolute [&_.team-multi-list]:left-0 [&_.team-multi-list]:top-full [&_.team-multi-list]:z-20 [&_.team-multi-list]:mt-1 [&_.team-multi-list]:grid [&_.team-multi-list]:w-full [&_.team-multi-list]:max-h-60 [&_.team-multi-list]:overflow-auto [&_.team-multi-list]:rounded-md [&_.team-multi-list]:border [&_.team-multi-list]:border-stone-200 [&_.team-multi-list]:bg-white [&_.team-multi-list]:shadow-lg [&_.team-multi-row]:grid [&_.team-multi-row]:cursor-pointer [&_.team-multi-row]:grid-cols-[18px_minmax(0,1fr)] [&_.team-multi-row]:items-center [&_.team-multi-row]:gap-2 [&_.team-multi-row]:px-3 [&_.team-multi-row]:py-2 [&_.team-multi-row]:text-sm [&_.team-multi-row]:font-bold [&_.team-multi-row]:text-stone-700 hover:[&_.team-multi-row]:bg-stone-50 [&_.team-multi-row.is-selected]:bg-stone-300 [&_.team-multi-row.is-selected]:text-stone-900 [&_.team-multi-row.is-strong]:font-black [&_.team-multi-row.is-disabled]:cursor-not-allowed [&_.team-multi-row.is-disabled]:bg-stone-100 [&_.team-multi-row.is-disabled]:text-stone-400 [&_.team-multi-row.is-disabled]:opacity-70
     [&_.settings-modal-backdrop]:fixed [&_.settings-modal-backdrop]:inset-0 [&_.settings-modal-backdrop]:z-50 [&_.settings-modal-backdrop]:grid [&_.settings-modal-backdrop]:place-items-end [&_.settings-modal-backdrop]:bg-stone-950/45 [&_.settings-modal-backdrop]:p-0 [&_.settings-modal-backdrop]:backdrop-blur-sm sm:[&_.settings-modal-backdrop]:place-items-center sm:[&_.settings-modal-backdrop]:p-4
     [&_.settings-modal-panel]:w-full [&_.settings-modal-panel]:max-w-2xl [&_.settings-modal-panel]:overflow-visible [&_.settings-modal-panel]:rounded-t-[28px] [&_.settings-modal-panel]:border [&_.settings-modal-panel]:border-white/70 [&_.settings-modal-panel]:bg-white [&_.settings-modal-panel]:p-5 [&_.settings-modal-panel]:shadow-2xl sm:[&_.settings-modal-panel]:rounded-[28px]
     [&_.settings-modal-header]:mb-4 [&_.settings-modal-header]:flex [&_.settings-modal-header]:items-start [&_.settings-modal-header]:justify-between [&_.settings-modal-header]:gap-3 [&_.settings-modal-header]:border-b [&_.settings-modal-header]:border-stone-100 [&_.settings-modal-header]:pb-3
@@ -144,18 +145,23 @@ export function createSettingsPage(ctx) {
     [&_.meal-catalog-card]:p-4 [&_.meal-catalog-list]:gap-3
   `;
 
-  const areaTypeLabel = (value) => ({
-    campo: "Campo",
-    canteiro: "Canteiro",
-    escritorio: "Escritorio",
-    misto: "Misto"
-  }[value] ?? "Campo");
+  const areaTypeLabel = (value) => {
+    const state = getState();
+    return state.workAreaTypes?.find((item) => item.id === value)?.label
+      ?? {
+        campo: "Campo",
+        canteiro: "Canteiro",
+        escritorio: "Escritorio",
+        misto: "Misto"
+      }[value]
+      ?? "Campo";
+  };
 
   function renderConfiguracoes() {
     const state = getState();
     const user = state.users.find((item) => item.id === (state.activeUserId ?? state.authenticatedUserId));
     if (!user) return renderEmptyState("Sessao expirada", "Entre novamente para alterar suas configuracoes.");
-    const canManageCatalog = user.role === "admin" || user.role === "fornecedor";
+    const canManageCatalog = user.role === "admin";
     const isLeader = user.role === "encarregado";
     const isAdmin = user.role === "admin";
     const activeSuppliers = (state.supplierCompanies ?? []).filter((item) => item.active !== false).length;
@@ -183,7 +189,7 @@ export function createSettingsPage(ctx) {
       fornecedores: ["Fornecedores", "Empresas e restaurantes usados nas operacoes.", renderSupplierCompaniesPanel()],
       vinculos: ["Vinculos", "Regras de atendimento e preco por fornecedor.", renderSupplierMealLinksPanel()],
       "vinculos-equipes": ["Vinculos por equipes", "Defina quais tipos de refeicao cada equipe pode solicitar.", renderTeamMealLinksPanel()],
-      efetivos: ["Efetivos", "Equipes, trechos, area e encarregado responsavel.", renderWorkSectionsPanel()],
+      efetivos: ["Efetivos", "Equipes, trechos, area e encarregado responsavel.", `${renderAreaTypePanel()}${renderWorkSectionsPanel()}`],
       refeicoes: ["Refeicoes", "Tipos de alimentacao, composicao, categoria e preco.", `${renderMealCategoryPanel(user)}${renderMealCatalogPanel(user)}`]
     };
     const activeTab = sections[currentTab] ? currentTab : navItems[0][0];
@@ -663,6 +669,88 @@ export function createSettingsPage(ctx) {
       </form>`;
   }
 
+  function areaCategoryIds(area) {
+    const state = getState();
+    return (state.workAreaTypeCategories ?? [])
+      .filter((item) => item.areaTypeId === area?.id && item.active !== false)
+      .map((item) => item.categoryId);
+  }
+
+  function renderAreaTypePanel() {
+    const state = getState();
+    const areas = state.workAreaTypes ?? [];
+    return `
+      <section class="settings-panel meal-catalog-panel">
+        <div class="settings-panel-title">
+          <span>${icon("map", 18)}</span>
+          <div><h2>Tipos de area</h2><p>Vincule cada area as categorias de refeicao permitidas.</p></div>
+        </div>
+        <div class="meal-catalog-toolbar">
+          <span class="settings-count-pill">${areas.length} tipos</span>
+          <button class="btn primary small" type="button" data-open-area-type-modal="new">${icon("plus", 15)}Nova area</button>
+        </div>
+        <div class="meal-catalog-list">
+          ${areas.map(renderAreaTypeItem).join("") || `<div class="empty">Nenhum tipo de area cadastrado.</div>`}
+        </div>
+      </section>`;
+  }
+
+  function renderAreaTypeItem(area) {
+    const state = getState();
+    const categoryLabels = areaCategoryIds(area)
+      .map((categoryId) => mealCategoryLabel(categoryId))
+      .filter(Boolean);
+    const linkedLabel = categoryLabels.length ? categoryLabels.join(", ") : "Nenhuma categoria vinculada";
+    return `
+      <article class="meal-catalog-card">
+        <div class="meal-catalog-card-head">
+          <div class="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-3">
+            <span class="settings-stat-icon">${icon("map", 17)}</span>
+            <div class="meal-catalog-card-title">
+              <strong>${escapeHtml(area.label)}</strong>
+              <p>${escapeHtml(linkedLabel)}</p>
+            </div>
+          </div>
+          <div class="meal-catalog-card-actions">
+            <button class="meal-active-toggle ${area.active ? "is-active" : ""}" type="button" data-area-type-active-toggle="${escapeHtml(area.id)}" data-next-active="${area.active ? "false" : "true"}" aria-pressed="${area.active}">
+              <span></span><strong>${area.active ? "Ativo" : "Inativo"}</strong>
+            </button>
+            <button class="icon-btn" type="button" data-open-area-type-modal="${escapeHtml(area.id)}" aria-label="Editar tipo de area ${escapeHtml(area.label)}">${icon("edit", 15)}</button>
+            <button class="icon-btn danger" type="button" data-delete-area-type="${escapeHtml(area.id)}" aria-label="Excluir tipo de area ${escapeHtml(area.label)}">${icon("trash", 15)}</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="meal-status-chip ${area.active ? "active" : "inactive"}">${area.active ? "Ativa" : "Inativa"}</span>
+          ${categoryLabels.map((label) => `<span class="meal-price-chip">${escapeHtml(label)}</span>`).join("")}
+        </div>
+      </article>`;
+  }
+
+  function renderAreaTypeForm(area = null) {
+    const state = getState();
+    const id = area?.id ?? "new";
+    const selectedCategoryIds = new Set(areaCategoryIds(area));
+    const categories = (state.mealCategories ?? []).filter((category) => category.active !== false || selectedCategoryIds.has(category.id));
+    const allSelected = categories.length > 0 && categories.every((category) => selectedCategoryIds.has(category.id));
+    const selectedNames = categories.filter((category) => selectedCategoryIds.has(category.id)).map((category) => category.label);
+    const categorySummary = selectedNames.length ? selectedNames.join(", ") : "Selecionar categorias";
+    const categoryOptions = categories.map((category) => `<label class="team-multi-row ${selectedCategoryIds.has(category.id) ? "is-selected" : ""}"><input type="checkbox" name="categoryIds" value="${escapeHtml(category.id)}" data-multi-option data-multi-label="${escapeHtml(category.label)}" ${selectedCategoryIds.has(category.id) ? "checked" : ""} /><span>${escapeHtml(category.label)}${category.canRecordActuals ? " - com consumido" : ""}</span></label>`).join("");
+    return `
+      <form class="meal-catalog-new-form settings-modal-form" data-form="area-type">
+        <input type="hidden" name="originalId" value="${escapeHtml(area?.id ?? "")}" />
+        <input type="hidden" name="id" value="${escapeHtml(area?.id ?? "")}" />
+        <div class="form-grid">
+          <div class="field"><label for="area-type-label-${escapeHtml(id)}">Nome do tipo de area</label><input id="area-type-label-${escapeHtml(id)}" name="label" value="${escapeHtml(area?.label ?? "")}" placeholder="Ex.: Escritorio" required /></div>
+          <div class="field"><label for="area-type-active-${escapeHtml(id)}">Status</label><select id="area-type-active-${escapeHtml(id)}" name="active"><option value="true" ${area?.active === false ? "" : "selected"}>Ativo</option><option value="false" ${area?.active === false ? "selected" : ""}>Inativo</option></select></div>
+        </div>
+        <div class="field"><label>Categorias liberadas</label>${categoryOptions ? `<details class="team-multi-select" data-multi-select data-placeholder="Selecionar categorias"><summary><span class="min-w-0 truncate" data-multi-summary>${escapeHtml(categorySummary)}</span><span class="shrink-0" aria-hidden="true">${icon("arrow", 13)}</span></summary><div class="team-multi-list"><label class="team-multi-row is-strong ${allSelected ? "is-selected" : ""}"><input type="checkbox" data-multi-select-all ${allSelected ? "checked" : ""} /><span>Selecionar todas</span></label>${categoryOptions}</div></details>` : `<div class="empty">Cadastre uma categoria antes de criar areas.</div>`}</div>
+        <footer class="settings-actions">
+          <button class="btn outline" type="button" data-close-area-type-modal>Cancelar</button>
+          <button class="btn primary" type="submit">${area?.id ? "Salvar area" : `${icon("plus", 15)}Cadastrar area`}</button>
+        </footer>
+      </form>`;
+  }
+
   function renderWorkSectionsPanel() {
     const state = getState();
     const leaders = state.users.filter((item) => item.role === "encarregado" && item.active !== false);
@@ -731,8 +819,17 @@ export function createSettingsPage(ctx) {
       .map((meal) => meal.label);
     const mealSummary = selectedMealNames.length ? selectedMealNames.join(", ") : "Selecionar refeicoes";
     const activeMeals = (state.mealCatalog ?? []).filter((meal) => meal.active !== false);
+    const areaTypes = (state.workAreaTypes ?? []).filter((area) => area.active !== false || area.id === section?.areaType);
+    const selectedAreaType = section?.areaType || areaTypes[0]?.id || "campo";
+    const areaOptions = areaTypes.map((area) => {
+      const categoryIds = (state.workAreaTypeCategories ?? [])
+        .filter((item) => item.areaTypeId === area.id && item.active !== false)
+        .map((item) => item.categoryId)
+        .join(",");
+      return `<option value="${escapeHtml(area.id)}" data-area-categories="${escapeHtml(categoryIds)}" ${area.id === selectedAreaType ? "selected" : ""}>${escapeHtml(area.label)}</option>`;
+    }).join("");
     const allMealsSelected = activeMeals.length > 0 && activeMeals.every((meal) => selectedMealIds.has(meal.id));
-    const mealOptions = activeMeals.map((meal) => `<label class="team-multi-row ${selectedMealIds.has(meal.id) ? "is-selected" : ""}"><input type="checkbox" name="mealTypeIds" value="${meal.id}" data-multi-option data-multi-label="${escapeHtml(meal.label)}" ${selectedMealIds.has(meal.id) ? "checked" : ""} /><span>${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</span></label>`).join("");
+    const mealOptions = activeMeals.map((meal) => `<label class="team-multi-row ${selectedMealIds.has(meal.id) ? "is-selected" : ""}" data-meal-category="${escapeHtml(meal.category)}"><input type="checkbox" name="mealTypeIds" value="${meal.id}" data-multi-option data-multi-label="${escapeHtml(meal.label)}" ${selectedMealIds.has(meal.id) ? "checked" : ""} /><span>${escapeHtml(meal.label)} - ${mealCategoryLabel(meal.category)}</span></label>`).join("");
     return `
       <form class="meal-catalog-new-form settings-modal-form" data-form="work-section">
         <input type="hidden" name="id" value="${section?.id ?? ""}" />
@@ -744,7 +841,7 @@ export function createSettingsPage(ctx) {
           <div class="field"><label for="work-section-leader-${id}">Encarregado</label><select id="work-section-leader-${id}" name="leaderId"><option value="">Sem vinculo fixo</option>${leaders.map((leader) => `<option value="${leader.id}" ${leader.id === section?.leaderId ? "selected" : ""}>${escapeHtml(leader.name)}</option>`).join("")}</select></div>
           <div class="field"><label for="work-section-active-${id}">Status</label><select id="work-section-active-${id}" name="active"><option value="true" ${section?.active === false ? "" : "selected"}>Ativo</option><option value="false" ${section?.active === false ? "selected" : ""}>Inativo</option></select></div>
         </div>
-        <div class="field"><label for="work-section-area-${id}">Area</label><select id="work-section-area-${id}" name="areaType"><option value="campo" ${section?.areaType === "campo" ? "selected" : ""}>Campo</option><option value="canteiro" ${section?.areaType === "canteiro" ? "selected" : ""}>Canteiro</option><option value="escritorio" ${section?.areaType === "escritorio" ? "selected" : ""}>Escritorio</option><option value="misto" ${section?.areaType === "misto" ? "selected" : ""}>Misto</option></select></div>
+        <div class="field"><label for="work-section-area-${id}">Area</label><select id="work-section-area-${id}" name="areaType" data-work-section-area>${areaOptions || `<option value="campo">Campo</option>`}</select></div>
         <div class="field"><label>Refeicoes liberadas para esta equipe</label>${mealOptions ? `<details class="team-multi-select" data-multi-select data-placeholder="Selecionar refeicoes"><summary><span class="min-w-0 truncate" data-multi-summary>${escapeHtml(mealSummary)}</span><span class="shrink-0" aria-hidden="true">${icon("arrow", 13)}</span></summary><div class="team-multi-list"><label class="team-multi-row is-strong ${allMealsSelected ? "is-selected" : ""}"><input type="checkbox" data-multi-select-all ${allMealsSelected ? "checked" : ""} /><span>Selecionar todos</span></label>${mealOptions}</div></details>` : `<div class="empty">Cadastre uma refeicao ativa antes de vincular.</div>`}</div>
         <p class="settings-helper-note">Escritorio e Canteiro ficam sempre sob responsabilidade do ADMIN.</p>
         <footer class="settings-actions">
@@ -756,7 +853,7 @@ export function createSettingsPage(ctx) {
 
   function renderMealCategoryPanel(user) {
     const state = getState();
-    if (!["admin", "fornecedor"].includes(user.role)) return "";
+    if (user.role !== "admin") return "";
     const categories = state.mealCategories ?? [];
     return `
       <section class="settings-panel meal-catalog-panel">
@@ -879,7 +976,7 @@ export function createSettingsPage(ctx) {
 
   function renderMealCatalogPanel(user) {
     const state = getState();
-    if (!["admin", "fornecedor"].includes(user.role)) return "";
+    if (user.role !== "admin") return "";
     return `
       <section class="settings-panel meal-catalog-panel">
         <div class="settings-panel-title">
@@ -1013,16 +1110,20 @@ export function createSettingsPage(ctx) {
     const supplierModal = user.role === "admin" && supplierModalId
       ? renderSupplierCompanyModal(supplierModalId === "new" ? null : state.supplierCompanies?.find((supplier) => supplier.id === supplierModalId))
       : "";
-    const mealModal = ["admin", "fornecedor"].includes(user.role) && mealModalId
+    const areaTypeModalId = getSettingsAreaTypeModalId?.();
+    const mealModal = user.role === "admin" && mealModalId
       ? renderMealCatalogModal(mealModalId === "new" ? null : state.mealCatalog?.find((meal) => meal.id === mealModalId))
       : "";
-    const mealCategoryModal = ["admin", "fornecedor"].includes(user.role) && mealCategoryModalId
+    const mealCategoryModal = user.role === "admin" && mealCategoryModalId
       ? renderMealCategoryModal(mealCategoryModalId === "new" ? null : state.mealCategories?.find((category) => category.id === mealCategoryModalId))
+      : "";
+    const areaTypeModal = user.role === "admin" && areaTypeModalId
+      ? renderAreaTypeModal(areaTypeModalId === "new" ? null : state.workAreaTypes?.find((area) => area.id === areaTypeModalId))
       : "";
     const workSectionModal = user.role === "admin" && workSectionModalId
       ? renderWorkSectionModal(workSectionModalId === "new" ? null : state.workSections?.find((section) => section.id === workSectionModalId))
       : "";
-    return `${supplierModal}${mealModal}${mealCategoryModal}${workSectionModal}`;
+    return `${supplierModal}${mealModal}${mealCategoryModal}${areaTypeModal}${workSectionModal}`;
   }
 
   function renderSupplierCompanyModal(supplier) {
@@ -1081,6 +1182,25 @@ export function createSettingsPage(ctx) {
             <button class="settings-modal-close" type="button" data-close-meal-category-modal aria-label="Fechar">x</button>
           </header>
           ${renderMealCategoryForm(category)}
+        </section>
+      </div>`;
+  }
+
+  function renderAreaTypeModal(area) {
+    const title = area ? "Editar area" : "Nova area";
+    const subtitle = area ? "Atualize nome, status e categorias liberadas." : "Cadastre um tipo de area e vincule as categorias de refeicao.";
+    return `
+      <div class="settings-modal-backdrop" data-close-area-type-modal>
+        <section class="settings-modal-panel meal-modal-panel" role="dialog" aria-modal="true" aria-labelledby="area-type-modal-title" onclick="event.stopPropagation()">
+          <header class="settings-modal-header">
+            <div>
+              <span class="compact-kicker">Tipo de area</span>
+              <h2 id="area-type-modal-title">${title}</h2>
+              <p>${subtitle}</p>
+            </div>
+            <button class="settings-modal-close" type="button" data-close-area-type-modal aria-label="Fechar">x</button>
+          </header>
+          ${renderAreaTypeForm(area)}
         </section>
       </div>`;
   }
